@@ -1,0 +1,12 @@
+REGEDIT4
+
+[HKEY_CLASSES_ROOT\twitch-player]
+@="URL:twitch-player Protocol"
+"URL Protocol"=""
+
+[HKEY_CLASSES_ROOT\twitch-player\shell]
+
+[HKEY_CLASSES_ROOT\twitch-player\shell\open]
+
+[HKEY_CLASSES_ROOT\twitch-player\shell\open\command]
+@="\"path\\to\\pythonw\" \"path\\to\\script.pyw\" \"%1\""
