@@ -1,0 +1,18 @@
+{
+  "manifest_version": 2,
+
+  "name": "Twitch VLC",
+  "description": "Runs Twitch streams in VLC",
+  "version": "1.0",
+
+  "permissions": [
+    "activeTab"
+  ],
+  "browser_action": {
+    "default_icon": "icon.png"
+  },
+  "background": {
+    "scripts": ["run.js"],
+    "persistent": false
+  }
+}
