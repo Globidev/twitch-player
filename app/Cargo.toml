@@ -1,0 +1,7 @@
+[package]
+name = "twitch-player"
+version = "0.1.0"
+authors = ["Guillaume Depardon <guillaume.depardon@gmail.com>"]
+
+[dependencies]
+winapi = { version = "0.3.4", features = ["winuser"] }
