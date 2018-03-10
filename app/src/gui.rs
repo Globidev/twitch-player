@@ -47,21 +47,18 @@ pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
     let on_exit = SlotNoArgs::new(|| {
         use types::PlayerMessage::AppQuit;
 
-        messages_out.send(AppQuit).unwrap();
-        messages_in.recv().unwrap();
+        messages_out.send(AppQuit).unwrap_or_default();
+        if let Err(error) = messages_in.recv() {
+            eprintln!("Error: {:?}", error)
+        }
     });
 
     let poll_messages = SlotNoArgs::new(|| {
         use types::GuiMessage::*;
 
-        if let Ok(message) = messages_in.try_recv() {
-            match message {
-                PlayerError(reason) => {
-                    critical("Player error", &reason);
-                    CoreApplication::quit();
-                },
-                CanExit => unreachable!()
-            }
+        if let Ok(PlayerError(reason)) = messages_in.try_recv() {
+            critical("Player error", &reason);
+            CoreApplication::quit();
         }
     });
 
@@ -78,7 +75,7 @@ pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
             main_window.set_central_widget((splitter.static_cast_mut()));
         }
 
-        let mut add_from_handle = |handle: HWND| {
+        let mut add_widget_from_handle = |handle: HWND| {
             unsafe {
                 let window = Window::from_win_id(handle as u64);
                 let widget = Widget::create_window_container(window);
@@ -92,29 +89,20 @@ pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
 
         let mut poll_timer = Timer::new();
         poll_timer.signals().timeout().connect(&poll_messages);
-        poll_timer.start(500);
+        poll_timer.start(250);
 
         let mut grab_timer = Timer::new();
         let grab_windows = SlotNoArgs::new(|| {
             if let Some((vlc_handle, chat_handle)) = find_windows() {
-                add_from_handle(vlc_handle);
-                add_from_handle(chat_handle);
+                add_widget_from_handle(vlc_handle);
+                add_widget_from_handle(chat_handle);
                 grab_timer.stop();
             }
         });
         poll_timer.signals().timeout().connect(&grab_windows);
         poll_timer.start(250);
 
-        // use std::cell::RefCell;
-
-        // let win_ref: RefCell<Option<*mut Window>> = RefCell::new(None);
-        // let detach_vlc = SlotNoArgs::new(|| {
-        //     if let Some(window) = *win_ref.borrow() {
-        //         println!("DETACHING...");
-        //         unsafe { (*window).set_parent(ptr::null_mut()); }
-        //     }
-        // });
-
+        // Startup
         main_window.resize((1280, 720));
         main_window.show_maximized();
         Application::exec()
