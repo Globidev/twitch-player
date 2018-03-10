@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Guillaume Depardon <guillaume.depardon@gmail.com>"]
 
 [dependencies]
+qt_widgets = "0.2.3"
+qt_gui = "0.2.3"
+qt_core = "0.2.3"
+cpp_utils = "0.2.0"
+
 winapi = { version = "0.3.4", features = ["winuser"] }
 
 futures = "0.1"
