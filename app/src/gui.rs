@@ -17,6 +17,9 @@ use self::qt_core::timer::Timer;
 use self::qt_core::string::String as QString;
 use self::cpp_utils::{StaticCast, CppBox};
 use self::qt_gui::window::Window;
+use self::qt_gui::palette::{Palette, ColorRole};
+use self::qt_gui::color::Color;
+use self::qt_core::qt::GlobalColor;
 
 use types::{GuiReceiver, PlayerSender};
 use windows::find_window_by_name;
@@ -26,10 +29,18 @@ use self::winapi::shared::windef::HWND;
 
 fn find_windows() -> Option<(HWND, HWND)> {
     let vlc = find_window_by_name(|title| title == "VLC media player")?;
-    // let chat = find_window_by_name(|title| title.starts_with("Twitch"))?;
+    let chat = find_window_by_name(|title| title.starts_with("Twitch"))?;
 
-    // Some((vlc, chat))
-    Some((vlc, vlc))
+    Some((vlc, chat))
+}
+
+fn critical(title: &str, text: &str) {
+    let args = (
+        ptr::null_mut(),
+        &QString::from_std_str(title.to_string()),
+        &QString::from_std_str(text.to_string())
+    );
+    unsafe { MessageBox::critical(args) };
 }
 
 pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
@@ -46,12 +57,7 @@ pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
         if let Ok(message) = messages_in.try_recv() {
             match message {
                 PlayerError(reason) => {
-                    let args = (
-                        ptr::null_mut(),
-                        &QString::from_std_str(&"Player error".to_string()),
-                        &QString::from_std_str(&reason)
-                    );
-                    unsafe { MessageBox::critical(args) };
+                    critical("Player error", &reason);
                     CoreApplication::quit();
                 },
                 CanExit => unreachable!()
@@ -62,12 +68,23 @@ pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
     Application::create_and_exit(|app| {
         // Setup window layout
         let mut main_window = MainWindow::new();
-
         let mut splitter = Splitter::new(());
 
+        let mut palette = Palette::new(());
+        palette.set_color((ColorRole::Window, &Color::new(GlobalColor::Black)));
+        main_window.set_palette(&palette);
+
         unsafe { 
-            main_window.set_central_widget((splitter.static_cast_mut())); 
+            main_window.set_central_widget((splitter.static_cast_mut()));
         }
+
+        let mut add_from_handle = |handle: HWND| {
+            unsafe {
+                let window = Window::from_win_id(handle as u64);
+                let widget = Widget::create_window_container(window);
+                splitter.add_widget(widget);
+            }
+        };
 
         // Events
         let core_app: &CoreApplication = app.static_cast();
@@ -80,12 +97,9 @@ pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
         let mut grab_timer = Timer::new();
         let grab_windows = SlotNoArgs::new(|| {
             if let Some((vlc_handle, chat_handle)) = find_windows() {
-                unsafe {
-                    let window = Window::from_win_id(vlc_handle as u64);
-                    let widget = Widget::create_window_container(window);
-                    splitter.add_widget(widget);
-                    grab_timer.stop();
-                }
+                add_from_handle(vlc_handle);
+                add_from_handle(chat_handle);
+                grab_timer.stop();
             }
         });
         poll_timer.signals().timeout().connect(&grab_windows);
@@ -101,7 +115,8 @@ pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
         //     }
         // });
 
-        main_window.show();
+        main_window.resize((1280, 720));
+        main_window.show_maximized();
         Application::exec()
     })
 }
