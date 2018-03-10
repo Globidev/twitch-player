@@ -1,4 +1,8 @@
+#![feature(conservative_impl_trait)]
 // #![windows_subsystem = "windows"]
+
+#[macro_use]
+extern crate serde_derive;
 
 mod windows;
 mod player;
