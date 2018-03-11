@@ -13,8 +13,8 @@ pub fn run_vlc(channel: &str) -> Result<Child> {
         "-",
         "--qt-minimal-view", "--no-qt-video-autoresize",
         "--key-faster=ctrl+f", "--key-rate-normal=ctrl+n",
-        "--file-caching=3000", "--live-caching=3000",
-        "--disc-caching=3000", "--network-caching=3000",
+        "--file-caching=1000", "--live-caching=1000",
+        "--disc-caching=1000", "--network-caching=1000",
         &format!("--meta-title={}", vlc_title(channel))
     ];
 
