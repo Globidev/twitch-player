@@ -12,6 +12,7 @@ mod gui;
 mod types;
 mod errors;
 mod options;
+mod process;
 
 use std::thread;
 use options::Options;

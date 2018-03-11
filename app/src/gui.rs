@@ -28,9 +28,11 @@ use options::Options;
 use std::ptr;
 use self::winapi::shared::windef::HWND;
 
-fn find_windows() -> Option<(HWND, HWND)> {
-    let vlc = find_window_by_name(|title| title == "VLC media player")?;
-    let chat = find_window_by_name(|title| title.starts_with("Twitch"))?;
+fn find_windows(channel: &str) -> Option<(HWND, HWND)> {
+    use process::vlc_title;
+
+    let vlc = find_window_by_name(|title| title.contains(&vlc_title(channel)))?;
+    let chat = find_window_by_name(|title| title == "Twitch")?;
 
     Some((vlc, chat))
 }
@@ -97,7 +99,7 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
 
         let mut grab_timer = Timer::new();
         let grab_windows = SlotNoArgs::new(|| {
-            if let Some((vlc_handle, chat_handle)) = find_windows() {
+            if let Some((vlc_handle, chat_handle)) = find_windows(&opts.channel) {
                 add_widget_from_handle(vlc_handle);
                 add_widget_from_handle(chat_handle);
                 grab_timer.stop();
