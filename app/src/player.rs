@@ -5,160 +5,222 @@ extern crate serde_json;
 extern crate tokio_core;
 extern crate tokio_timer;
 extern crate tokio_tls;
+extern crate native_tls;
 
-use std::io;
-use self::futures::{Future, Stream};
-use self::futures::future::Either;
-use self::futures::future::{loop_fn, Loop, ok, err};
-use self::hyper::{Client, StatusCode};
+use std::process;
+use std::io::Write;
+use std::time::Duration;
+
+use self::futures::{Future, Stream, Async};
+use self::futures::future::{ok, err};
+use self::hyper::{Client, StatusCode, Chunk};
 use self::hyper::client::HttpConnector;
 use self::tokio_core::reactor::Core;
-use self::tokio_timer::{Interval, Timer};
+use self::tokio_timer::Timer;
 use self::serde_json::from_slice as decode;
 use self::hyper_tls::HttpsConnector;
 
-use types::{GuiSender, PlayerReceiver};
-use std::time::Duration;
-use std::process;
-
-#[derive(Deserialize)]
-struct Resolution {
-    height: u32,
-    width: u32,
-}
-
-#[derive(Deserialize)]
-struct PlaylistInfo {
-    url: String,
-    name: String,
-    bandwidth: u64,
-    resolution: Resolution,
-}
-
-#[derive(Deserialize)]
-struct PlaylistsInfo {
-    channel: String,
-    playlists: Vec<PlaylistInfo>,
-}
-
-#[derive(Debug)]
-enum PlayerError {
-    PollFail,
-    HyperError(hyper::Error),
-    IoError(io::Error),
-    FetchPlaylistsInfoFail(StatusCode),
-    BadPlaylistsInfoFormat
-}
-
-use std::error;
-impl error::Error for PlayerError {
-    fn description(&self) -> &str { "Player Error" }
-}
-
-use std::fmt;
-impl fmt::Display for PlayerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl From<hyper::Error> for PlayerError {
-    fn from(error: hyper::Error) -> Self {
-        PlayerError::HyperError(error)
-    }
-}
-
-impl From<io::Error> for PlayerError {
-    fn from(error: io::Error) -> Self {
-        PlayerError::IoError(error)
-    }
-}
-
-type Segment = String;
-type Playlist = Vec<Segment>;
+use errors::PlayerError;
+use types::*;
 
 type HttpClient = Client<HttpsConnector<HttpConnector>>;
+type BoxFuture<T> = Box<Future<Item = T, Error = PlayerError>>;
+type BadStatusError = fn(StatusCode) -> PlayerError;
 
-fn poll_messages(messages_in: PlayerReceiver) -> impl Future<Item = (), Error = PlayerError> {
-    use types::PlayerMessage::AppQuit;
+struct PlaylistStream {
+    client: HttpClient,
+    playlist_url: String,
+    request: BoxFuture<Playlist>
+}
 
-    let ticks = Timer::default().interval(Duration::from_millis(250));
+impl PlaylistStream {
+    fn new(client: &HttpClient, url: String) -> PlaylistStream {
+        // Queue an initial request
+        let future = fetch_playlist(client, &url);
+        
+        PlaylistStream {
+            client: client.clone(),
+            playlist_url: url,
+            request: Box::new(future)
+        }
+    }
+}
 
-    ticks
-        .take_while(move |_| {
-            let cont = match messages_in.try_recv() {
-                Ok(AppQuit) => false,
-                _ => true,
-            };
-            ok(cont)
-        })
+impl futures::Stream for PlaylistStream {
+    type Item = Playlist;
+    type Error = PlayerError;
+
+    fn poll(&mut self) -> futures::Poll<Option<Self::Item>, Self::Error> {
+        match self.request.poll() {
+            // Request is ready -> return its result and queue a new one
+            Ok(Async::Ready(pl)) => {
+                let future = fetch_playlist(&self.client, &self.playlist_url);
+                self.request = Box::new(future);
+                Ok(Async::Ready(Some(pl)))
+            },
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Err(e) => Err(e)
+        }
+    }
+}
+
+fn ticks(duration: Duration) 
+    -> impl futures::Stream<Item = (), Error = PlayerError> 
+{
+    Timer::default()
+        .interval(duration)
+        .map_err(|_| PlayerError::PollFail)
+}
+
+fn poll_messages(messages_in: PlayerReceiver) 
+    -> impl Future<Item = (), Error = PlayerError> 
+{
+    let should_poll_next = move || {
+        match messages_in.try_recv() {
+            Ok(PlayerMessage::AppQuit) => false,
+            _                          => true,
+        }
+    };
+
+    ticks(Duration::from_millis(250))
+        .take_while(move |_| ok(should_poll_next()))
         .collect()
         .map(|_| ())
         .map_err(|_| PlayerError::PollFail)
 }
 
-type BoxFuture<T, E> = Box<Future<Item = T, Error = E> + Send>;
+fn fetch(client: &HttpClient, url: &str, on_bad_status: BadStatusError) 
+    -> impl Future<Item = Chunk, Error = PlayerError> 
+{
+    match url.parse() {
+        Err(error) => Box::new(err(PlayerError::MalformedUrl(error))),
+        Ok(uri) => {
+            let future = client.get(uri)
+                .map_err(From::from)
+                .and_then(move |response| -> BoxFuture<_> {
+                    match response.status() {
+                        StatusCode::Ok => {
+                            let future = response
+                                .body()
+                                .concat2()
+                                .map_err(From::from);
+                            Box::new(future)
+                        },
+                        status => Box::new(err(on_bad_status(status)))
+                    }
+                });
+            Box::new(future) as BoxFuture<_>
+        }
+    }
+}
 
-fn fetch_playlists_info(
-    client: &HttpClient,
-    channel: &str,
-) -> impl Future<Item = PlaylistsInfo, Error = PlayerError> {
-    use self::PlayerError::*;
+fn fetch_segment(client: &HttpClient, segment_url: &str) 
+    -> impl Future<Item = hyper::Chunk, Error = PlayerError> 
+{
+    fetch(client, segment_url, PlayerError::FetchSegmentFail)
+}
 
-    let url = format_args!("https://streamer.datcoloc.com/{}", channel).to_string();
-    client.get(url.parse().unwrap())
-        .map_err(From::from)
-        .and_then(|res| {
-            if res.status() == StatusCode::Ok {
-                let playlists = res.body()
-                    .concat2()
-                    .map_err(From::from)
-                    .and_then(move |body| {
-                        match decode::<PlaylistsInfo>(&body) {
-                            Ok(playlists) => ok(playlists),
-                            Err(error) => err(BadPlaylistsInfoFormat)
-                        }
-                    });
-                Box::new(playlists) as BoxFuture<_,_>
-            } else {
-                let error = err(FetchPlaylistsInfoFail(res.status()));
-                Box::new(error) as BoxFuture<_,_>
+fn fetch_playlist(client: &HttpClient, playlist_url: &str) 
+    -> impl Future<Item = Playlist, Error = PlayerError> 
+{
+    fetch(client, playlist_url, PlayerError::FetchPlaylistFail)
+        .map(parse_playlist)
+}
+
+fn parse_playlist(data: Chunk) -> Playlist {
+    use std::str::from_utf8;
+    use std::string::ToString;
+
+    from_utf8(&data).unwrap_or("")
+        .split('\n')
+        .filter(|line| line.starts_with("http://"))
+        .map(ToString::to_string)
+        .collect()
+}
+
+fn fetch_playlists_info(client: &HttpClient, channel: &str) 
+    -> impl Future<Item = PlaylistsInfo, Error = PlayerError> 
+{
+    let url = format!("https://streamer.datcoloc.com/{}", channel);
+
+    fetch(client, &url, PlayerError::FetchPlaylistsInfoFail)
+        .and_then(|chunk| {
+            decode(&chunk).map_err(PlayerError::BadPlaylistsInfoFormat)
+        })
+}
+
+fn fetch_and_pipe_data<W>(client: HttpClient, playlist_url: String, writer: W)
+    -> impl Future<Item = (), Error = PlayerError>
+where
+    W: Write + 'static
+{
+    struct State<W> {
+        last_segment: Option<SegmentUrl>,
+        writer: W
+    };
+
+    let state = State { last_segment: None, writer: writer };
+
+    let playlists = PlaylistStream::new(&client, playlist_url);
+    let refresh_ticks = ticks(Duration::from_millis(1000));
+    let stream = playlists.zip(refresh_ticks).map(|i| i.0);
+
+    stream.fold(state, move |mut state, mut playlist| -> BoxFuture<_> {
+        let to_download = match state.last_segment {
+            None => playlist.pop(),
+            Some(ref segment) => {
+                match playlist.iter().position(|s| s == segment) {
+                    None => playlist.pop(),
+                    Some(idx) => playlist.into_iter().nth(idx + 1)
+                }
             }
-        })
+        };
+
+        if let Some(segment) = to_download {
+            let future = fetch_segment(&client, &segment)
+                .and_then(move |chunk| {
+                    match state.writer.write(&chunk) {
+                        Ok(size) => {
+                            println!("Piped {} bytes", size);
+                            state.last_segment = Some(segment);
+                            ok(state)
+                        },
+                        Err(error) => err(From::from(error))
+                    }
+                });
+            Box::new(future)
+        } else {
+            Box::new(ok(state))
+        }
+    }).map(|_| ())
 }
 
-fn fetch_and_pipe_data(
-    client: &HttpClient,
-    playlist_url: &str,
-) -> impl Future<Item = (), Error = PlayerError> {
-    use self::PlayerError::*;
-
-    println!("{}", playlist_url);
-    client.get(playlist_url.parse().unwrap())
-        .map_err(From::from)
-        .and_then(|res| {
-            println!("status: {}", res.status());
-            ok(())
-        })
-}
-
-fn run_impl(messages_in: PlayerReceiver, messages_out: &GuiSender) -> Result<(), PlayerError> {
+fn run_impl(messages_in: PlayerReceiver) -> Result<(), PlayerError> {
     let mut core = Core::new()?;
 
+    let connector = HttpsConnector::new(2, &core.handle())?;
     let client = Client::configure()
-        .connector(HttpsConnector::new(4, &core.handle()).unwrap())
+        .connector(connector)
         .build(&core.handle());
 
-    let logic = fetch_playlists_info(&client, "lirik")
-        .and_then(|pl| fetch_and_pipe_data(&client, &pl.playlists[0].url))
+    let vlc = process::Command::new(r"C:\Program Files (x86)\VideoLAN\VLC\vlc.exe")
+        .args(&["-"])
+        .stdin(process::Stdio::piped())
+        .spawn()?;
+    let vlc_writer = vlc.stdin.ok_or(PlayerError::NoStdinAccess)?;
+
+    let _chat = process::Command::new(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe")
+        // .args(&[])
+        .spawn()?;
+
+    let logic = fetch_playlists_info(&client, "shroud")
+        .and_then(|pl| {
+            let playlist_url = pl.playlists[0].url.clone();
+            fetch_and_pipe_data(client, playlist_url, vlc_writer)
+        })
         .select2(poll_messages(messages_in))
         .map(|_| ())
-        .map_err(|e| {
-            match e {
-                Either::A((e, _)) => e,
-                Either::B((e, _)) => e,
-            }
-        });
+        .map_err(|e| e.split().0);
 
     core.run(logic)
 }
@@ -166,10 +228,10 @@ fn run_impl(messages_in: PlayerReceiver, messages_out: &GuiSender) -> Result<(),
 pub fn run(messages_in: PlayerReceiver, messages_out: GuiSender) {
     use types::GuiMessage::PlayerError;
 
-    match run_impl(messages_in, &messages_out) {
+    match run_impl(messages_in) {
         Err(error) => {
-            println!("Player error: {:?}", error);
-            messages_out.send(PlayerError(error.to_string()));
+            println!("Player error: {}", error);
+            messages_out.send(PlayerError(error.to_string())).unwrap_or_default();
         }
         _ => (),
     }
