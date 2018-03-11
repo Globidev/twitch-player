@@ -9,13 +9,13 @@ use self::qt_widgets::widget::Widget;
 use self::qt_widgets::main_window::MainWindow;
 use self::qt_widgets::message_box::MessageBox;
 use self::qt_widgets::splitter::Splitter;
-use self::qt_widgets::push_button::PushButton;
 use self::qt_core::slots::SlotNoArgs;
 use self::qt_core::core_application::CoreApplication;
 use self::qt_core::connection::Signal;
 use self::qt_core::timer::Timer;
 use self::qt_core::string::String as QString;
-use self::cpp_utils::{StaticCast, CppBox};
+use self::qt_core::list::ListCInt;
+use self::cpp_utils::StaticCast;
 use self::qt_gui::window::Window;
 use self::qt_gui::palette::{Palette, ColorRole};
 use self::qt_gui::color::Color;
@@ -72,7 +72,7 @@ pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
         main_window.set_palette(&palette);
 
         unsafe { 
-            main_window.set_central_widget((splitter.static_cast_mut()));
+            main_window.set_central_widget(splitter.static_cast_mut());
         }
 
         let mut add_widget_from_handle = |handle: HWND| {
@@ -80,6 +80,9 @@ pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
                 let window = Window::from_win_id(handle as u64);
                 let widget = Widget::create_window_container(window);
                 splitter.add_widget(widget);
+                let mut sizes = ListCInt::new(());
+                sizes.append(&80); sizes.append(&20);
+                splitter.set_sizes(&sizes);
             }
         };
 
