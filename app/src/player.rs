@@ -7,7 +7,6 @@ extern crate tokio_timer;
 extern crate tokio_tls;
 extern crate native_tls;
 
-use std::process;
 use std::io::Write;
 use std::time::Duration;
 
@@ -22,6 +21,7 @@ use self::hyper_tls::HttpsConnector;
 
 use errors::PlayerError;
 use options::Options;
+use process::{run_chat, run_vlc};
 use types::*;
 
 type HttpClient = Client<HttpsConnector<HttpConnector>>;
@@ -166,17 +166,12 @@ fn run_impl(opts: Options, messages_in: PlayerReceiver) -> Result<(), PlayerErro
         .connector(connector)
         .build(&core.handle());
 
-    let vlc = process::Command::new(r"C:\Program Files (x86)\VideoLAN\VLC\vlc.exe")
-        .args(&["-"])
-        .stdin(process::Stdio::piped())
-        .spawn()?;
+    let vlc = run_vlc(&opts.channel)?;
+    let _chat = run_chat(&opts.channel)?;
+
     let vlc_writer = vlc.stdin.ok_or(PlayerError::NoStdinAccess)?;
 
-    let _chat = process::Command::new(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe")
-        // .args(&[])
-        .spawn()?;
-
-    let logic = fetch_playlists_info(&client, "shroud")
+    let logic = fetch_playlists_info(&client, &opts.channel)
         .and_then(|pl| {
             let playlist_url = pl.playlists[0].url.clone();
             fetch_and_pipe_data(client, playlist_url, vlc_writer)
