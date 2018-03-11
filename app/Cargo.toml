@@ -4,16 +4,17 @@ version = "0.1.0"
 authors = ["Guillaume Depardon <guillaume.depardon@gmail.com>"]
 
 [dependencies]
-qt_widgets = "0.2.3"
-qt_gui = "0.2.3"
-qt_core = "0.2.3"
-cpp_utils = "0.2.0"
+qt_widgets = "0.2"
+qt_gui = "0.2"
+qt_core = "0.2"
+cpp_utils = "0.2"
 
 winapi = { version = "0.3.4", features = ["winuser"] }
 
 futures = "0.1"
 hyper = "0.11"
 hyper-tls = "0.1"
+native-tls = "0.1"
 tokio-core = "0.1"
 tokio-timer = "0.1"
 tokio-tls = "0.1"
