@@ -23,6 +23,7 @@ use self::qt_core::qt::GlobalColor;
 
 use types::{GuiReceiver, PlayerSender};
 use windows::find_window_by_name;
+use options::Options;
 
 use std::ptr;
 use self::winapi::shared::windef::HWND;
@@ -43,7 +44,7 @@ fn critical(title: &str, text: &str) {
     unsafe { MessageBox::critical(args) };
 }
 
-pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
+pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
     let on_exit = SlotNoArgs::new(|| {
         use types::PlayerMessage::AppQuit;
 

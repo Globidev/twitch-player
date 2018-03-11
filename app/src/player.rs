@@ -21,6 +21,7 @@ use self::serde_json::from_slice as decode;
 use self::hyper_tls::HttpsConnector;
 
 use errors::PlayerError;
+use options::Options;
 use types::*;
 
 type HttpClient = Client<HttpsConnector<HttpConnector>>;
@@ -49,10 +50,9 @@ fn poll_messages(messages_in: PlayerReceiver)
         .take_while(move |_| ok(should_poll_next()))
         .collect()
         .map(|_| ())
-        .map_err(|_| PlayerError::PollFail)
 }
 
-fn fetch(client: &HttpClient, url: &str, on_bad_status: BadStatusError) 
+fn fetch(client: &HttpClient, url: &str, bad_status_error: BadStatusError) 
     -> impl Future<Item = Chunk, Error = PlayerError> 
 {
     match url.parse() {
@@ -69,7 +69,7 @@ fn fetch(client: &HttpClient, url: &str, on_bad_status: BadStatusError)
                                 .map_err(From::from);
                             Box::new(future)
                         },
-                        status => Box::new(err(on_bad_status(status)))
+                        status => Box::new(err(bad_status_error(status)))
                     }
                 });
             Box::new(future) as BoxFuture<_>
@@ -158,7 +158,7 @@ where
     }).map(|_| ())
 }
 
-fn run_impl(messages_in: PlayerReceiver) -> Result<(), PlayerError> {
+fn run_impl(opts: Options, messages_in: PlayerReceiver) -> Result<(), PlayerError> {
     let mut core = Core::new()?;
 
     let connector = HttpsConnector::new(2, &core.handle())?;
@@ -188,10 +188,10 @@ fn run_impl(messages_in: PlayerReceiver) -> Result<(), PlayerError> {
     core.run(logic)
 }
 
-pub fn run(messages_in: PlayerReceiver, messages_out: GuiSender) {
+pub fn run(opts: Options, messages_in: PlayerReceiver, messages_out: GuiSender) {
     use types::GuiMessage::PlayerError;
 
-    match run_impl(messages_in) {
+    match run_impl(opts, messages_in) {
         Err(error) => {
             println!("Player error: {}", error);
             messages_out.send(PlayerError(error.to_string())).unwrap_or_default();
