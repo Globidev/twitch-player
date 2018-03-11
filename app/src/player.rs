@@ -11,7 +11,7 @@ use std::process;
 use std::io::Write;
 use std::time::Duration;
 
-use self::futures::{Future, Stream, Async};
+use self::futures::{Future, Stream};
 use self::futures::future::{ok, err};
 use self::hyper::{Client, StatusCode, Chunk};
 use self::hyper::client::HttpConnector;
@@ -26,43 +26,6 @@ use types::*;
 type HttpClient = Client<HttpsConnector<HttpConnector>>;
 type BoxFuture<T> = Box<Future<Item = T, Error = PlayerError>>;
 type BadStatusError = fn(StatusCode) -> PlayerError;
-
-struct PlaylistStream {
-    client: HttpClient,
-    playlist_url: String,
-    request: BoxFuture<Playlist>
-}
-
-impl PlaylistStream {
-    fn new(client: &HttpClient, url: String) -> PlaylistStream {
-        // Queue an initial request
-        let future = fetch_playlist(client, &url);
-        
-        PlaylistStream {
-            client: client.clone(),
-            playlist_url: url,
-            request: Box::new(future)
-        }
-    }
-}
-
-impl futures::Stream for PlaylistStream {
-    type Item = Playlist;
-    type Error = PlayerError;
-
-    fn poll(&mut self) -> futures::Poll<Option<Self::Item>, Self::Error> {
-        match self.request.poll() {
-            // Request is ready -> return its result and queue a new one
-            Ok(Async::Ready(pl)) => {
-                let future = fetch_playlist(&self.client, &self.playlist_url);
-                self.request = Box::new(future);
-                Ok(Async::Ready(Some(pl)))
-            },
-            Ok(Async::NotReady) => Ok(Async::NotReady),
-            Err(e) => Err(e)
-        }
-    }
-}
 
 fn ticks(duration: Duration) 
     -> impl futures::Stream<Item = (), Error = PlayerError> 
@@ -161,9 +124,9 @@ where
 
     let state = State { last_segment: None, writer: writer };
 
-    let playlists = PlaylistStream::new(&client, playlist_url);
-    let refresh_ticks = ticks(Duration::from_millis(1000));
-    let stream = playlists.zip(refresh_ticks).map(|i| i.0);
+    let playlist_client = client.clone();
+    let stream = ticks(Duration::from_millis(1000))
+        .and_then(move |_| fetch_playlist(&playlist_client, &playlist_url));
 
     stream.fold(state, move |mut state, mut playlist| -> BoxFuture<_> {
         let to_download = match state.last_segment {
