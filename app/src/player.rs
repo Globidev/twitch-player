@@ -166,10 +166,10 @@ fn run_impl(opts: Options, messages_in: PlayerReceiver) -> Result<(), PlayerErro
         .connector(connector)
         .build(&core.handle());
 
-    let vlc = run_vlc(&opts.channel)?;
-    let _chat = run_chat(&opts.channel)?;
+    let mut vlc = run_vlc(&opts.channel)?;
+    let mut chat = run_chat(&opts.channel)?;
 
-    let vlc_writer = vlc.stdin.ok_or(PlayerError::NoStdinAccess)?;
+    let vlc_writer = vlc.stdin.take().ok_or(PlayerError::NoStdinAccess)?;
 
     let logic = fetch_playlists_info(&client, &opts.channel)
         .and_then(|pl| {
@@ -180,7 +180,12 @@ fn run_impl(opts: Options, messages_in: PlayerReceiver) -> Result<(), PlayerErro
         .map(|_| ())
         .map_err(|e| e.split().0);
 
-    core.run(logic)
+    core.run(logic)?;
+
+    vlc.kill()?;
+    chat.kill()?;
+    
+    Ok(())
 }
 
 pub fn run(opts: Options, messages_in: PlayerReceiver, messages_out: GuiSender) {
