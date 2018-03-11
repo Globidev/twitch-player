@@ -8,6 +8,7 @@ mod windows;
 mod player;
 mod gui;
 mod types;
+mod errors;
 
 use std::thread;
 
