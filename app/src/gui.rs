@@ -50,10 +50,10 @@ fn critical(title: &str, text: &str) {
     unsafe { MessageBox::critical(args) };
 }
 
-fn widget_from_handle(handle: HWND) -> *mut Widget {
+fn widget_from_handle(handle: HWND, parent: *mut Widget) -> *mut Widget {
     unsafe {
         let window = Window::from_win_id(handle as u64);
-        Widget::create_window_container(window)
+        Widget::create_window_container((window, parent))
     }
 }
 
@@ -111,6 +111,8 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
             main_window.set_central_widget(splitter.static_cast_mut());
         }
 
+        let main_window_ptr = main_window.static_cast_mut() as *mut Widget;
+
         // Events
         let core_app: &CoreApplication = app.static_cast();
         core_app.signals().about_to_quit().connect(&on_exit);
@@ -128,15 +130,13 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
             if let Some((vlc, chat)) = find_windows(&opts.channel) {
                 unsafe {
                     let splitter = splitter_ptr.as_mut().unwrap();
-                    splitter.add_widget(widget_from_handle(vlc));
-                    splitter.add_widget(widget_from_handle(chat));
+                    splitter.add_widget(widget_from_handle(vlc, main_window_ptr));
+                    splitter.add_widget(widget_from_handle(chat, main_window_ptr));
                     resize_splitter(splitter, 80, 20);
                 }
                 grab_timer.stop();
             }
         });
-
-        let main_window_ptr = main_window.static_cast_mut() as *mut Widget;
 
         // Fullscreen handling
         let fullscreen_seq = KeySequence::new(StandardKey::FullScreen);
