@@ -2,7 +2,6 @@ extern crate qt_core;
 extern crate qt_gui;
 extern crate qt_widgets;
 extern crate cpp_utils;
-extern crate winapi;
 
 use self::qt_core::connection::Signal;
 use self::qt_core::core_application::CoreApplication;
@@ -27,18 +26,17 @@ use self::qt_widgets::input_dialog::InputDialog;
 use self::cpp_utils::StaticCast;
 
 use types::{GuiReceiver, PlayerSender, PlayerMessage};
-use windows::{find_window_by_name, find_window_by_pid};
+use native::{find_window_by_name, find_window_by_pid, Handle};
 use options::Options;
 
 use std::ptr;
-use self::winapi::shared::windef::HWND;
 
 type WidgetRatios = (i32, i32);
 
 const INITIAL_WIDGETS_RATIOS: WidgetRatios = (80, 20);
 const FULL_SCREEN_RATIOS: WidgetRatios = (100, 0);
 
-fn find_windows(channel: &str) -> Option<(HWND, HWND)> {
+fn find_windows(channel: &str) -> Option<(Handle, Handle)> {
     use process::vlc_title;
 
     let vlc = find_window_by_name(|title| title.contains(&vlc_title(channel)))?;
@@ -65,7 +63,7 @@ fn get_text(title: &str, text: &str) -> String {
     unsafe { InputDialog::get_text(args).to_std_string() }
 }
 
-unsafe fn widget_from_handle(handle: HWND, parent: *mut Widget) -> *mut Widget {
+unsafe fn widget_from_handle(handle: Handle, parent: *mut Widget) -> *mut Widget {
     let window = Window::from_win_id(handle as u64);
     Widget::create_window_container((window, parent))
 }
@@ -83,7 +81,7 @@ fn toggle_full_screen(widget: &mut Widget) {
 
 fn resize_splitter(splitter: &mut Splitter, ratios: WidgetRatios) {
     let mut sizes = ListCInt::new(());
-    sizes.append(&ratios.0); 
+    sizes.append(&ratios.0);
     sizes.append(&ratios.1);
     splitter.set_sizes(&sizes)
 }
@@ -191,8 +189,8 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
             chat_toggled = !chat_toggled;
             let ratios = match chat_toggled {
                 true  => widgets_ratios,
-                false => { 
-                    widgets_ratios = get_widgets_ratios(&*splitter_ptr); 
+                false => {
+                    widgets_ratios = get_widgets_ratios(&*splitter_ptr);
                     FULL_SCREEN_RATIOS
                 }
             };
@@ -206,7 +204,7 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
                 messages_out.send(order).unwrap_or_default();
             }
         });
-        
+
         Application::exec()
     })
 }

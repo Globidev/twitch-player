@@ -12,8 +12,8 @@ struct FindWindowContext<F: Fn(HWND) -> bool> {
     predicate: F
 }
 
-extern "system" fn enum_window_callback<F>(handle: HWND, lparam: LPARAM) -> BOOL 
-where 
+extern "system" fn enum_window_callback<F>(handle: HWND, lparam: LPARAM) -> BOOL
+where
     F: Fn(HWND) -> bool
 {
     let context_ptr = lparam as *mut FindWindowContext<F>;
@@ -39,7 +39,7 @@ where
 
     unsafe {
         EnumWindows(
-            Some(enum_window_callback::<F>), 
+            Some(enum_window_callback::<F>),
             &mut context as *mut _ as LPARAM
         )
     };
@@ -49,17 +49,17 @@ where
 
 fn get_window_text(handle: HWND) -> Option<String> {
     let mut text_buffer = [0u16; 256];
-    let length = unsafe { 
+    let length = unsafe {
         GetWindowTextW(
-            handle, 
-            text_buffer.as_mut_ptr(), 
+            handle,
+            text_buffer.as_mut_ptr(),
             text_buffer.len() as c_int
-        ) 
+        )
     };
 
     if length != 0 {
-        let exact_text = unsafe { 
-            from_raw_parts(text_buffer.as_ptr(), length as usize) 
+        let exact_text = unsafe {
+            from_raw_parts(text_buffer.as_ptr(), length as usize)
         };
         Some(String::from_utf16_lossy(exact_text))
     } else {
@@ -90,7 +90,7 @@ fn get_window_pid(handle: HWND) -> Option<DWORD> {
     }
 }
 
-pub fn find_window_by_pid<F>(pid_predicate: F) -> Option<HWND> 
+pub fn find_window_by_pid<F>(pid_predicate: F) -> Option<HWND>
 where
     F: Fn(u32) -> bool,
 {

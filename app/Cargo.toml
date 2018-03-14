@@ -10,8 +10,6 @@ qt_gui = "0.2"
 qt_core = "0.2"
 cpp_utils = "0.2"
 
-winapi = { version = "0.3.4", features = ["winuser"] }
-
 futures = "0.1"
 hyper = "0.11"
 hyper-tls = "0.1"
@@ -26,5 +24,11 @@ serde_derive = "1.0"
 
 structopt = "0.2"
 
-[build-dependencies]
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3.4", features = ["winuser"] }
+
+[target.'cfg(unix)'.dependencies]
+x11 = "2.17.3"
+
+[target.'cfg(windows)'.build-dependencies]
 winres = "0.1"

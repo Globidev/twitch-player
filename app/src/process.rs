@@ -1,8 +1,14 @@
 use std::process::{Command, Child, Stdio};
 use std::io::Result;
 
+#[cfg(windows)]
 const VLC_PATH: &'static str = r"C:\Program Files (x86)\VideoLAN\VLC\vlc.exe";
+#[cfg(unix)]
+const VLC_PATH: &'static str = r"vlc";
+#[cfg(windows)]
 const CHROME_PATH: &'static str = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe";
+#[cfg(unix)]
+const CHROME_PATH: &'static str = r"google-chrome-stable";
 
 pub fn vlc_title(channel: &str) -> String {
     format!("Twitch-Player_{}", channel)

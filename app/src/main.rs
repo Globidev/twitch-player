@@ -6,13 +6,13 @@ extern crate serde_derive;
 #[macro_use]
 extern crate structopt;
 
-mod windows;
 mod player;
 mod gui;
 mod types;
 mod errors;
 mod options;
 mod process;
+mod native;
 
 use std::thread;
 use options::Options;
