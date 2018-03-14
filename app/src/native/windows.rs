@@ -7,14 +7,16 @@ use self::winapi::ctypes::c_int;
 
 use std::slice::from_raw_parts;
 
-struct FindWindowContext<F: Fn(HWND) -> bool> {
-    handle: Option<HWND>,
+pub type Handle = HWND;
+
+struct FindWindowContext<F: Fn(Handle) -> bool> {
+    handle: Option<Handle>,
     predicate: F
 }
 
-extern "system" fn enum_window_callback<F>(handle: HWND, lparam: LPARAM) -> BOOL
+extern "system" fn enum_window_callback<F>(handle: Handle, lparam: LPARAM) -> BOOL
 where
-    F: Fn(HWND) -> bool
+    F: Fn(Handle) -> bool
 {
     let context_ptr = lparam as *mut FindWindowContext<F>;
 
@@ -28,9 +30,9 @@ where
     TRUE
 }
 
-pub fn find_window<F>(predicate: F) -> Option<HWND>
+pub fn find_window<F>(predicate: F) -> Option<Handle>
 where
-    F: Fn(HWND) -> bool,
+    F: Fn(Handle) -> bool,
 {
     let mut context = FindWindowContext {
         handle: None,
@@ -47,7 +49,7 @@ where
     context.handle
 }
 
-fn get_window_text(handle: HWND) -> Option<String> {
+fn get_window_text(handle: Handle) -> Option<String> {
     let mut text_buffer = [0u16; 256];
     let length = unsafe {
         GetWindowTextW(
@@ -67,11 +69,11 @@ fn get_window_text(handle: HWND) -> Option<String> {
     }
 }
 
-pub fn find_window_by_name<F>(name_predicate: F) -> Option<HWND>
+pub fn find_window_by_name<F>(name_predicate: F) -> Option<Handle>
 where
     F: Fn(String) -> bool,
 {
-    let predicate = |handle: HWND| {
+    let predicate = |handle: Handle| {
         get_window_text(handle)
             .map(|name| name_predicate(name))
             .unwrap_or(false)
@@ -80,7 +82,7 @@ where
     find_window(predicate)
 }
 
-fn get_window_pid(handle: HWND) -> Option<DWORD> {
+fn get_window_pid(handle: Handle) -> Option<DWORD> {
     let mut win_pid: DWORD = 0;
     unsafe { GetWindowThreadProcessId(handle, &mut win_pid as LPDWORD) };
 
@@ -90,11 +92,11 @@ fn get_window_pid(handle: HWND) -> Option<DWORD> {
     }
 }
 
-pub fn find_window_by_pid<F>(pid_predicate: F) -> Option<HWND>
+pub fn find_window_by_pid<F>(pid_predicate: F) -> Option<Handle>
 where
     F: Fn(u32) -> bool,
 {
-    let predicate = |handle: HWND| {
+    let predicate = |handle: Handle| {
         get_window_pid(handle)
             .map(|pid| pid_predicate(pid))
             .unwrap_or(false)
