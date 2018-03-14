@@ -11,7 +11,7 @@ use std::io::Write;
 use std::time::Duration;
 
 use self::futures::{Future, Stream};
-use self::futures::future::{ok, err};
+use self::futures::future::{ok, err, Either};
 use self::hyper::{Client, StatusCode, Chunk};
 use self::hyper::client::HttpConnector;
 use self::tokio_core::reactor::Core;
@@ -28,6 +28,13 @@ type HttpClient = Client<HttpsConnector<HttpConnector>>;
 type BoxFuture<T> = Box<Future<Item = T, Error = PlayerError>>;
 type BadStatusError = fn(StatusCode) -> PlayerError;
 
+#[derive(Debug)]
+enum PollResult {
+    Continue,
+    Quit,
+    SwitchChannel(String),
+}
+
 fn ticks(duration: Duration) 
     -> impl Stream<Item = (), Error = PlayerError> 
 {
@@ -36,20 +43,31 @@ fn ticks(duration: Duration)
         .map_err(|_| PlayerError::PollFail)
 }
 
-fn poll_messages(messages_in: PlayerReceiver) 
-    -> impl Future<Item = (), Error = PlayerError> 
+fn poll_messages<'a>(messages_in: &'a PlayerReceiver) 
+    -> impl Future<Item = PollResult, Error = PlayerError> + 'a
 {
-    let should_poll_next = move || {
+    use self::PlayerMessage::*;
+    use self::PollResult::*;
+
+    let to_poll_result = move |_| {
         match messages_in.try_recv() {
-            Ok(PlayerMessage::AppQuit) => false,
-            _                          => true,
+            Ok(ChangeChannel(channel)) => SwitchChannel(channel),
+            Ok(AppQuit)                => Quit,
+            _                          => Continue,
         }
     };
 
     ticks(Duration::from_millis(250))
-        .take_while(move |_| ok(should_poll_next()))
-        .collect()
-        .map(|_| ())
+        .map(to_poll_result)
+        .skip_while(|poll_result| {
+            match poll_result {
+                &Continue => ok(true),
+                _        => ok(false)
+            }
+        })
+        .into_future()
+        .map(|(r, _)| r.unwrap_or(Quit))
+        .map_err(|(e, _)| e)
 }
 
 fn fetch(client: &HttpClient, url: &str, bad_status_error: BadStatusError) 
@@ -157,7 +175,35 @@ where
     }
 }
 
+fn play_channel<'a, W: Write>(
+    client: &'a HttpClient, 
+    writer: &'a mut W, 
+    channel: String, 
+    messages_in: &'a PlayerReceiver
+) -> impl Future<Item = PollResult, Error = PlayerError> + 'a
+{
+    let to_poll_result = |select_result| {
+        match select_result {
+            Either::B((result, _)) => result,
+            _                      => PollResult::Quit, // unreachable ?
+        }
+    };
+
+    fetch_playlists_info(client, &channel)
+        .and_then(move |info| {
+            let playlist_url = info.playlists[0].url.clone();
+            segment_stream(client, playlist_url)
+                .and_then(move |chunk| pipe_data(writer, chunk))
+                .collect()
+        })
+        .select2(poll_messages(messages_in))
+        .map_err(|e| e.split().0)
+        .map(to_poll_result)
+}
+
 fn run_impl(opts: Options, messages_in: PlayerReceiver) -> Result<(), PlayerError> {
+    use self::PollResult::SwitchChannel;
+
     let mut core = Core::new()?;
 
     let connector = HttpsConnector::new(2, &core.handle())?;
@@ -170,20 +216,19 @@ fn run_impl(opts: Options, messages_in: PlayerReceiver) -> Result<(), PlayerErro
 
     let mut vlc_writer = vlc.stdin.take().ok_or(PlayerError::NoStdinAccess)?;
 
-    let logic = fetch_playlists_info(&client, &opts.channel)
-        .and_then(|info| {
-            let playlist_url = info.playlists[0].url.clone();
-            segment_stream(&client, playlist_url)
-                .and_then(|chunk| pipe_data(&mut vlc_writer, chunk))
-                .collect()
-        })
-        .select2(poll_messages(messages_in))
-        .map_err(|e| e.split().0);
+    let mut channel = opts.channel;
 
-    core.run(logic)?;
+    loop {
+        let logic = play_channel(&client, &mut vlc_writer, channel, &messages_in);
+        match core.run(logic)? {
+            SwitchChannel(new_channel) => { channel = new_channel; },
+            _                          => break
+        }
+    }
 
     vlc.kill()?;
-    chat.kill()?;
+    // Waiting for a way to prevent chat daemonizing
+    // chat.kill()?;
     
     Ok(())
 }

@@ -1,7 +1,8 @@
 use std::sync::mpsc;
 
 pub enum PlayerMessage {
-    AppQuit
+    AppQuit,
+    ChangeChannel(String),
 }
 
 pub enum GuiMessage {
