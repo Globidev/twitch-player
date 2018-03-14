@@ -114,7 +114,8 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
 
     Application::create_and_exit(|app| unsafe {
         let core_app: &CoreApplication = app.static_cast();
-        core_app.signals().about_to_quit()
+        core_app.signals()
+            .about_to_quit()
             .connect(&on_exit);
 
         // Setup window layout

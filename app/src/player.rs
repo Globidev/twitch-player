@@ -161,10 +161,8 @@ fn segment_stream<'a>(client: &'a HttpClient, playlist_url: String)
     segments.filter_map(|opt_segment| opt_segment) 
 }
 
-fn pipe_data<W>(writer: &mut W, chunk: Chunk) 
+fn pipe_data<W: Write>(writer: &mut W, chunk: Chunk) 
     -> impl Future<Item = (), Error = PlayerError>
-where
-    W: Write
 {
     match writer.write(&chunk) {
         Ok(size) => {
