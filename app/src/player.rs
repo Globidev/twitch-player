@@ -29,7 +29,7 @@ type BoxFuture<T> = Box<Future<Item = T, Error = PlayerError>>;
 type BadStatusError = fn(StatusCode) -> PlayerError;
 
 fn ticks(duration: Duration) 
-    -> impl futures::Stream<Item = (), Error = PlayerError> 
+    -> impl Stream<Item = (), Error = PlayerError> 
 {
     Timer::default()
         .interval(duration)
@@ -112,24 +112,16 @@ fn fetch_playlists_info(client: &HttpClient, channel: &str)
         })
 }
 
-fn fetch_and_pipe_data<W>(client: HttpClient, playlist_url: String, writer: W)
-    -> impl Future<Item = (), Error = PlayerError>
-where
-    W: Write + 'static
+fn segment_stream<'a>(client: &'a HttpClient, playlist_url: String)
+    -> impl Stream<Item = Chunk, Error = PlayerError> + 'a
 {
-    struct State<W> {
-        last_segment: Option<SegmentUrl>,
-        writer: W
-    };
+    let playlists = ticks(Duration::from_millis(1_000))
+        .and_then(move |_| fetch_playlist(client, &playlist_url));
 
-    let state = State { last_segment: None, writer: writer };
+    let mut last_segment = None;
 
-    let playlist_client = client.clone();
-    let stream = ticks(Duration::from_millis(1000))
-        .and_then(move |_| fetch_playlist(&playlist_client, &playlist_url));
-
-    stream.fold(state, move |mut state, mut playlist| -> BoxFuture<_> {
-        let to_download = match state.last_segment {
+    let segments = playlists.and_then(move |mut playlist| -> BoxFuture<_> { 
+        let to_download = match last_segment {
             None => playlist.pop(),
             Some(ref segment) => {
                 match playlist.iter().position(|s| s == segment) {
@@ -140,22 +132,29 @@ where
         };
 
         if let Some(segment) = to_download {
-            let future = fetch_segment(&client, &segment)
-                .and_then(move |chunk| {
-                    match state.writer.write(&chunk) {
-                        Ok(size) => {
-                            println!("Piped {} bytes", size);
-                            state.last_segment = Some(segment);
-                            ok(state)
-                        },
-                        Err(error) => err(From::from(error))
-                    }
-                });
+            let future = fetch_segment(client, &segment).map(Option::from);
+            last_segment = Some(segment);
             Box::new(future)
         } else {
-            Box::new(ok(state))
+            Box::new(ok(None))
         }
-    }).map(|_| ())
+    });
+
+    segments.filter_map(|opt_segment| opt_segment) 
+}
+
+fn pipe_data<W>(writer: &mut W, chunk: Chunk) 
+    -> impl Future<Item = (), Error = PlayerError>
+where
+    W: Write
+{
+    match writer.write(&chunk) {
+        Ok(size) => {
+            println!("Piped {} bytes", size);
+            ok(())
+        },
+        Err(error) => err(From::from(error))
+    }
 }
 
 fn run_impl(opts: Options, messages_in: PlayerReceiver) -> Result<(), PlayerError> {
@@ -169,15 +168,16 @@ fn run_impl(opts: Options, messages_in: PlayerReceiver) -> Result<(), PlayerErro
     let mut vlc = run_vlc(&opts.channel)?;
     let mut chat = run_chat(&opts.channel)?;
 
-    let vlc_writer = vlc.stdin.take().ok_or(PlayerError::NoStdinAccess)?;
+    let mut vlc_writer = vlc.stdin.take().ok_or(PlayerError::NoStdinAccess)?;
 
     let logic = fetch_playlists_info(&client, &opts.channel)
-        .and_then(|pl| {
-            let playlist_url = pl.playlists[0].url.clone();
-            fetch_and_pipe_data(client, playlist_url, vlc_writer)
+        .and_then(|info| {
+            let playlist_url = info.playlists[0].url.clone();
+            segment_stream(&client, playlist_url)
+                .and_then(|chunk| pipe_data(&mut vlc_writer, chunk))
+                .collect()
         })
         .select2(poll_messages(messages_in))
-        .map(|_| ())
         .map_err(|e| e.split().0);
 
     core.run(logic)?;

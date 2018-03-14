@@ -32,6 +32,11 @@ use options::Options;
 use std::ptr;
 use self::winapi::shared::windef::HWND;
 
+type WidgetRatios = (i32, i32);
+
+const INITIAL_WIDGETS_RATIOS: WidgetRatios = (80, 20);
+const FULL_SCREEN_RATIOS: WidgetRatios = (100, 0);
+
 fn find_windows(channel: &str) -> Option<(HWND, HWND)> {
     use process::vlc_title;
 
@@ -50,11 +55,9 @@ fn critical(title: &str, text: &str) {
     unsafe { MessageBox::critical(args) };
 }
 
-fn widget_from_handle(handle: HWND, parent: *mut Widget) -> *mut Widget {
-    unsafe {
-        let window = Window::from_win_id(handle as u64);
-        Widget::create_window_container((window, parent))
-    }
+unsafe fn widget_from_handle(handle: HWND, parent: *mut Widget) -> *mut Widget {
+    let window = Window::from_win_id(handle as u64);
+    Widget::create_window_container((window, parent))
 }
 
 fn toggle_full_screen(widget: &mut Widget) {
@@ -68,11 +71,16 @@ fn toggle_full_screen(widget: &mut Widget) {
     widget.set_window_state(new_state);
 }
 
-fn resize_splitter(splitter: &mut Splitter, first: i32, second: i32) {
+fn resize_splitter(splitter: &mut Splitter, ratios: WidgetRatios) {
     let mut sizes = ListCInt::new(());
-    sizes.append(&first); 
-    sizes.append(&second);
+    sizes.append(&ratios.0); 
+    sizes.append(&ratios.1);
     splitter.set_sizes(&sizes)
+}
+
+fn get_widgets_ratios(splitter: &Splitter) -> WidgetRatios {
+    let sizes = splitter.sizes();
+    (*sizes.at(0), *sizes.at(1))
 }
 
 pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
@@ -89,16 +97,19 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
         use types::GuiMessage::*;
 
         if let Ok(PlayerError(reason)) = messages_in.try_recv() {
-            critical("Player error", &reason);
+            critical("Fatal player error", &reason);
             CoreApplication::quit();
         }
     });
 
-    Application::create_and_exit(|app| {
+    Application::create_and_exit(|app| unsafe {
+        let core_app: &CoreApplication = app.static_cast();
+        core_app.signals().about_to_quit()
+            .connect(&on_exit);
+
         // Setup window layout
         let mut main_window = MainWindow::new();
-        main_window.resize((1280, 720));
-        main_window.show_maximized();
+        let main_window_ptr = main_window.static_cast_mut() as *mut Widget;
 
         let mut splitter = Splitter::new(());
         let splitter_ptr = splitter.as_mut_ptr();
@@ -107,67 +118,66 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
         palette.set_color((ColorRole::Window, &Color::new(GlobalColor::Black)));
         main_window.set_palette(&palette);
 
-        unsafe { 
-            main_window.set_central_widget(splitter.static_cast_mut());
-        }
+        main_window.set_central_widget(splitter.static_cast_mut());
+        main_window.resize((1280, 720));
+        main_window.show_maximized();
 
-        let main_window_ptr = main_window.static_cast_mut() as *mut Widget;
-
-        // Events
-        let core_app: &CoreApplication = app.static_cast();
-        core_app.signals().about_to_quit().connect(&on_exit);
-
+        // Player messages polling
         let mut poll_timer = Timer::new();
-        poll_timer.signals().timeout().connect(&poll_messages);
+        poll_timer.signals()
+            .timeout()
+            .connect(&poll_messages);
         poll_timer.start(250);
 
         // VLC + Chat embedding
         let mut grab_timer = Timer::new();
         let mut grab_windows = SlotNoArgs::default();
-        grab_timer.signals().timeout().connect(&grab_windows);
+        grab_timer.signals()
+            .timeout()
+            .connect(&grab_windows);
         grab_timer.start(250);
+
+        // Fullscreen handling
+        let fullscreen_seq = KeySequence::new(StandardKey::FullScreen);
+        let fullscreen_shortcut = Shortcut::new((&fullscreen_seq, main_window_ptr));
+        let mut on_fullscreen = SlotNoArgs::default();
+        fullscreen_shortcut.signals()
+            .activated()
+            .connect(&on_fullscreen);
+
+        // Chat Toggle
+        let mut chat_toggled = true;
+        let mut widgets_ratios = INITIAL_WIDGETS_RATIOS;
+        let toggle_chat_seq = KeySequence::new(StandardKey::MoveToNextWord);
+        let toggle_chat_shortcut = Shortcut::new((&toggle_chat_seq, main_window_ptr));
+        let mut on_toggle_chat = SlotNoArgs::default();
+        toggle_chat_shortcut.signals()
+            .activated()
+            .connect(&on_toggle_chat);
+
+        // Slots
         grab_windows.set(|| {
             if let Some((vlc, chat)) = find_windows(&opts.channel) {
-                unsafe {
-                    let splitter = splitter_ptr.as_mut().unwrap();
-                    splitter.add_widget(widget_from_handle(vlc, main_window_ptr));
-                    splitter.add_widget(widget_from_handle(chat, main_window_ptr));
-                    resize_splitter(splitter, 80, 20);
-                }
+                let splitter = &mut *splitter_ptr;
+                splitter.add_widget(widget_from_handle(vlc, main_window_ptr));
+                splitter.add_widget(widget_from_handle(chat, main_window_ptr));
+                resize_splitter(splitter, INITIAL_WIDGETS_RATIOS);
                 grab_timer.stop();
             }
         });
 
-        // Fullscreen handling
-        let fullscreen_seq = KeySequence::new(StandardKey::FullScreen);
-        let fullscreen_shortcut = unsafe { 
-            Shortcut::new((&fullscreen_seq, main_window_ptr)) 
-        };
-        let mut on_fullscreen_request = SlotNoArgs::default();
-        fullscreen_shortcut.signals()
-            .activated()
-            .connect(&on_fullscreen_request);
-        on_fullscreen_request.set(|| 
-            toggle_full_screen(unsafe { main_window_ptr.as_mut().unwrap() })
-        );
+        on_fullscreen.set(|| toggle_full_screen(&mut *main_window_ptr));
 
-        // Chat Toggle
-        let mut toggle_state = true;
-        let toggle_chat_seq = KeySequence::new(StandardKey::MoveToNextWord);
-        let toggle_chat_shortcut = unsafe {
-            Shortcut::new((&toggle_chat_seq, main_window_ptr))
-        };
-        let mut on_toggle_chat_request = SlotNoArgs::default();
-        toggle_chat_shortcut.signals()
-            .activated()
-            .connect(&on_toggle_chat_request);
-        on_toggle_chat_request.set(|| {
-            toggle_state = !toggle_state;
-            let (s1, s2) = match toggle_state {
-                true  => (100, 0),
-                false => (80, 20)
+        on_toggle_chat.set(|| {
+            chat_toggled = !chat_toggled;
+            let ratios = match chat_toggled {
+                true  => widgets_ratios,
+                false => { 
+                    widgets_ratios = get_widgets_ratios(&*splitter_ptr); 
+                    FULL_SCREEN_RATIOS
+                }
             };
-            unsafe { resize_splitter(splitter_ptr.as_mut().unwrap(), s1, s2) }
+            resize_splitter(&mut *splitter_ptr, ratios)
         });
         
         Application::exec()

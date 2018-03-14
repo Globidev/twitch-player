@@ -40,7 +40,7 @@ where
     unsafe {
         EnumWindows(
             Some(enum_window_callback::<F>), 
-            &mut context as *mut FindWindowContext<F> as LPARAM
+            &mut context as *mut _ as LPARAM
         )
     };
 
