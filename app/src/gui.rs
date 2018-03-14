@@ -4,29 +4,30 @@ extern crate qt_widgets;
 extern crate cpp_utils;
 extern crate winapi;
 
-use self::qt_widgets::application::Application;
-use self::qt_widgets::widget::Widget;
-use self::qt_widgets::main_window::MainWindow;
-use self::qt_widgets::message_box::MessageBox;
-use self::qt_widgets::splitter::Splitter;
-use self::qt_core::slots::SlotNoArgs;
-use self::qt_widgets::shortcut::Shortcut;
-use self::qt_core::core_application::CoreApplication;
 use self::qt_core::connection::Signal;
-use self::qt_core::timer::Timer;
-use self::qt_core::string::String as QString;
+use self::qt_core::core_application::CoreApplication;
+use self::qt_core::flags::{Flags, FlaggableEnum};
 use self::qt_core::list::ListCInt;
-use self::cpp_utils::StaticCast;
-use self::qt_gui::window::Window;
-use self::qt_gui::palette::{Palette, ColorRole};
-use self::qt_gui::color::Color;
-use self::qt_gui::key_sequence::{KeySequence, StandardKey};
 use self::qt_core::qt::GlobalColor;
 use self::qt_core::qt::WindowState;
-use self::qt_core::flags::{Flags, FlaggableEnum};
+use self::qt_core::slots::SlotNoArgs;
+use self::qt_core::string::String as QString;
+use self::qt_core::timer::Timer;
+use self::qt_gui::color::Color;
+use self::qt_gui::key_sequence::{KeySequence, StandardKey};
+use self::qt_gui::palette::{Palette, ColorRole};
+use self::qt_gui::window::Window;
+use self::qt_widgets::application::Application;
+use self::qt_widgets::main_window::MainWindow;
+use self::qt_widgets::message_box::MessageBox;
+use self::qt_widgets::shortcut::Shortcut;
+use self::qt_widgets::splitter::Splitter;
+use self::qt_widgets::widget::Widget;
+use self::qt_widgets::input_dialog::InputDialog;
+use self::cpp_utils::StaticCast;
 
-use types::{GuiReceiver, PlayerSender};
-use windows::find_window_by_name;
+use types::{GuiReceiver, PlayerSender, PlayerMessage};
+use windows::{find_window_by_name, find_window_by_pid};
 use options::Options;
 
 use std::ptr;
@@ -53,6 +54,15 @@ fn critical(title: &str, text: &str) {
         &QString::from_std_str(text.to_string())
     );
     unsafe { MessageBox::critical(args) };
+}
+
+fn get_text(title: &str, text: &str) -> String {
+    let args = (
+        ptr::null_mut(),
+        &QString::from_std_str(title.to_string()),
+        &QString::from_std_str(text.to_string())
+    );
+    unsafe { InputDialog::get_text(args).to_std_string() }
 }
 
 unsafe fn widget_from_handle(handle: HWND, parent: *mut Widget) -> *mut Widget {
@@ -155,6 +165,14 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
             .activated()
             .connect(&on_toggle_chat);
 
+        // Change channel
+        let change_channel_seq = KeySequence::new(StandardKey::Open);
+        let change_channel_shortcut = Shortcut::new((&change_channel_seq, main_window_ptr));
+        let mut on_change_channel = SlotNoArgs::default();
+        change_channel_shortcut.signals()
+            .activated()
+            .connect(&on_change_channel);
+
         // Slots
         grab_windows.set(|| {
             if let Some((vlc, chat)) = find_windows(&opts.channel) {
@@ -177,7 +195,15 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
                     FULL_SCREEN_RATIOS
                 }
             };
-            resize_splitter(&mut *splitter_ptr, ratios)
+            resize_splitter(&mut *splitter_ptr, ratios);
+        });
+
+        on_change_channel.set(|| {
+            let channel = get_text("Change channel", "New channel");
+            if channel.len() > 0 {
+                let order = PlayerMessage::ChangeChannel(channel);
+                messages_out.send(order).unwrap_or_default();
+            }
         });
         
         Application::exec()
