@@ -18,16 +18,16 @@ use std::thread;
 use options::Options;
 
 fn run_app(opts: Options) -> thread::Result<()> {
-    let opts_player = opts.clone();
-
     let (player_out, player_in) = types::player_channel();
     let (gui_out, gui_in) = types::gui_channel();
 
     let gui_out_clone = gui_out.clone();
-    let player = thread::spawn(move || player::run(opts_player, player_in, gui_out_clone));
-    let gui = thread::spawn(move || gui::run(opts, gui_in, player_out));
+    let player = thread::spawn(move || player::run(opts, player_in, gui_out_clone));
+    let gui = thread::spawn(move || gui::run(gui_in, player_out));
 
-    player.join()?;
+    if let Err(err) = player.join()? {
+        eprintln!("Error running player: {}", err)
+    }
     gui_out.send(types::GuiMessage::CanExit).unwrap_or_default();
     gui.join()?;
 
