@@ -6,8 +6,10 @@ pub enum PlayerMessage {
 }
 
 pub enum GuiMessage {
+    VideoPlayerHandle(u64),
+    ChatRendererHandle(u64),
     PlayerError(String),
-    CanExit
+    CanExit,
 }
 
 pub type PlayerSender = mpsc::Sender<PlayerMessage>;

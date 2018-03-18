@@ -26,8 +26,6 @@ use self::qt_widgets::input_dialog::InputDialog;
 use self::cpp_utils::StaticCast;
 
 use types::{GuiReceiver, PlayerSender, PlayerMessage};
-use native::{find_window_by_name, find_window_by_pid, Handle};
-use options::Options;
 
 use std::ptr;
 
@@ -35,15 +33,6 @@ type WidgetRatios = (i32, i32);
 
 const INITIAL_WIDGETS_RATIOS: WidgetRatios = (80, 20);
 const FULL_SCREEN_RATIOS: WidgetRatios = (100, 0);
-
-fn find_windows(channel: &str) -> Option<(Handle, Handle)> {
-    use process::vlc_title;
-
-    let vlc = find_window_by_name(|title| title.contains(&vlc_title(channel)))?;
-    let chat = find_window_by_name(|title| title == "Twitch")?;
-
-    Some((vlc, chat))
-}
 
 fn critical(title: &str, text: &str) {
     let args = (
@@ -63,8 +52,8 @@ fn get_text(title: &str, text: &str) -> String {
     unsafe { InputDialog::get_text(args).to_std_string() }
 }
 
-unsafe fn widget_from_handle(handle: Handle, parent: *mut Widget) -> *mut Widget {
-    let window = Window::from_win_id(handle as u64);
+unsafe fn widget_from_handle(handle: u64, parent: *mut Widget) -> *mut Widget {
+    let window = Window::from_win_id(handle);
     Widget::create_window_container((window, parent))
 }
 
@@ -91,22 +80,13 @@ fn get_widgets_ratios(splitter: &Splitter) -> WidgetRatios {
     (*sizes.at(0), *sizes.at(1))
 }
 
-pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
+pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
     let on_exit = SlotNoArgs::new(|| {
         use types::PlayerMessage::AppQuit;
 
         messages_out.send(AppQuit).unwrap_or_default();
         if let Err(error) = messages_in.recv() {
             eprintln!("Error: {:?}", error)
-        }
-    });
-
-    let poll_messages = SlotNoArgs::new(|| {
-        use types::GuiMessage::*;
-
-        if let Ok(PlayerError(reason)) = messages_in.try_recv() {
-            critical("Fatal player error", &reason);
-            CoreApplication::quit();
         }
     });
 
@@ -133,18 +113,11 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
 
         // Player messages polling
         let mut poll_timer = Timer::new();
+        let mut poll_messages = SlotNoArgs::default();
         poll_timer.signals()
             .timeout()
             .connect(&poll_messages);
         poll_timer.start(250);
-
-        // VLC + Chat embedding
-        let mut grab_timer = Timer::new();
-        let mut grab_windows = SlotNoArgs::default();
-        grab_timer.signals()
-            .timeout()
-            .connect(&grab_windows);
-        grab_timer.start(250);
 
         // Fullscreen handling
         let fullscreen_seq = KeySequence::new(StandardKey::FullScreen);
@@ -173,13 +146,26 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
             .connect(&on_change_channel);
 
         // Slots
-        grab_windows.set(|| {
-            if let Some((vlc, chat)) = find_windows(&opts.channel) {
-                let splitter = &mut *splitter_ptr;
-                splitter.add_widget(widget_from_handle(vlc, main_window_ptr));
-                splitter.add_widget(widget_from_handle(chat, main_window_ptr));
-                resize_splitter(splitter, INITIAL_WIDGETS_RATIOS);
-                grab_timer.stop();
+        poll_messages.set(|| {
+            use types::GuiMessage::*;
+            let splitter = &mut *splitter_ptr;
+
+            if let Ok(message) = messages_in.try_recv() {
+                match message {
+                    PlayerError(reason) => {
+                        critical("Fatal player error", &reason);
+                        CoreApplication::quit();
+                    },
+                    VideoPlayerHandle(handle) => {
+                        splitter.add_widget(widget_from_handle(handle, main_window_ptr));
+                        resize_splitter(splitter, INITIAL_WIDGETS_RATIOS);
+                    },
+                    ChatRendererHandle(handle) => {
+                        splitter.add_widget(widget_from_handle(handle, main_window_ptr));
+                        resize_splitter(splitter, INITIAL_WIDGETS_RATIOS);
+                    },
+                    _ => { }
+                }
             }
         });
 
