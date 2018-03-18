@@ -21,7 +21,7 @@ use self::hyper_tls::HttpsConnector;
 
 use errors::PlayerError;
 use options::Options;
-use process::{run_chat, run_vlc};
+use process::{run_video_player, run_chat_renderer};
 use types::*;
 
 type HttpClient = Client<HttpsConnector<HttpConnector>>;
@@ -209,8 +209,6 @@ fn run_impl(opts: Options, messages_in: PlayerReceiver) -> Result<(), PlayerErro
         .connector(connector)
         .build(&core.handle());
 
-    let mut vlc = run_vlc(&opts.channel)?;
-    let mut chat = run_chat(&opts.channel)?;
 
     let mut vlc_writer = vlc.stdin.take().ok_or(PlayerError::NoStdinAccess)?;
 
@@ -224,10 +222,6 @@ fn run_impl(opts: Options, messages_in: PlayerReceiver) -> Result<(), PlayerErro
         }
     }
 
-    vlc.kill()?;
-    // Waiting for a way to prevent chat daemonizing
-    // chat.kill()?;
-    
     Ok(())
 }
 
@@ -235,10 +229,14 @@ pub fn run(opts: Options, messages_in: PlayerReceiver, messages_out: GuiSender) 
     use types::GuiMessage::PlayerError;
 
     match run_impl(opts, messages_in) {
+    let mut video_player = run_video_player(&opts)?;
+    let mut chat_renderer = run_chat_renderer(&opts)?;
         Err(error) => {
             println!("Player error: {}", error);
             messages_out.send(PlayerError(error.to_string())).unwrap_or_default();
         }
         _ => (),
     }
+    video_player.kill()?;
+    chat_renderer.kill()?;
 }
