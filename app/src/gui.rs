@@ -156,11 +156,7 @@ pub fn run(messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
                         critical("Fatal player error", &reason);
                         CoreApplication::quit();
                     },
-                    VideoPlayerHandle(handle) => {
-                        splitter.add_widget(widget_from_handle(handle, main_window_ptr));
-                        resize_splitter(splitter, INITIAL_WIDGETS_RATIOS);
-                    },
-                    ChatRendererHandle(handle) => {
+                    VideoPlayerHandle(handle) | ChatRendererHandle(handle) => {
                         splitter.add_widget(widget_from_handle(handle, main_window_ptr));
                         resize_splitter(splitter, INITIAL_WIDGETS_RATIOS);
                     },
