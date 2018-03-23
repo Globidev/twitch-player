@@ -10,6 +10,7 @@ extern crate native_tls;
 use std::io::Write;
 use std::time::Duration;
 use std::thread;
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
 use self::futures::{Future, Stream};
 use self::futures::future::{ok, err, Either};
@@ -227,25 +228,30 @@ fn run_impl<W: Write>(opts: Options, messages_in: PlayerReceiver, writer: &mut W
     Ok(())
 }
 
-fn grab_windows(video_player_pid: u32, _chat_renderer_pid: u32, messages_out: GuiSender) {
-    use types::GuiMessage;
+fn grab_windows(
+    video_player_pid: u32,
+    _chat_renderer_pid: u32,
+    messages_out: GuiSender,
+    should_stop: Arc<AtomicBool>
+) {
+    use types::GuiMessage::Handles;
 
-    loop {
-        if let Some(handle) = find_window_by_pid(|pid| pid == video_player_pid) {
-            messages_out.send(GuiMessage::VideoPlayerHandle(handle as u64))
-                .unwrap_or_default();
+    let mut player_handle = None;
+    let mut chat_handle = None;
+
+    while !should_stop.load(Ordering::Relaxed) {
+        let find_player = || find_window_by_pid(|pid| pid == video_player_pid);
+        let find_chat = || find_window_by_name(|name| name == "Twitch");
+
+        player_handle = player_handle.or_else(find_player);
+        chat_handle = chat_handle.or_else(find_chat);
+
+        if let (Some(player), Some(chat)) = (player_handle, chat_handle) {
+            let message = Handles(player as u64, chat as u64);
+            messages_out.send(message).unwrap_or_default();
             break
         }
-        thread::sleep(Duration::from_millis(250));
-    }
 
-    loop {
-        // Waiting for a fix for chrome's daemonizing to be able to search by pid
-        if let Some(handle) = find_window_by_name(|name| name == "Twitch") {
-            messages_out.send(GuiMessage::ChatRendererHandle(handle as u64))
-                .unwrap_or_default();
-            break
-        }
         thread::sleep(Duration::from_millis(250));
     }
 }
@@ -265,7 +271,9 @@ pub fn run(opts: Options, messages_in: PlayerReceiver, messages_out: GuiSender)
     let messages = messages_out.clone();
     let player_id = video_player.id();
     let chat_id = chat_renderer.id();
-    let handle = thread::spawn(move || grab_windows(player_id, chat_id, messages));
+    let should_stop = Arc::new(AtomicBool::new(false));
+    let should_stop_clone = should_stop.clone();
+    let handle = thread::spawn(move || grab_windows(player_id, chat_id, messages, should_stop_clone));
 
     match run_impl(opts, messages_in, &mut data_writer) {
         Err(error) => {
@@ -276,6 +284,7 @@ pub fn run(opts: Options, messages_in: PlayerReceiver, messages_out: GuiSender)
         _ => (),
     }
 
+    should_stop.store(true, Ordering::Relaxed);
     handle.join().map_err(|_| PlayerError::PollFail)?;
 
     video_player.kill()?;

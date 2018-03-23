@@ -6,8 +6,7 @@ pub enum PlayerMessage {
 }
 
 pub enum GuiMessage {
-    VideoPlayerHandle(u64),
-    ChatRendererHandle(u64),
+    Handles(u64, u64),
     PlayerError(String),
     CanExit,
 }
