@@ -266,11 +266,13 @@ pub fn run(opts: Options, messages_in: PlayerReceiver, messages_out: GuiSender)
         .take()
         .ok_or(PlayerError::NoStdinAccess)?;
 
-    let messages = messages_out.clone();
     let should_stop = Arc::new(AtomicBool::new(false));
-    let should_stop_clone = should_stop.clone();
-    let opts_clone = opts.clone();
-    let handle = thread::spawn(move || grab_windows(opts_clone, messages, should_stop_clone));
+    let handle = {
+        let opts = opts.clone();
+        let messages_out = messages_out.clone();
+        let should_stop = Arc::clone(&should_stop);
+        thread::spawn(move || grab_windows(opts, messages_out, should_stop))
+    };
 
     match run_impl(opts, messages_in, &mut data_writer) {
         Err(error) => {
