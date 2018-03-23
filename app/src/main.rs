@@ -1,5 +1,5 @@
 #![feature(conservative_impl_trait)]
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 #[macro_use]
 extern crate serde_derive;
