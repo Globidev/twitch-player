@@ -25,7 +25,7 @@ use errors::PlayerError;
 use options::Options;
 use process::{run_video_player, run_chat_renderer};
 use types::*;
-use native::{find_window_by_name, find_window_by_pid};
+use native::{find_window_by_name, /*find_window_by_pid*/};
 
 type HttpClient = Client<HttpsConnector<HttpConnector>>;
 type BoxFuture<T> = Box<Future<Item = T, Error = PlayerError>>;
@@ -228,20 +228,18 @@ fn run_impl<W: Write>(opts: Options, messages_in: PlayerReceiver, writer: &mut W
     Ok(())
 }
 
-fn grab_windows(
-    video_player_pid: u32,
-    _chat_renderer_pid: u32,
-    messages_out: GuiSender,
-    should_stop: Arc<AtomicBool>
-) {
+fn grab_windows(opts: Options, messages_out: GuiSender, should_stop: Arc<AtomicBool>) {
     use types::GuiMessage::Handles;
+
+    let player_window_hint = &opts.config.video_player.window_title_hint;
+    let chat_window_hint = &opts.config.chat_renderer.window_title_hint;
 
     let mut player_handle = None;
     let mut chat_handle = None;
 
     while !should_stop.load(Ordering::Relaxed) {
-        let find_player = || find_window_by_pid(|pid| pid == video_player_pid);
-        let find_chat = || find_window_by_name(|name| name == "Twitch");
+        let find_player = || find_window_by_name(|name| name.starts_with(player_window_hint));
+        let find_chat = || find_window_by_name(|name| name.starts_with(chat_window_hint));
 
         player_handle = player_handle.or_else(find_player);
         chat_handle = chat_handle.or_else(find_chat);
@@ -269,11 +267,10 @@ pub fn run(opts: Options, messages_in: PlayerReceiver, messages_out: GuiSender)
         .ok_or(PlayerError::NoStdinAccess)?;
 
     let messages = messages_out.clone();
-    let player_id = video_player.id();
-    let chat_id = chat_renderer.id();
     let should_stop = Arc::new(AtomicBool::new(false));
     let should_stop_clone = should_stop.clone();
-    let handle = thread::spawn(move || grab_windows(player_id, chat_id, messages, should_stop_clone));
+    let opts_clone = opts.clone();
+    let handle = thread::spawn(move || grab_windows(opts_clone, messages, should_stop_clone));
 
     match run_impl(opts, messages_in, &mut data_writer) {
         Err(error) => {

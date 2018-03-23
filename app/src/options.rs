@@ -54,6 +54,7 @@ pub struct Config {
 pub struct ProcessConfig {
     pub command: String,
     pub args: Vec<String>,
+    pub window_title_hint: String,
 }
 
 #[derive(Debug)]
