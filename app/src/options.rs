@@ -48,6 +48,7 @@ pub struct Options {
 pub struct Config {
     pub video_player: ProcessConfig,
     pub chat_renderer: ProcessConfig,
+    pub keybinds: Option<KeyBinds>
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -55,6 +56,16 @@ pub struct ProcessConfig {
     pub command: String,
     pub args: Vec<String>,
     pub window_title_hint: String,
+}
+
+type KeyBind = String;
+
+#[derive(Deserialize, Debug, Clone, Default)]
+pub struct KeyBinds {
+    pub fullscreen: Option<KeyBind>,
+    pub chat_toggle_left: Option<KeyBind>,
+    pub chat_toggle_right: Option<KeyBind>,
+    pub change_channel: Option<KeyBind>,
 }
 
 #[derive(Debug)]
