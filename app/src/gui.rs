@@ -49,10 +49,10 @@ enum ChatState {
 fn toggle_chat(state: &ChatState, new_position: ChatPosition) -> ChatState {
     use self::ChatState::{Hidden, Visible};
 
-    match state {
-        &Hidden => Visible(new_position),
-        &Visible(ref position) => {
-            match position == &new_position {
+    match *state {
+        Hidden => Visible(new_position),
+        Visible(ref position) => {
+            match *position == new_position {
                 true => Hidden,
                 false => Visible(new_position)
             }
@@ -129,10 +129,16 @@ fn resize_splitter(splitter: &mut Splitter, ratios: (i32, i32)) {
     splitter.set_sizes(&sizes)
 }
 
-pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
-    let on_exit = SlotNoArgs::new(|| {
-        use types::PlayerMessage::AppQuit;
+// struct Layout {
+//     main_window: CppBox<MainWindow>,
+//     splitter: CppBox<Splitter>
+// }
 
+pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
+    use types::PlayerMessage::AppQuit;
+    use types::GuiMessage::{PlayerError, Handles};
+
+    let on_exit = SlotNoArgs::new(|| {
         messages_out.send(AppQuit).unwrap_or_default();
         if let Err(error) = messages_in.recv() {
             eprintln!("Error: {:?}", error)
@@ -212,8 +218,6 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
         };
 
         let handle_message = |message| {
-            use types::GuiMessage::*;
-
             match message {
                 PlayerError(reason) => {
                     critical("Fatal player error", &reason);
@@ -237,31 +241,18 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
         poll_timer.start(250);
 
         // Shortcuts
-        let new_shortcut = |seq| Shortcut::new((seq, main_window_ptr));
-
-        let fullscreen_shortcut = new_shortcut(&keybinds.fullscreen);
-        let mut on_fullscreen = SlotNoArgs::default();
-        fullscreen_shortcut.signals()
-            .activated()
-            .connect(&on_fullscreen);
-
-        let chat_toggle_left_shortcut = new_shortcut(&keybinds.chat_toggle_left);
-        let mut on_chat_toggle_left = SlotNoArgs::default();
-        chat_toggle_left_shortcut.signals()
-            .activated()
-            .connect(&on_chat_toggle_left);
-
-        let chat_toggle_right_shortcut = new_shortcut(&keybinds.chat_toggle_right);
-        let mut on_chat_toggle_right = SlotNoArgs::default();
-        chat_toggle_right_shortcut.signals()
-            .activated()
-            .connect(&on_chat_toggle_right);
-
-        let change_channel_shortcut = new_shortcut(&keybinds.change_channel);
-        let mut on_change_channel = SlotNoArgs::default();
-        change_channel_shortcut.signals()
-            .activated()
-            .connect(&on_change_channel);
+        let make_shortcut = |seq| {
+            let shortcut = Shortcut::new((seq, main_window_ptr));
+            let slot = SlotNoArgs::default();
+            shortcut.signals().activated().connect(&slot);
+            (shortcut, slot)
+        };
+        // /!\ Keep the shortcut named, don't use only `_`
+        // Otherwise CppBox drops from the helper above
+        let (_s, mut on_fullscreen)        = make_shortcut(&keybinds.fullscreen);
+        let (_s, mut on_chat_toggle_left)  = make_shortcut(&keybinds.chat_toggle_left);
+        let (_s, mut on_chat_toggle_right) = make_shortcut(&keybinds.chat_toggle_right);
+        let (_s, mut on_change_channel)    = make_shortcut(&keybinds.change_channel);
 
         // Slots
         poll_messages.set(|| {
