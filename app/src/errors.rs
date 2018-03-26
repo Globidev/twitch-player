@@ -1,6 +1,6 @@
+extern crate hyper;
 extern crate native_tls;
 extern crate serde_json;
-extern crate hyper;
 
 use std::io;
 use std::fmt;

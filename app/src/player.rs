@@ -1,21 +1,19 @@
 extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
+extern crate native_tls;
 extern crate serde_json;
 extern crate tokio_core;
 extern crate tokio_timer;
 extern crate tokio_tls;
-extern crate native_tls;
 
 use std::io::Write;
 use std::time::Duration;
 use std::thread;
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
-use self::futures::{Future, Stream};
-use self::futures::future::{ok, err, Either};
-use self::hyper::{Client, StatusCode, Chunk};
-use self::hyper::client::HttpConnector;
+use self::futures::{Future, Stream, future::{err, ok, Either}};
+use self::hyper::{Chunk, Client, StatusCode, client::HttpConnector};
 use self::tokio_core::reactor::Core;
 use self::tokio_timer::Timer;
 use self::serde_json::from_slice as decode;
@@ -23,8 +21,8 @@ use self::hyper_tls::HttpsConnector;
 
 use errors::PlayerError;
 use options::Options;
-use process::{run_video_player, run_chat_renderer};
-use types::*;
+use process::{run_chat_renderer, run_video_player};
+use types::{GuiSender, PlayerReceiver, Playlist, PlaylistsInfo};
 use native::{find_window_by_name, /*find_window_by_pid*/};
 
 type HttpClient = Client<HttpsConnector<HttpConnector>>;
@@ -49,7 +47,7 @@ fn ticks(duration: Duration)
 fn poll_messages<'a>(messages_in: &'a PlayerReceiver)
     -> impl Future<Item = PollResult, Error = PlayerError> + 'a
 {
-    use self::PlayerMessage::*;
+    use types::PlayerMessage::*;
     use self::PollResult::*;
 
     let to_poll_result = move |_| {
@@ -99,7 +97,7 @@ fn fetch(client: &HttpClient, url: &str, bad_status_error: BadStatusError)
 }
 
 fn fetch_segment(client: &HttpClient, segment_url: &str)
-    -> impl Future<Item = hyper::Chunk, Error = PlayerError>
+    -> impl Future<Item = Chunk, Error = PlayerError>
 {
     fetch(client, segment_url, PlayerError::FetchSegmentFail)
 }

@@ -1,4 +1,4 @@
-use std::process::{Command, Child, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::io::Result;
 
 use options::Options;

@@ -3,27 +3,32 @@ extern crate qt_gui;
 extern crate qt_widgets;
 extern crate cpp_utils;
 
-use self::qt_core::connection::Signal;
-use self::qt_core::core_application::CoreApplication;
-use self::qt_core::flags::{Flags, FlaggableEnum};
-use self::qt_core::list::ListCInt;
-use self::qt_core::qt::GlobalColor;
-use self::qt_core::qt::WindowState;
-use self::qt_core::slots::SlotNoArgs;
-use self::qt_core::string::String as QString;
-use self::qt_core::timer::Timer;
-use self::qt_gui::color::Color;
-use self::qt_gui::key_sequence::KeySequence;
-use self::qt_gui::palette::{Palette, ColorRole};
-use self::qt_gui::window::Window;
-use self::qt_widgets::application::Application;
-use self::qt_widgets::main_window::MainWindow;
-use self::qt_widgets::message_box::MessageBox;
-use self::qt_widgets::shortcut::Shortcut;
-use self::qt_widgets::splitter::Splitter;
-use self::qt_widgets::widget::Widget;
-use self::qt_widgets::input_dialog::InputDialog;
 use self::cpp_utils::StaticCast;
+use self::qt_core::{
+    connection::Signal,
+    core_application::CoreApplication,
+    flags::{Flags, FlaggableEnum},
+    list::ListCInt,
+    qt::{GlobalColor, WindowState},
+    slots::SlotNoArgs,
+    string::String as QString,
+    timer::Timer,
+};
+use self::qt_gui::{
+    color::Color,
+    key_sequence::KeySequence,
+    palette::{Palette, ColorRole},
+    window::Window,
+};
+use self::qt_widgets::{
+    application::Application,
+    input_dialog::InputDialog,
+    main_window::MainWindow,
+    message_box::MessageBox,
+    shortcut::Shortcut,
+    splitter::Splitter,
+    widget::Widget,
+};
 
 use types::{GuiReceiver, PlayerSender, PlayerMessage};
 use options::{Options, KeyBinds as KeyConfig};
@@ -128,11 +133,6 @@ fn resize_splitter(splitter: &mut Splitter, ratios: (i32, i32)) {
     sizes.append(&ratios.1);
     splitter.set_sizes(&sizes)
 }
-
-// struct Layout {
-//     main_window: CppBox<MainWindow>,
-//     splitter: CppBox<Splitter>
-// }
 
 pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) -> ! {
     use types::PlayerMessage::AppQuit;

@@ -1,11 +1,9 @@
 extern crate winapi;
 
 use self::winapi::shared::windef::HWND;
-use self::winapi::shared::minwindef::{BOOL, LPARAM, DWORD, LPDWORD, FALSE, TRUE};
+use self::winapi::shared::minwindef::{BOOL, DWORD, FALSE, LPARAM, LPDWORD, TRUE};
 use self::winapi::um::winuser::{EnumWindows, GetWindowTextW, GetWindowThreadProcessId};
 use self::winapi::ctypes::c_int;
-
-use std::slice::from_raw_parts;
 
 pub type Handle = HWND;
 
@@ -61,6 +59,7 @@ fn get_window_text(handle: Handle) -> Option<String> {
 
     if length != 0 {
         let exact_text = unsafe {
+            use std::slice::from_raw_parts;
             from_raw_parts(text_buffer.as_ptr(), length as usize)
         };
         Some(String::from_utf16_lossy(exact_text))
