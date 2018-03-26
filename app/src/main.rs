@@ -1,4 +1,5 @@
 #![feature(conservative_impl_trait)]
+#![feature(universal_impl_trait)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 #[macro_use]

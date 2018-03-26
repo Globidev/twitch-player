@@ -61,14 +61,15 @@ fn poll_messages<'a>(messages_in: &'a PlayerReceiver)
     ticks(Duration::from_millis(250))
         .map(to_poll_result)
         .skip_while(|poll_result| {
-            match poll_result {
-                &Continue => ok(true),
-                _        => ok(false)
-            }
+            let keep_polling = match *poll_result {
+                Continue => true,
+                _        => false
+            };
+            ok(keep_polling)
         })
         .into_future()
-        .map(|(r, _)| r.unwrap_or(Quit))
-        .map_err(|(e, _)| e)
+        .map(|(result, _remain)| result.unwrap_or(Quit))
+        .map_err(|(error, _remain)| error)
 }
 
 fn fetch(client: &HttpClient, url: &str, bad_status_error: BadStatusError)
@@ -78,14 +79,14 @@ fn fetch(client: &HttpClient, url: &str, bad_status_error: BadStatusError)
         Err(error) => Box::new(err(PlayerError::MalformedUrl(error))),
         Ok(uri) => {
             let future = client.get(uri)
-                .map_err(From::from)
+                .map_err(PlayerError::from)
                 .and_then(move |response| -> BoxFuture<_> {
                     match response.status() {
                         StatusCode::Ok => {
                             let future = response
                                 .body()
                                 .concat2()
-                                .map_err(From::from);
+                                .map_err(PlayerError::from);
                             Box::new(future)
                         },
                         status => Box::new(err(bad_status_error(status)))
@@ -162,7 +163,7 @@ fn segment_stream<'a>(client: &'a HttpClient, playlist_url: String)
     segments.filter_map(|opt_segment| opt_segment)
 }
 
-fn pipe_data<W: Write>(writer: &mut W, chunk: Chunk)
+fn pipe_data(writer: &mut impl Write, chunk: Chunk)
     -> impl Future<Item = (), Error = PlayerError>
 {
     match writer.write(&chunk) {
@@ -170,15 +171,15 @@ fn pipe_data<W: Write>(writer: &mut W, chunk: Chunk)
             println!("Piped {} bytes", size);
             ok(())
         },
-        Err(error) => err(From::from(error))
+        Err(error) => err(PlayerError::from(error))
     }
 }
 
-fn play_channel<'a, W: Write>(
+fn play_channel<'a>(
     client: &'a HttpClient,
-    writer: &'a mut W,
-    channel: String,
-    messages_in: &'a PlayerReceiver
+    writer: &'a mut impl Write,
+    messages_in: &'a PlayerReceiver,
+    channel: &str,
 ) -> impl Future<Item = PollResult, Error = PlayerError> + 'a
 {
     let to_poll_result = |select_result| {
@@ -188,10 +189,10 @@ fn play_channel<'a, W: Write>(
         }
     };
 
-    fetch_playlists_info(client, &channel)
+    fetch_playlists_info(client, channel)
         .and_then(move |info| {
-            let playlist_url = info.playlists[0].url.clone();
-            segment_stream(client, playlist_url)
+            let playlist_url = &info.playlists[0].url;
+            segment_stream(client, playlist_url.to_string())
                 .and_then(move |chunk| pipe_data(writer, chunk))
                 .collect()
         })
@@ -200,12 +201,11 @@ fn play_channel<'a, W: Write>(
         .map(to_poll_result)
 }
 
-fn run_impl<W: Write>(opts: Options, messages_in: PlayerReceiver, writer: &mut W)
+fn run_impl(opts: Options, messages_in: PlayerReceiver, writer: &mut impl Write)
     -> Result<(), PlayerError>
 {
     use self::PollResult::SwitchChannel;
 
-    let mut writer = writer;
     let mut core = Core::new()?;
 
     let connector = HttpsConnector::new(2, &core.handle())?;
@@ -216,7 +216,7 @@ fn run_impl<W: Write>(opts: Options, messages_in: PlayerReceiver, writer: &mut W
     let mut channel = opts.channel;
 
     loop {
-        let logic = play_channel(&client, &mut writer, channel, &messages_in);
+        let logic = play_channel(&client, writer, &messages_in, &channel);
         match core.run(logic)? {
             SwitchChannel(new_channel) => { channel = new_channel; },
             _                          => break
