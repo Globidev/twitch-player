@@ -57,6 +57,9 @@ impl Layout {
     }
 
     pub unsafe fn toggle_chat(&mut self, position: ChatPosition) {
+        if let ChatState::Visible(_) = self.chat_state {
+            self.widget_sizes = self.query_sizes()
+        }
         self.chat_state = toggle_chat_state(&self.chat_state, position);
         self.rearrange();
     }
@@ -69,8 +72,6 @@ impl Layout {
             };
             self.splitter.insert_widget(player_index, self.player_widget);
             self.splitter.insert_widget(chat_index, self.chat_widget);
-        } else {
-            self.widget_sizes = self.query_sizes();
         }
 
         self.resize();
