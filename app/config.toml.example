@@ -16,3 +16,9 @@ args = [
     "--app=https://www.twitch.tv/popout/{channel_name}/chat?popout="
 ]
 window_title_hint = "Twitch"
+
+[keybinds]
+fullscreen = "F11"
+chat_toggle_left = "Ctrl+Left"
+chat_toggle_right = "Ctrl+Right"
+change_channel = "Ctrl+O"

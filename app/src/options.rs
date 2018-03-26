@@ -48,7 +48,7 @@ pub struct Options {
 pub struct Config {
     pub video_player: ProcessConfig,
     pub chat_renderer: ProcessConfig,
-    pub keys: Option<KeyConfig>
+    pub keybinds: Option<KeyConfig>
 }
 
 #[derive(Deserialize, Debug, Clone)]

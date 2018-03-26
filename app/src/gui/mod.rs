@@ -47,7 +47,7 @@ pub fn run(opts: Options, messages_in: GuiReceiver, messages_out: PlayerSender) 
         }
     });
 
-    let keybinds = KeyBinds::from(opts.config.keys.unwrap_or_default());
+    let keybinds = KeyBinds::from(opts.config.keybinds.unwrap_or_default());
 
     let layout: RefCell<Option<Layout>> = RefCell::new(None);
 
