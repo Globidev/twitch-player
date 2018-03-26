@@ -21,15 +21,21 @@ fn run_app(opts: Options) -> thread::Result<()> {
     let (player_out, player_in) = types::player_channel();
     let (gui_out, gui_in) = types::gui_channel();
 
-    let gui_out_clone = gui_out.clone();
-    let gui_opts = opts.clone();
-    let player = thread::spawn(move || player::run(opts, player_in, gui_out_clone));
-    let gui = thread::spawn(move || gui::run(gui_opts, gui_in, player_out));
+    let player = {
+        let gui_out = gui_out.clone();
+        let opts = opts.clone();
+        thread::spawn(move || player::run(opts, player_in, gui_out))
+    };
+    let gui = {
+        thread::spawn(move || gui::run(opts, gui_in, player_out))
+    };
 
     if let Err(err) = player.join()? {
         eprintln!("Error running player: {}", err)
     }
+
     gui_out.send(types::GuiMessage::CanExit).unwrap_or_default();
+
     gui.join()?;
 
     Ok(())
