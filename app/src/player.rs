@@ -19,7 +19,7 @@ use self::tokio_timer::Timer;
 use self::serde_json::from_slice as decode;
 use self::hyper_tls::HttpsConnector;
 
-use errors::PlayerError;
+use errors::{self, PlayerError};
 use options::Options;
 use process::{run_chat_renderer, run_video_player};
 use types::{GuiSender, PlayerReceiver, Playlist, PlaylistsInfo};
@@ -217,9 +217,19 @@ fn run_impl(opts: Options, messages_in: PlayerReceiver, writer: &mut impl Write)
 
     loop {
         let logic = play_channel(&client, writer, &messages_in, &channel);
-        match core.run(logic)? {
-            SwitchChannel(new_channel) => { channel = new_channel; },
-            _                          => break
+        match core.run(logic) {
+            Ok(result) => {
+                match result {
+                    SwitchChannel(new_channel) => { channel = new_channel; },
+                    _                          => break
+                }
+            },
+            Err(error) => {
+                eprintln!("error: {}", error);
+                if errors::is_fatal(&error) {
+                    return Err(error);
+                }
+            }
         }
     }
 

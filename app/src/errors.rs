@@ -47,3 +47,13 @@ impl From<native_tls::Error> for PlayerError {
         PlayerError::TlsError(error)
     }
 }
+
+pub fn is_fatal(error: &PlayerError) -> bool {
+    use self::PlayerError::*;
+
+    match *error {
+        // Only considering Hyper's "Incomplete" errors as non fatal for now
+        HyperError(hyper::error::Error::Incomplete) => false,
+        _ => true
+    }
+}
