@@ -5,17 +5,12 @@ extern crate serde_json;
 extern crate tokio_core;
 extern crate url;
 
-#[derive(Debug, Deserialize)]
-pub struct AccessToken {
-    token: String,
-    #[serde(rename = "sig")]
-    signature: String
-}
-
 use self::futures::{Future, Stream};
 use self::hyper::{Client, client::HttpConnector};
 
 type HttpClient = Client<::hyper_tls::HttpsConnector<HttpConnector>>;
+
+use super::types::{AccessToken, StreamIndex};
 
 fn access_token_uri(channel: &str) -> hyper::Uri {
     let url = format!(
@@ -37,7 +32,7 @@ pub fn access_token(client: &HttpClient, channel: &str, client_id: &str)
 
     client.request(request)
         .and_then(|response| {
-            println!("{:?}", response);
+            // println!("{:?}", response);
             response.body().concat2()
         })
         .map(|chunk| json_decode(&chunk).unwrap())
@@ -62,42 +57,15 @@ fn stream_index_uri(channel: &str, token: &AccessToken) -> hyper::Uri {
     url.parse().unwrap()
 }
 
-#[derive(Debug)]
-pub struct PlaylistInfo {
-    url: String
-}
-
-#[derive(Debug)]
-pub struct StreamIndex {
-    playlist_infos: Vec<PlaylistInfo>
-}
-
-fn parse_stream_index(data: &[u8]) -> StreamIndex {
-    use std::str::from_utf8;
-
-    named!(playlist_info_parser<PlaylistInfo>, do_parse!(
-        take_until!("http://") >>
-        url: take_until!("\n") >> tag!("\n") >>
-        (PlaylistInfo { url: String::from(from_utf8(url).unwrap_or_default()) })
-    ));
-
-    named!(stream_index_parser<StreamIndex>, do_parse!(
-        take_until!("#EXT-X-MEDIA:TYPE") >>
-        playlist_infos: many1!(playlist_info_parser) >>
-        (StreamIndex { playlist_infos: playlist_infos })
-    ));
-
-    let (_, o) = stream_index_parser(data).unwrap();
-    o
-}
-
 pub fn stream_index(client: &HttpClient, channel: &str, token: &AccessToken)
     -> impl Future<Item = StreamIndex, Error = hyper::Error>
 {
+    use super::m3u8::parse_stream_index;
+
     client.get(stream_index_uri(channel, token))
         .and_then(|response| {
-            println!("{:?}", response);
+            // println!("{:?}", response);
             response.body().concat2()
         })
-        .map(|chunk| parse_stream_index(&chunk))
+        .map(|chunk| parse_stream_index(&chunk).unwrap())
 }
