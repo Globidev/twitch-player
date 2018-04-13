@@ -31,6 +31,8 @@ fn main() {
     let app = twitch::api::access_token(&client, &channel, CLIENT_ID)
         .and_then(|token| twitch::api::stream_index(&client, &channel, &token));
 
-    let index = core.run(app).unwrap();
-    println!("{:#?}", index);
+    match core.run(app) {
+        Ok(index)  => println!("{:#?}", index),
+        Err(error) => println!("{:#?}", error),
+    }
 }
