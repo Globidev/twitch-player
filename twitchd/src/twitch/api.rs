@@ -5,15 +5,14 @@ extern crate serde_json;
 extern crate tokio_core;
 extern crate url;
 
-use self::futures::{Future, Stream, future};
-use self::hyper::{Client, client::HttpConnector};
-
-type HttpClient = Client<::hyper_tls::HttpsConnector<HttpConnector>>;
-type ApiFuture<T> = Box<Future<Item = T, Error = ApiError>>;
-
+use types::HttpsClient;
 use super::types::{AccessToken, StreamIndex};
 
-fn fetch(client: &HttpClient, request: hyper::Request)
+use self::futures::{Future, Stream, future};
+
+type ApiFuture<T> = Box<Future<Item = T, Error = ApiError>>;
+
+fn fetch(client: &HttpsClient, request: hyper::Request)
     -> impl Future<Item = hyper::Chunk, Error = ApiError>
 {
     use hyper::StatusCode;
@@ -42,7 +41,7 @@ fn access_token_uri(channel: &str) -> hyper::Uri {
     url.parse().unwrap()
 }
 
-pub fn access_token(client: &HttpClient, channel: &str, client_id: &str)
+pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str)
     -> impl Future<Item = AccessToken, Error = ApiError>
 {
     use self::hyper::{Request, Get};
@@ -83,7 +82,7 @@ fn stream_index_uri(channel: &str, token: &AccessToken) -> hyper::Uri {
     url.parse().unwrap()
 }
 
-pub fn stream_index(client: &HttpClient, channel: &str, token: &AccessToken)
+pub fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
     -> impl Future<Item = StreamIndex, Error = ApiError>
 {
     use self::hyper::{Request, Get};

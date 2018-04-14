@@ -12,6 +12,7 @@ extern crate num_cpus;
 extern crate futures;
 
 mod twitch;
+mod types;
 
 use futures::Future;
 
