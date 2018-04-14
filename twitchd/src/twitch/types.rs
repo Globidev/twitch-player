@@ -7,13 +7,13 @@ pub struct AccessToken {
     pub signature: String
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StreamIndex {
     pub twitch_info: TwitchInfo,
     pub playlist_infos: Vec<PlaylistInfo>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TwitchInfo {
     pub node: String,
     pub manifest_node: String,
@@ -30,14 +30,14 @@ pub struct TwitchInfo {
     pub stream_time: f64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PlaylistInfo {
     pub media_info: MediaInfo,
     pub stream_info: StreamInfo,
     pub url: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MediaInfo {
     pub type_: MediaType,
     pub group_id: String,
@@ -46,12 +46,12 @@ pub struct MediaInfo {
     pub default: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MediaType {
     Video,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StreamInfo {
     pub program_id: u32,
     pub bandwidth: u64,
@@ -60,7 +60,7 @@ pub struct StreamInfo {
     pub video: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Resolution {
     pub width: u32,
     pub height: u32,

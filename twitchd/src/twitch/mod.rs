@@ -1,3 +1,3 @@
 pub mod api;
-mod types;
+pub mod types;
 mod m3u8;
