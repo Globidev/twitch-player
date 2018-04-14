@@ -1,6 +1,7 @@
 extern crate hyper;
 extern crate futures;
 extern crate url;
+extern crate serde;
 extern crate serde_json;
 
 use self::hyper::server;
@@ -28,37 +29,16 @@ impl TwitchdApi {
     }
 
     fn get_stream_index(&self, channel: &str) -> ApiFuture {
-        use self::serde_json::to_string as encode;
-
-        let return_index = |index| {
-            use self::hyper::mime::APPLICATION_JSON;
-
-            let return_encode_error = |error| {
-                let detail = format!("Encoding error: {}", error);
-                server::Response::new()
-                    .with_status(hyper::StatusCode::InternalServerError)
-                    .with_body(detail)
-            };
-
-            encode(&index)
-                .map(|data|
-                    server::Response::new()
-                        .with_header(hyper::header::ContentLength(data.len() as u64))
-                        .with_header(hyper::header::ContentType(APPLICATION_JSON))
-                        .with_body(data)
-                )
-                .unwrap_or_else(return_encode_error)
-        };
-
         let return_error = |error| {
-            match error {
+            let response = match error {
                 IndexError::NotFound          => not_found(),
                 IndexError::Unexpected(error) => server_error(&error)
-            }
+            };
+            Ok(response)
         };
 
         let response = self.state.index_cache.get(channel)
-            .map(return_index)
+            .map(json_response)
             .or_else(return_error);
 
         Box::new(response)
@@ -84,38 +64,56 @@ impl server::Service for TwitchdApi {
             // Stream index
             (Get, "/stream_index") => {
                 match params.get("channel") {
-                    None          => bad_request("Missing channel"),
+                    None          => respond(bad_request("Missing channel")),
                     Some(channel) => self.get_stream_index(&channel)
                 }
             },
             // Default => 404
-            _ => not_found()
+            _ => respond(not_found())
         }
     }
 }
 
-fn not_found() -> ApiFuture {
-    use self::hyper::StatusCode::NotFound;
-
-    let response = server::Response::new()
-        .with_status(NotFound);
-    Box::new(future::ok(response))
+fn not_found() -> server::Response {
+    server::Response::new()
+        .with_status(hyper::StatusCode::NotFound)
 }
 
-fn bad_request(detail: &str) -> ApiFuture {
-    use self::hyper::StatusCode::BadRequest;
-
-    let response = server::Response::new()
-        .with_status(BadRequest)
-        .with_body(String::from(detail));
-    Box::new(future::ok(response))
+fn bad_request(detail: &str) -> server::Response {
+    server::Response::new()
+        .with_status(hyper::StatusCode::BadRequest)
+        .with_body(String::from(detail))
 }
 
-fn server_error(detail: &str) -> ApiFuture {
-    use self::hyper::StatusCode::InternalServerError;
+fn server_error(detail: &str) -> server::Response {
+    server::Response::new()
+        .with_status(hyper::StatusCode::InternalServerError)
+        .with_body(String::from(detail))
+}
 
-    let response = server::Response::new()
-        .with_status(InternalServerError)
-        .with_body(String::from(detail));
+fn json_response(value: impl serde::Serialize) -> server::Response {
+    use self::serde_json::to_vec as encode;
+    use self::hyper::{header, mime};
+
+    let reply_with_data = |data: Vec<u8>| {
+        server::Response::new()
+            .with_header(header::ContentLength(data.len() as u64))
+            .with_header(header::ContentType(mime::APPLICATION_JSON))
+            .with_body(data)
+    };
+
+    let reply_with_error = |error| {
+        let detail = format!("Encoding error: {}", error);
+        server::Response::new()
+            .with_status(hyper::StatusCode::InternalServerError)
+            .with_body(detail)
+    };
+
+    encode(&value)
+        .map(reply_with_data)
+        .unwrap_or_else(reply_with_error)
+}
+
+fn respond(response: server::Response) -> ApiFuture {
     Box::new(future::ok(response))
 }
