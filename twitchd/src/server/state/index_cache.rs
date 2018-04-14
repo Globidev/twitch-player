@@ -81,15 +81,16 @@ impl IndexCache {
             }
         };
 
+        let expire_cache_later = Timer::default()
+            .sleep(EXPIRE_TIMEOUT)
+            .then(expire_cache);
+
         let cache_result = {
             let channel = channel.clone();
             let cache = Rc::clone(&self.cache);
             let handle = Rc::clone(&self.handle);
             move |index: StreamIndex| {
                 cache.borrow_mut().insert(channel, index.clone());
-                let expire_cache_later = Timer::default()
-                    .sleep(EXPIRE_TIMEOUT)
-                    .then(expire_cache);
                 handle.spawn(expire_cache_later);
                 Ok(index)
             }
