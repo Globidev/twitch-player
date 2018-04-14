@@ -4,7 +4,7 @@ extern crate futures;
 use self::hyper::server;
 use self::futures::{Future, future};
 
-use state::State;
+use super::state::State;
 
 use std::rc::Rc;
 

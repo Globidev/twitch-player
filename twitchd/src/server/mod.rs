@@ -2,9 +2,10 @@ extern crate tokio_core;
 extern crate futures;
 extern crate hyper;
 
+mod state;
 mod service;
 
-use state::State;
+use self::state::State;
 use self::service::TwitchdApi;
 
 use std::net::SocketAddr;
