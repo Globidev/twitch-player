@@ -18,10 +18,9 @@ mod types;
 use futures::{Future, Stream, future};
 
 use std::rc::Rc;
-use std::cell::RefCell;
 
 struct TwitchdApi {
-    index_cache: Rc<RefCell<state::index_cache::IndexCache>>
+    index_cache: Rc<state::index_cache::IndexCache>
 }
 
 impl hyper::server::Service for TwitchdApi {
@@ -34,8 +33,7 @@ impl hyper::server::Service for TwitchdApi {
         let channel = &req.path()[1..];
         println!("{}", channel);
 
-        let mut cache = self.index_cache.borrow_mut();
-        let future = cache.get(channel)
+        let future = self.index_cache.get(channel)
             .map(|index| {
                 hyper::server::Response::new()
                     .with_body(format!("{:#?}", index))
@@ -60,7 +58,7 @@ fn main() {
         .build(handle);
 
     let index_cache = state::index_cache::IndexCache::new(client);
-    let index_cache_rc = Rc::new(RefCell::new(index_cache));
+    let index_cache_rc = Rc::new(index_cache);
 
     let addr = "0.0.0.0:8080".parse().unwrap();
     let serve = hyper::server::Http::new()

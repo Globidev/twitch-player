@@ -30,7 +30,7 @@ impl IndexCache {
         }
     }
 
-    pub fn get(&mut self, channel: &str)
+    pub fn get(&self, channel: &str)
         -> Box<Future<Item = StreamIndex, Error = IndexError>>
     {
         let channel_lc = channel.to_lowercase();
@@ -44,7 +44,7 @@ impl IndexCache {
         }
     }
 
-    fn fetch_and_cache(&mut self, channel: String)
+    fn fetch_and_cache(&self, channel: String)
         -> impl Future<Item = StreamIndex, Error = IndexError>
     {
         use twitch::api::{access_token, stream_index};
@@ -60,32 +60,31 @@ impl IndexCache {
         let cache_result = {
             let channel = channel.clone();
             let cache = Rc::clone(&self.cache);
-            move |index_result: Result<StreamIndex, _>| {
-                index_result
-                    .map_err(to_index_error)
-                    .map(|index| {
-                        cache.borrow_mut().insert(channel, index.clone());
-                        index
-                    })
+            move |index: StreamIndex| {
+                cache.borrow_mut().insert(channel, index.clone());
+                Ok(index)
             }
         };
 
         fetch_token
             .and_then(fetch_index)
-            .then(cache_result)
-    }
-}
-
-fn to_index_error(error: ApiError) -> IndexError {
-    use hyper::StatusCode::NotFound;
-
-    match error {
-        ApiError::BadStatus(NotFound) => IndexError::NotFound,
-        _ => IndexError::Unexpected(error.to_string())
+            .and_then(cache_result)
+            .map_err(IndexError::from)
     }
 }
 
 pub enum IndexError {
     NotFound,
     Unexpected(String)
+}
+
+impl From<ApiError> for IndexError {
+    fn from(error: ApiError) -> Self {
+        use hyper::StatusCode::NotFound;
+
+        match error {
+            ApiError::BadStatus(NotFound) => IndexError::NotFound,
+            _ => IndexError::Unexpected(error.to_string())
+        }
+    }
 }
