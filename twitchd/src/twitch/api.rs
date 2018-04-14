@@ -15,7 +15,7 @@ type ApiFuture<T> = Box<Future<Item = T, Error = ApiError>>;
 fn fetch(client: &HttpsClient, request: hyper::Request)
     -> impl Future<Item = hyper::Chunk, Error = ApiError>
 {
-    use hyper::StatusCode;
+    use self::hyper::StatusCode;
 
     client.request(request)
         .map_err(ApiError::from)

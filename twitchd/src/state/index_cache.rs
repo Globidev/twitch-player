@@ -4,16 +4,14 @@ extern crate hyper;
 extern crate hyper_tls;
 extern crate tokio_timer;
 
-use futures::{Future, future};
-
 use types::{HttpsClient, Handle};
 
 use twitch::api::ApiError;
 use twitch::types::StreamIndex;
 
+use self::futures::{Future, future};
 use self::hyper::Client;
 use self::hyper_tls::HttpsConnector;
-
 use self::tokio_timer::Timer;
 
 use std::rc::Rc;
@@ -111,7 +109,7 @@ pub enum IndexError {
 
 impl From<ApiError> for IndexError {
     fn from(error: ApiError) -> Self {
-        use hyper::StatusCode::NotFound;
+        use self::hyper::StatusCode::NotFound;
 
         match error {
             ApiError::BadStatus(NotFound) => IndexError::NotFound,
