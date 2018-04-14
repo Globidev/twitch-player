@@ -1,6 +1,7 @@
 extern crate hyper;
 extern crate futures;
 extern crate url;
+extern crate serde_json;
 
 use self::hyper::server;
 use self::futures::{Future, future};
@@ -27,9 +28,26 @@ impl TwitchdApi {
     }
 
     fn get_stream_index(&self, channel: &str) -> ApiFuture {
+        use self::serde_json::to_string as encode;
+
         let return_index = |index| {
-            server::Response::new()
-                .with_body(format!("{:#?}", index))
+            use self::hyper::mime::APPLICATION_JSON;
+
+            let return_encode_error = |error| {
+                let detail = format!("Encoding error: {}", error);
+                server::Response::new()
+                    .with_status(hyper::StatusCode::InternalServerError)
+                    .with_body(detail)
+            };
+
+            encode(&index)
+                .map(|data|
+                    server::Response::new()
+                        .with_header(hyper::header::ContentLength(data.len() as u64))
+                        .with_header(hyper::header::ContentType(APPLICATION_JSON))
+                        .with_body(data)
+                )
+                .unwrap_or_else(return_encode_error)
         };
 
         let return_error = |error| {
