@@ -1,31 +1,48 @@
 extern crate futures;
+extern crate num_cpus;
+extern crate hyper;
+extern crate hyper_tls;
+extern crate tokio_timer;
 
 use futures::{Future, future};
 
-use std::collections::HashMap;
-
-use types::HttpsClient;
+use types::{HttpsClient, Handle};
 
 use twitch::api::ApiError;
 use twitch::types::StreamIndex;
+
+use self::hyper::Client;
+use self::hyper_tls::HttpsConnector;
+
+use self::tokio_timer::Timer;
+
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::time::Duration;
+use std::collections::HashMap;
 
 type Channel = String;
 type ChannelIndexes = HashMap<Channel, StreamIndex>;
 
 const CLIENT_ID: &str = "alcht5gave31yctuzv48v2i1hlwq53";
-
-use std::rc::Rc;
-use std::cell::RefCell;
+const EXPIRE_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub struct IndexCache {
     client: Rc<HttpsClient>,
+    handle: Rc<Handle>,
     cache: Rc<RefCell<ChannelIndexes>>
 }
 
 impl IndexCache {
-    pub fn new(client: HttpsClient) -> Self {
+    pub fn new(handle: &Handle) -> Self {
+        let connector = HttpsConnector::new(num_cpus::get(), handle).unwrap();
+        let client = Client::configure()
+            .connector(connector)
+            .build(handle);
+
         Self {
             client: Rc::new(client),
+            handle: Rc::new(handle.clone()),
             cache: Rc::new(RefCell::new(HashMap::new()))
         }
     }
@@ -57,11 +74,25 @@ impl IndexCache {
             move |token| stream_index(&client, &channel, &token)
         };
 
+        let expire_cache = {
+            let channel = channel.clone();
+            let cache = Rc::clone(&self.cache);
+            move |_| {
+                cache.borrow_mut().remove(&channel);
+                Ok(())
+            }
+        };
+
         let cache_result = {
             let channel = channel.clone();
             let cache = Rc::clone(&self.cache);
+            let handle = Rc::clone(&self.handle);
             move |index: StreamIndex| {
                 cache.borrow_mut().insert(channel, index.clone());
+                let expire_cache_later = Timer::default()
+                    .sleep(EXPIRE_TIMEOUT)
+                    .then(expire_cache);
+                handle.spawn(expire_cache_later);
                 Ok(index)
             }
         };

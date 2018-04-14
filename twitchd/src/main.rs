@@ -48,16 +48,10 @@ impl hyper::server::Service for TwitchdApi {
 }
 
 fn main() {
-    use ::hyper_tls::HttpsConnector;
-
     let mut core = tokio_core::reactor::Core::new().unwrap();
     let handle = &core.handle();
 
-    let client = hyper::Client::configure()
-        .connector(HttpsConnector::new(num_cpus::get(), handle).unwrap())
-        .build(handle);
-
-    let index_cache = state::index_cache::IndexCache::new(client);
+    let index_cache = state::index_cache::IndexCache::new(handle);
     let index_cache_rc = Rc::new(index_cache);
 
     let addr = "0.0.0.0:8080".parse().unwrap();
@@ -67,7 +61,7 @@ fn main() {
         ).unwrap();
 
     let server = serve.for_each(|incoming| {
-        let future = incoming.map_err(|e| println!("Unexpected error: {}", e));
+        let future = incoming.map_err(|e| eprintln!("Unexpected error: {}", e));
         handle.spawn(future);
         futures::future::ok(())
     });
