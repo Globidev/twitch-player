@@ -92,12 +92,8 @@ impl server::Service for TwitchdApi {
 
     fn call(&self, req: Self::Request) -> Self::Future {
         use self::hyper::Method::Get;
-        use self::url::form_urlencoded::parse as parse_query;
 
-        let query_bytes = req.query().unwrap_or_default().as_bytes();
-        let params: QueryParams = parse_query(query_bytes)
-            .map(|(k, v)| (String::from(k), String::from(v)))
-            .collect();
+        let params = parse_query_params(req.query().unwrap_or_default());
 
         match (req.method(), req.path()) {
             // Stream index
@@ -162,4 +158,12 @@ fn json_response(value: impl serde::Serialize) -> server::Response {
 
 fn respond(response: server::Response) -> ApiFuture {
     Box::new(future::ok(response))
+}
+
+fn parse_query_params(query: &str) -> QueryParams {
+    use self::url::form_urlencoded::parse as parse_query;
+
+    parse_query(query.as_bytes())
+        .map(|(k, v)| (String::from(k), String::from(v)))
+        .collect()
 }
