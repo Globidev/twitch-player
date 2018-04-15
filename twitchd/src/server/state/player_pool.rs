@@ -1,4 +1,7 @@
 extern crate futures;
+extern crate hyper;
+extern crate hyper_tls;
+extern crate num_cpus;
 
 use types::Handle;
 
@@ -40,9 +43,16 @@ impl PlayerPool {
 
     pub fn add_player(&self, stream: Stream, playlist_info: PlaylistInfo, sink: PlayerSink) {
         let new_player = {
+            use self::hyper::Client;
+            use self::hyper_tls::HttpsConnector;
+
             let stream = stream.clone();
             move || {
-                let player = StreamPlayer::new(playlist_info);
+                let connector = HttpsConnector::new(num_cpus::get(), &self.handle).unwrap();
+                let client = Client::configure()
+                    .connector(connector)
+                    .build(&self.handle);
+                let player = StreamPlayer::new(client, playlist_info);
                 self.play(&player, stream);
                 player
             }
