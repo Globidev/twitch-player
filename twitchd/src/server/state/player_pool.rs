@@ -16,14 +16,14 @@ type Quality = String;
 type Stream = (Channel, Quality);
 
 pub struct PlayerPool {
-    handle: Rc<Handle>,
+    handle: Handle,
     players: Rc<RefCell<HashMap<Stream, StreamPlayer>>>,
 }
 
 impl PlayerPool {
     pub fn new(handle: &Handle) -> Self {
         Self {
-            handle: Rc::new(handle.clone()),
+            handle: handle.clone(),
             players: Rc::new(RefCell::new(HashMap::new())),
         }
     }

@@ -7,7 +7,6 @@ pub mod stream_player;
 pub struct State {
     pub index_cache: index_cache::IndexCache,
     pub player_pool: player_pool::PlayerPool,
-    pub handle: Handle,
 }
 
 impl State {
@@ -15,7 +14,6 @@ impl State {
         Self {
             index_cache: index_cache::IndexCache::new(handle),
             player_pool: player_pool::PlayerPool::new(handle),
-            handle: handle.clone()
         }
     }
 }
