@@ -6,13 +6,13 @@ extern crate tokio_core;
 extern crate url;
 
 use types::HttpsClient;
-use super::types::{AccessToken, StreamIndex};
+use super::types::{AccessToken, StreamIndex, Playlist};
 
 use self::futures::{Future, Stream, future};
 
 type ApiFuture<T> = Box<Future<Item = T, Error = ApiError>>;
 
-fn fetch(client: &HttpsClient, request: hyper::Request)
+pub fn fetch(client: &HttpsClient, request: hyper::Request)
     -> impl Future<Item = hyper::Chunk, Error = ApiError>
 {
     use self::hyper::StatusCode;
@@ -100,6 +100,28 @@ pub fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
                 }
             }
         })
+}
+
+fn parse_playlist(data: hyper::Chunk) -> Playlist {
+    use std::str::from_utf8;
+    use std::string::ToString;
+
+    from_utf8(&data).unwrap_or("")
+        .split('\n')
+        .filter(|line| line.starts_with("http://"))
+        .map(ToString::to_string)
+        .collect()
+}
+
+pub fn playlist(client: &HttpsClient, url: &str)
+    -> impl Future<Item = Playlist, Error = ApiError>
+{
+    use self::hyper::{Request, Get};
+
+    let request = Request::new(Get, url.parse().unwrap_or_default());
+
+    fetch(client, request)
+        .map(parse_playlist)
 }
 
 use std::{error, fmt};

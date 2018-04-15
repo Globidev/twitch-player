@@ -65,3 +65,6 @@ pub struct Resolution {
     pub width: u32,
     pub height: u32,
 }
+
+pub type SegmentUrl = String;
+pub type Playlist = Vec<SegmentUrl>;
