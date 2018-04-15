@@ -12,6 +12,8 @@ use super::state::{index_cache::IndexError, State};
 use std::rc::Rc;
 use std::collections::HashMap;
 
+use twitch::types::StreamIndex;
+
 pub struct TwitchdApi {
     state: Rc<State>
 }
@@ -43,6 +45,43 @@ impl TwitchdApi {
 
         Box::new(response)
     }
+
+    fn play_stream(&self, channel: &str, params: &QueryParams) -> ApiFuture {
+        let stream = (String::from(channel), params.get("quality").map(Clone::clone).unwrap_or_default());
+        if self.state.player_pool.is_playing(&stream) {
+            let (sink, body) = hyper::Body::pair();
+            self.state.player_pool.add_client(stream, sink);
+            let response = server::Response::new()
+                .with_body(body);
+            respond(response)
+        } else {
+            let return_error = |error| {
+                let response = match error {
+                    IndexError::NotFound          => not_found(),
+                    IndexError::Unexpected(error) => server_error(&error)
+                };
+                Ok(response)
+            };
+
+            let stream_response = {
+                let state = Rc::clone(&self.state);
+                move |index: StreamIndex| {
+                    let (sink, body) = hyper::Body::pair();
+                    let playlist_info = &index.playlist_infos[0];
+                    state.player_pool.add_player(stream, playlist_info.clone(), sink);
+                    let response = server::Response::new()
+                        .with_body(body);
+                    response
+                }
+            };
+
+            let response = self.state.index_cache.get(channel)
+                .map(stream_response)
+                .or_else(return_error);
+
+            Box::new(response)
+        }
+    }
 }
 
 impl server::Service for TwitchdApi {
@@ -66,6 +105,13 @@ impl server::Service for TwitchdApi {
                 match params.get("channel") {
                     None          => respond(bad_request("Missing channel")),
                     Some(channel) => self.get_stream_index(&channel)
+                }
+            },
+            // Video stream
+            (Get, "/play") => {
+                match params.get("channel") {
+                    None          => respond(bad_request("Missing channel")),
+                    Some(channel) => self.play_stream(&channel, &params)
                 }
             },
             // Default => 404
