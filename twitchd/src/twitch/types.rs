@@ -68,3 +68,18 @@ pub struct Resolution {
 
 pub type SegmentUrl = String;
 pub type Playlist = Vec<SegmentUrl>;
+
+pub type Channel = String;
+pub type Stream = (Channel, Quality);
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Quality {
+    Exact(String),
+    Approx(ApproxQuality)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ApproxQuality {
+    Best,
+    Worst
+}
