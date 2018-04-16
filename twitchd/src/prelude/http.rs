@@ -1,14 +1,21 @@
+extern crate futures;
 extern crate hyper;
 extern crate hyper_tls;
 extern crate num_cpus;
+extern crate url;
 
+use self::futures::sync::mpsc;
 use self::hyper::{Client, client::HttpConnector};
 use self::hyper_tls::{HttpsConnector, Error as TlsError};
 
 use super::asio::Handle;
 use super::futures::*;
 
+use std::collections::HashMap;
+
 pub type HttpsClient = Client<HttpsConnector<HttpConnector>>;
+pub type QueryParams = HashMap<String, String>;
+pub type ResponseSink = mpsc::Sender<Result<hyper::Chunk, hyper::Error>>;
 
 pub fn http_client(handle: &Handle) -> Result<HttpsClient, TlsError> {
     let connector = HttpsConnector::new(num_cpus::get(), handle)?;
@@ -20,12 +27,28 @@ pub fn http_client(handle: &Handle) -> Result<HttpsClient, TlsError> {
     Ok(client)
 }
 
+pub fn parse_query_params(query: &str) -> QueryParams {
+    use self::url::form_urlencoded::parse as parse_query;
+
+    parse_query(query.as_bytes())
+        .map(|(k, v)| (String::from(k), String::from(v)))
+        .collect()
+}
+
 pub fn fetch(client: &HttpsClient, request: hyper::Request)
     -> impl Future<Item = hyper::Chunk, Error = HttpError>
 {
     client.request(request)
         .map_err(HttpError::NetworkError)
         .and_then(read_response)
+}
+
+pub fn streaming_response() -> (ResponseSink, hyper::Response) {
+    let (sink, body) = hyper::Body::pair();
+    let response = hyper::Response::new()
+        .with_body(body);
+
+    (sink, response)
 }
 
 fn read_response(response: hyper::Response)

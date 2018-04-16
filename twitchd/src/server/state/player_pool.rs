@@ -3,15 +3,11 @@ use prelude::http::{HttpsClient, http_client};
 use prelude::futures::*;
 
 use super::stream_player::{StreamPlayer, PlayerSink};
-use twitch::types::PlaylistInfo;
+use twitch::types::{PlaylistInfo, Stream};
 
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
-
-type Channel = String;
-type Quality = String;
-type Stream = (Channel, Quality);
 
 pub struct PlayerPool {
     handle: Handle,
@@ -29,22 +25,32 @@ impl PlayerPool {
     }
 
     pub fn is_playing(&self, stream: &Stream) -> bool {
-        self.players.borrow().contains_key(&stream)
+        self.players.borrow().contains_key(stream)
     }
 
-    pub fn add_client(&self, stream: Stream, sink: PlayerSink) {
-        if let Some(player) = self.players.borrow().get(&stream) {
-            player.add_sink(sink)
+    pub fn add_sink(&self, stream: &Stream, sink: PlayerSink) {
+        if let Some(player) = self.players.borrow().get(stream) {
+            player.add_sink(sink);
         }
     }
 
-    pub fn add_player(&self, stream: Stream, playlist_info: PlaylistInfo, sink: PlayerSink) {
-        let new_player = {
+    pub fn add_player(&self, stream: Stream, playlist: PlaylistInfo, sink: PlayerSink) {
+        let remove_player = {
             let stream = stream.clone();
+            let players = Rc::clone(&self.players);
+            move |_result| {
+                players.borrow_mut().remove(&stream);
+                Ok(())
+            }
+        };
+
+        let new_player = {
             let client = self.client.clone();
             move || {
-                let player = StreamPlayer::new(client, playlist_info);
-                self.play(&player, stream);
+                let player = StreamPlayer::new(client);
+                let future = player.play(playlist)
+                    .then(remove_player);
+                self.handle.spawn(future);
                 player
             }
         };
@@ -53,20 +59,5 @@ impl PlayerPool {
             .entry(stream)
             .or_insert_with(new_player)
             .add_sink(sink);
-    }
-
-    fn play(&self, player: &StreamPlayer, stream: Stream) {
-        let remove_player = {
-            let players = Rc::clone(&self.players);
-            move |result| {
-                players.borrow_mut().remove(&stream);
-                Ok(())
-            }
-        };
-
-        let future = player.play()
-            .then(remove_player);
-
-        self.handle.spawn(future);
     }
 }

@@ -5,80 +5,83 @@ extern crate serde_json;
 
 use self::hyper::server;
 
-use prelude::futures::*;
-use twitch::types::StreamIndex;
-use super::state::{index_cache::IndexError, State};
+use prelude::futures::{Future, future};
+use prelude::http::{QueryParams, parse_query_params, streaming_response};
+use twitch::types::{StreamIndex, Quality, Stream};
+use twitch::utils::find_playlist;
+use super::state::{State, index_cache::IndexError};
 
 use std::rc::Rc;
-use std::collections::HashMap;
-
-pub struct TwitchdApi {
-    state: Rc<State>
-}
 
 type ApiRequest = server::Request;
 type ApiResponse = server::Response;
 type ApiError = hyper::Error;
 type ApiFuture = Box<Future<Item = ApiResponse, Error = ApiError>>;
 
-type QueryParams = HashMap<String, String>;
+pub struct TwitchdApi {
+    state: Rc<State>
+}
 
 impl TwitchdApi {
     pub fn new(state: &Rc<State>) -> Self {
         Self { state: Rc::clone(state) }
     }
 
-    fn get_stream_index(&self, channel: &str) -> ApiFuture {
-        let return_error = |error| {
-            let response = match error {
-                IndexError::NotFound          => not_found(),
-                IndexError::Unexpected(error) => server_error(&error)
-            };
-            Ok(response)
-        };
+    fn get_stream_index(&self, params: QueryParams) -> ApiFuture {
+        match params.get("channel") {
+            None          => respond(bad_request("Missing channel")),
+            Some(channel) => {
+                let response = self.state.index_cache.get(channel)
+                    .map(json_response)
+                    .or_else(|error| Ok(index_error_response(error)));
 
-        let response = self.state.index_cache.get(channel)
-            .map(json_response)
-            .or_else(return_error);
-
-        Box::new(response)
+                Box::new(response)
+            }
+        }
     }
 
-    fn play_stream(&self, channel: &str, params: &QueryParams) -> ApiFuture {
-        let stream = (String::from(channel), params.get("quality").map(Clone::clone).unwrap_or_default());
-        if self.state.player_pool.is_playing(&stream) {
-            let (sink, body) = hyper::Body::pair();
-            self.state.player_pool.add_client(stream, sink);
-            let response = server::Response::new()
-                .with_body(body);
-            respond(response)
-        } else {
-            let return_error = |error| {
-                let response = match error {
-                    IndexError::NotFound          => not_found(),
-                    IndexError::Unexpected(error) => server_error(&error)
-                };
-                Ok(response)
-            };
+    fn get_video_stream(&self, params: QueryParams) -> ApiFuture {
+        match params.get("channel") {
+            None          => respond(bad_request("Missing channel")),
+            Some(channel) => {
+                let quality = params.get("quality")
+                    .map(|raw_quality| Quality::from(raw_quality.clone()))
+                    .unwrap_or_default();
+                let stream = (channel.clone(), quality);
 
-            let stream_response = {
-                let state = Rc::clone(&self.state);
-                move |index: StreamIndex| {
-                    let (sink, body) = hyper::Body::pair();
-                    let playlist_info = &index.playlist_infos[0];
-                    state.player_pool.add_player(stream, playlist_info.clone(), sink);
-                    let response = server::Response::new()
-                        .with_body(body);
-                    response
+                if self.state.player_pool.is_playing(&stream) {
+                    let (sink, response) = streaming_response();
+                    self.state.player_pool.add_sink(&stream, sink);
+                    respond(response)
+                } else {
+                    self.fetch_and_play(stream)
                 }
-            };
-
-            let response = self.state.index_cache.get(channel)
-                .map(stream_response)
-                .or_else(return_error);
-
-            Box::new(response)
+            }
         }
+    }
+
+    fn fetch_and_play(&self, stream: Stream) -> ApiFuture {
+        let (channel, quality) = stream.clone();
+
+        let stream_response = {
+            let state = Rc::clone(&self.state);
+            move |index: StreamIndex| {
+                match find_playlist(index, &quality) {
+                    None                => not_found(),
+                    Some(playlist) => {
+                        let (sink, response) = streaming_response();
+                        state.player_pool.add_player(stream, playlist, sink);
+                        response
+                    }
+                }
+            }
+        };
+
+        let response = self.state.index_cache.get(&channel)
+            .map(stream_response)
+            .or_else(|error| Ok(index_error_response(error)));
+
+        Box::new(response)
     }
 }
 
@@ -91,52 +94,42 @@ impl server::Service for TwitchdApi {
     fn call(&self, req: Self::Request) -> Self::Future {
         use self::hyper::Method::Get;
 
-        let params = parse_query_params(req.query().unwrap_or_default());
+        let params = req.query()
+            .map(parse_query_params)
+            .unwrap_or_default();
 
         match (req.method(), req.path()) {
-            // Stream index
-            (Get, "/stream_index") => {
-                match params.get("channel") {
-                    None          => respond(bad_request("Missing channel")),
-                    Some(channel) => self.get_stream_index(&channel)
-                }
-            },
-            // Video stream
-            (Get, "/play") => {
-                match params.get("channel") {
-                    None          => respond(bad_request("Missing channel")),
-                    Some(channel) => self.play_stream(&channel, &params)
-                }
-            },
+            (Get, "/stream_index") => self.get_stream_index(params),
+            (Get, "/play")         => self.get_video_stream(params),
             // Default => 404
             _ => respond(not_found())
         }
     }
 }
 
-fn not_found() -> server::Response {
-    server::Response::new()
+fn not_found() -> ApiResponse {
+    ApiResponse::new()
         .with_status(hyper::StatusCode::NotFound)
 }
 
-fn bad_request(detail: &str) -> server::Response {
-    server::Response::new()
+fn bad_request(detail: &str) -> ApiResponse {
+    ApiResponse::new()
         .with_status(hyper::StatusCode::BadRequest)
         .with_body(String::from(detail))
 }
 
-fn server_error(detail: &str) -> server::Response {
-    server::Response::new()
+fn server_error(detail: &str) -> ApiResponse {
+    ApiResponse::new()
         .with_status(hyper::StatusCode::InternalServerError)
         .with_body(String::from(detail))
 }
 
-fn json_response(value: impl serde::Serialize) -> server::Response {
+fn json_response(value: impl serde::Serialize) -> ApiResponse {
     use self::serde_json::to_vec as encode;
     use self::hyper::{header, mime};
 
     let reply_with_data = |data: Vec<u8>| {
-        server::Response::new()
+        ApiResponse::new()
             .with_header(header::ContentLength(data.len() as u64))
             .with_header(header::ContentType(mime::APPLICATION_JSON))
             .with_body(data)
@@ -144,7 +137,7 @@ fn json_response(value: impl serde::Serialize) -> server::Response {
 
     let reply_with_error = |error| {
         let detail = format!("Encoding error: {}", error);
-        server::Response::new()
+        ApiResponse::new()
             .with_status(hyper::StatusCode::InternalServerError)
             .with_body(detail)
     };
@@ -154,14 +147,13 @@ fn json_response(value: impl serde::Serialize) -> server::Response {
         .unwrap_or_else(reply_with_error)
 }
 
-fn respond(response: server::Response) -> ApiFuture {
-    Box::new(future::ok(response))
+fn index_error_response(error: IndexError) -> ApiResponse {
+    match error {
+        IndexError::NotFound          => not_found(),
+        IndexError::Unexpected(error) => server_error(&error)
+    }
 }
 
-fn parse_query_params(query: &str) -> QueryParams {
-    use self::url::form_urlencoded::parse as parse_query;
-
-    parse_query(query.as_bytes())
-        .map(|(k, v)| (String::from(k), String::from(v)))
-        .collect()
+fn respond(response: ApiResponse) -> ApiFuture {
+    Box::new(future::ok(response))
 }
