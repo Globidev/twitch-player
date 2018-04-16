@@ -1,36 +1,50 @@
-extern crate futures;
 extern crate hyper;
-extern crate num_cpus;
 extern crate serde_json;
-extern crate tokio_core;
 extern crate url;
 
-use types::HttpsClient;
+use prelude::http::*;
+use prelude::futures::*;
+
+use self::hyper::{Request, Get};
+
 use super::types::{AccessToken, StreamIndex, Playlist};
 
-use self::futures::{Future, Stream, future};
+type ParseResult<T> = Result<T, ApiError>;
 
-type ApiFuture<T> = Box<Future<Item = T, Error = ApiError>>;
-
-pub fn fetch(client: &HttpsClient, request: hyper::Request)
-    -> impl Future<Item = hyper::Chunk, Error = ApiError>
+pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str)
+    -> impl Future<Item = AccessToken, Error = ApiError>
 {
-    use self::hyper::StatusCode;
+    let mut request = Request::new(Get, access_token_uri(channel));
+    request.headers_mut()
+        .set_raw("Client-ID", client_id);
 
-    client.request(request)
-        .map_err(ApiError::from)
-        .and_then(move |response| -> ApiFuture<_> {
-            match response.status() {
-                StatusCode::Ok => {
-                    let read_body = response
-                        .body()
-                        .concat2()
-                        .map_err(ApiError::from);
-                    Box::new(read_body)
-                },
-                status => Box::new(future::err(ApiError::BadStatus(status)))
-            }
-        })
+    api_call(client, request, parse_token)
+}
+
+pub fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
+    -> impl Future<Item = StreamIndex, Error = ApiError>
+{
+    let request = Request::new(Get, stream_index_uri(channel, token));
+
+    api_call(client, request, parse_index)
+}
+
+pub fn playlist(client: &HttpsClient, url: &str)
+    -> impl Future<Item = Playlist, Error = ApiError>
+{
+    let request = Request::new(Get, url.parse().unwrap_or_default());
+
+    api_call(client, request, parse_playlist)
+}
+
+fn api_call<F, T>(client: &HttpsClient, request: hyper::Request, parse: F)
+    -> impl Future<Item = T, Error = ApiError>
+where
+    F: FnOnce(hyper::Chunk) -> ParseResult<T>
+{
+    fetch(client, request)
+        .map_err(ApiError::HttpError)
+        .and_then(parse)
 }
 
 fn access_token_uri(channel: &str) -> hyper::Uri {
@@ -39,28 +53,6 @@ fn access_token_uri(channel: &str) -> hyper::Uri {
         channel.to_lowercase()
     );
     url.parse().unwrap()
-}
-
-pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str)
-    -> impl Future<Item = AccessToken, Error = ApiError>
-{
-    use self::hyper::{Request, Get};
-    use self::serde_json::from_slice as json_decode;
-
-    let mut request = Request::new(Get, access_token_uri(channel));
-    request.headers_mut()
-        .set_raw("Client-ID", client_id);
-
-    fetch(client, request)
-        .and_then(|chunk| -> ApiFuture<_> {
-            match json_decode(&chunk) {
-                Ok(token)  => Box::new(future::ok(token)),
-                Err(error) => {
-                    let api_error = ApiError::FormatError(error.to_string());
-                    Box::new(future::err(api_error))
-                }
-            }
-        })
 }
 
 fn stream_index_uri(channel: &str, token: &AccessToken) -> hyper::Uri {
@@ -82,56 +74,42 @@ fn stream_index_uri(channel: &str, token: &AccessToken) -> hyper::Uri {
     url.parse().unwrap()
 }
 
-pub fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
-    -> impl Future<Item = StreamIndex, Error = ApiError>
-{
-    use self::hyper::{Request, Get};
-    use super::m3u8::{ParseError, parse_stream_index};
+fn parse_token (chunk: hyper::Chunk) -> ParseResult<AccessToken> {
+    use self::serde_json::from_slice as json_decode;
 
-    let request = Request::new(Get, stream_index_uri(channel, token));
-
-    fetch(client, request)
-        .and_then(|chunk| -> ApiFuture<_> {
-            match parse_stream_index(&chunk) {
-                Ok(index)  => Box::new(future::ok(index)),
-                Err(ParseError(error)) => {
-                    let api_error = ApiError::FormatError(error);
-                    Box::new(future::err(api_error))
-                }
-            }
-        })
+    json_decode(&chunk)
+        .map_err(|error| ApiError::FormatError(error.to_string()))
 }
 
-fn parse_playlist(data: hyper::Chunk) -> Playlist {
+
+fn parse_index (chunk: hyper::Chunk) -> ParseResult<StreamIndex> {
+    use super::m3u8::{ParseError, parse_stream_index};
+
+    parse_stream_index(&chunk)
+        .map_err(|ParseError(error)| ApiError::FormatError(error))
+}
+
+fn parse_playlist(data: hyper::Chunk) -> ParseResult<Playlist> {
     use std::str::from_utf8;
     use std::string::ToString;
 
-    from_utf8(&data).unwrap_or("")
-        .split('\n')
-        .filter(|line| line.starts_with("http://"))
-        .map(ToString::to_string)
-        .collect()
+    from_utf8(&data)
+        .map_err(|error| ApiError::FormatError(error.to_string()))
+        .map(|string| {
+            string.split('\n')
+                .filter(|line| line.starts_with("http://"))
+                .map(ToString::to_string)
+                .collect()
+        })
 }
-
-pub fn playlist(client: &HttpsClient, url: &str)
-    -> impl Future<Item = Playlist, Error = ApiError>
-{
-    use self::hyper::{Request, Get};
-
-    let request = Request::new(Get, url.parse().unwrap_or_default());
-
-    fetch(client, request)
-        .map(parse_playlist)
-}
-
-use std::{error, fmt};
 
 #[derive(Debug)]
 pub enum ApiError {
-    NetworkError(hyper::Error),
-    BadStatus(hyper::StatusCode),
+    HttpError(HttpError),
     FormatError(String)
 }
+
+use std::{error, fmt};
 
 impl error::Error for ApiError {
     fn description(&self) -> &str { "Api Error" }
@@ -140,11 +118,5 @@ impl error::Error for ApiError {
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
-    }
-}
-
-impl From<hyper::Error> for ApiError {
-    fn from(error: hyper::Error) -> Self {
-        ApiError::NetworkError(error)
     }
 }

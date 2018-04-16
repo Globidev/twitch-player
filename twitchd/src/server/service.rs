@@ -1,18 +1,16 @@
 extern crate hyper;
-extern crate futures;
 extern crate url;
 extern crate serde;
 extern crate serde_json;
 
 use self::hyper::server;
-use self::futures::{Future, future};
 
+use prelude::futures::*;
+use twitch::types::StreamIndex;
 use super::state::{index_cache::IndexError, State};
 
 use std::rc::Rc;
 use std::collections::HashMap;
-
-use twitch::types::StreamIndex;
 
 pub struct TwitchdApi {
     state: Rc<State>

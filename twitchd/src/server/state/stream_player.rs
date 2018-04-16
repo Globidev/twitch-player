@@ -5,12 +5,11 @@ extern crate tokio_timer;
 use self::futures::{future, Future, Stream};
 use self::futures::sync::mpsc;
 use self::hyper::Chunk;
-
 use self::tokio_timer::Timer;
 
 use twitch::types::{PlaylistInfo, Playlist};
 use twitch::api::ApiError;
-use types::HttpsClient;
+use prelude::http::{HttpsClient, HttpError, fetch};
 
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -70,13 +69,6 @@ impl StreamPlayer {
     }
 }
 
-pub enum StreamPlayerError {
-    TimerError(tokio_timer::TimerError),
-    FetchPlaylistFail(ApiError),
-    FetchSegmentFail(ApiError),
-    NoMoreClients
-}
-
 fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo)
     -> impl Stream<Item = hyper::Chunk, Error = StreamPlayerError>
 {
@@ -105,8 +97,6 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo)
             };
 
             if let Some(segment) = to_download {
-                use twitch::api::fetch;
-
                 let request = hyper::Request::new(hyper::Get, segment.parse().unwrap());
                 let future = fetch(&client, request)
                     .map(Option::from)
@@ -127,4 +117,11 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo)
     playlist_stream
         .and_then(fetch_latest_segment)
         .filter_map(|opt_segment| opt_segment)
+}
+
+pub enum StreamPlayerError {
+    TimerError(tokio_timer::TimerError),
+    FetchPlaylistFail(ApiError),
+    FetchSegmentFail(HttpError),
+    NoMoreClients
 }

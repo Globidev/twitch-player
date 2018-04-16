@@ -1,14 +1,9 @@
-extern crate futures;
-extern crate hyper;
-extern crate hyper_tls;
-extern crate num_cpus;
-
-use types::Handle;
+use prelude::asio::Handle;
+use prelude::http::{HttpsClient, http_client};
+use prelude::futures::*;
 
 use super::stream_player::{StreamPlayer, PlayerSink};
 use twitch::types::PlaylistInfo;
-
-use self::futures::Future;
 
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -20,12 +15,14 @@ type Stream = (Channel, Quality);
 
 pub struct PlayerPool {
     handle: Handle,
+    client: HttpsClient,
     players: Rc<RefCell<HashMap<Stream, StreamPlayer>>>,
 }
 
 impl PlayerPool {
     pub fn new(handle: &Handle) -> Self {
         Self {
+            client: http_client(handle).unwrap(),
             handle: handle.clone(),
             players: Rc::new(RefCell::new(HashMap::new())),
         }
@@ -43,15 +40,9 @@ impl PlayerPool {
 
     pub fn add_player(&self, stream: Stream, playlist_info: PlaylistInfo, sink: PlayerSink) {
         let new_player = {
-            use self::hyper::Client;
-            use self::hyper_tls::HttpsConnector;
-
             let stream = stream.clone();
+            let client = self.client.clone();
             move || {
-                let connector = HttpsConnector::new(num_cpus::get(), &self.handle).unwrap();
-                let client = Client::configure()
-                    .connector(connector)
-                    .build(&self.handle);
                 let player = StreamPlayer::new(client, playlist_info);
                 self.play(&player, stream);
                 player

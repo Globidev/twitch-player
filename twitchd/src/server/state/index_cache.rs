@@ -1,17 +1,13 @@
-extern crate futures;
-extern crate num_cpus;
 extern crate hyper;
-extern crate hyper_tls;
 extern crate tokio_timer;
 
-use types::{HttpsClient, Handle};
+use prelude::http::{HttpsClient, HttpError, http_client};
+use prelude::asio::Handle;
+use prelude::futures::*;
 
 use twitch::api::ApiError;
 use twitch::types::StreamIndex;
 
-use self::futures::{Future, future};
-use self::hyper::Client;
-use self::hyper_tls::HttpsConnector;
 use self::tokio_timer::Timer;
 
 use std::rc::Rc;
@@ -33,13 +29,8 @@ pub struct IndexCache {
 
 impl IndexCache {
     pub fn new(handle: &Handle) -> Self {
-        let connector = HttpsConnector::new(num_cpus::get(), handle).unwrap();
-        let client = Client::configure()
-            .connector(connector)
-            .build(handle);
-
         Self {
-            client: Rc::new(client),
+            client: Rc::new(http_client(handle).unwrap()),
             handle: Rc::new(handle.clone()),
             cache: Rc::new(RefCell::new(HashMap::new()))
         }
@@ -111,9 +102,10 @@ pub enum IndexError {
 impl From<ApiError> for IndexError {
     fn from(error: ApiError) -> Self {
         use self::hyper::StatusCode::NotFound;
+        use self::HttpError::BadStatus;
 
         match error {
-            ApiError::BadStatus(NotFound) => IndexError::NotFound,
+            ApiError::HttpError(BadStatus(NotFound)) => IndexError::NotFound,
             _ => IndexError::Unexpected(error.to_string())
         }
     }

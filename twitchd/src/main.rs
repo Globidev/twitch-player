@@ -5,7 +5,7 @@
 
 mod twitch;
 mod server;
-mod types;
+mod prelude;
 
 fn main() {
     let addr = "0.0.0.0:8080".parse().unwrap();
