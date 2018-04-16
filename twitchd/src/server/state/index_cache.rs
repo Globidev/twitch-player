@@ -4,6 +4,7 @@ extern crate tokio_timer;
 use prelude::http::{HttpsClient, HttpError, http_client};
 use prelude::asio::Handle;
 use prelude::futures::*;
+use options::Options;
 
 use twitch::api::ApiError;
 use twitch::types::StreamIndex;
@@ -12,27 +13,25 @@ use self::tokio_timer::Timer;
 
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::time::Duration;
 use std::collections::HashMap;
 
 type Channel = String;
 type ChannelIndexes = HashMap<Channel, StreamIndex>;
 
-const CLIENT_ID: &str = "alcht5gave31yctuzv48v2i1hlwq53";
-const EXPIRE_TIMEOUT: Duration = Duration::from_secs(60);
-
 pub struct IndexCache {
     client: Rc<HttpsClient>,
     handle: Rc<Handle>,
-    cache: Rc<RefCell<ChannelIndexes>>
+    cache: Rc<RefCell<ChannelIndexes>>,
+    opts: Options,
 }
 
 impl IndexCache {
-    pub fn new(handle: &Handle) -> Self {
+    pub fn new(opts: Options, handle: &Handle) -> Self {
         Self {
             client: Rc::new(http_client(handle).unwrap()),
             handle: Rc::new(handle.clone()),
-            cache: Rc::new(RefCell::new(HashMap::new()))
+            cache: Rc::new(RefCell::new(HashMap::new())),
+            opts: opts,
         }
     }
 
@@ -55,7 +54,7 @@ impl IndexCache {
     {
         use twitch::api::{access_token, stream_index};
 
-        let fetch_token = access_token(&self.client, &channel, CLIENT_ID);
+        let fetch_token = access_token(&self.client, &channel, &self.opts.client_id);
 
         let fetch_index = {
             let client = Rc::clone(&self.client);
@@ -73,7 +72,7 @@ impl IndexCache {
         };
 
         let expire_cache_later = Timer::default()
-            .sleep(EXPIRE_TIMEOUT)
+            .sleep(self.opts.index_cache_timeout)
             .then(expire_cache);
 
         let cache_result = {

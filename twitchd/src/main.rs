@@ -1,14 +1,21 @@
 #![feature(drain_filter)]
 
-#[macro_use] extern crate serde_derive;
 #[macro_use] extern crate nom;
+#[macro_use] extern crate serde_derive;
+#[macro_use] extern crate structopt;
 
 mod twitch;
 mod server;
 mod prelude;
+mod options;
 
 fn main() {
-    let addr = "0.0.0.0:8080".parse().unwrap();
+    use options::Options;
+    use structopt::StructOpt;
 
-    server::run(&addr);
+    let opts = Options::from_args();
+
+    println!("Running with options: {:#?}", opts);
+
+    server::run(opts);
 }

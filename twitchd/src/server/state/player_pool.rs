@@ -1,6 +1,7 @@
 use prelude::asio::Handle;
 use prelude::http::{HttpsClient, http_client};
 use prelude::futures::*;
+use options::Options;
 
 use super::stream_player::{StreamPlayer, PlayerSink};
 use twitch::types::{PlaylistInfo, Stream};
@@ -13,14 +14,16 @@ pub struct PlayerPool {
     handle: Handle,
     client: HttpsClient,
     players: Rc<RefCell<HashMap<Stream, StreamPlayer>>>,
+    opts: Options,
 }
 
 impl PlayerPool {
-    pub fn new(handle: &Handle) -> Self {
+    pub fn new(opts: Options, handle: &Handle) -> Self {
         Self {
             client: http_client(handle).unwrap(),
             handle: handle.clone(),
             players: Rc::new(RefCell::new(HashMap::new())),
+            opts: opts,
         }
     }
 
@@ -47,7 +50,7 @@ impl PlayerPool {
         let new_player = {
             let client = self.client.clone();
             move || {
-                let player = StreamPlayer::new(client);
+                let player = StreamPlayer::new(self.opts.clone(), client);
                 let future = player.play(playlist)
                     .then(remove_player);
                 self.handle.spawn(future);

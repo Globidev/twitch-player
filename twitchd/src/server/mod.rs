@@ -7,15 +7,17 @@ mod state;
 
 use prelude::asio::Core;
 use prelude::futures::*;
+use options::Options;
 
 use std::net::SocketAddr;
 use std::rc::Rc;
 
-pub fn run(addr: &SocketAddr) {
+pub fn run(opts: Options) {
     let mut core = Core::new().unwrap();
     let handle = &core.handle();
 
-    let state = Rc::new(state::State::new(handle));
+    let addr = SocketAddr::new(opts.host, opts.port);
+    let state = Rc::new(state::State::new(opts, handle));
     let make_service = || Ok(service::TwitchdApi::new(&state));
 
     let incoming_stream = hyper::server::Http::new()

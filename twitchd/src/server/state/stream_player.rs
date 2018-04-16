@@ -8,26 +8,26 @@ use prelude::futures::*;
 use twitch::types::{PlaylistInfo, Playlist};
 use twitch::api::ApiError;
 use prelude::http::{HttpsClient, HttpError, fetch, ResponseSink};
+use options::Options;
 
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::time::{Duration, Instant};
-
-const PLAYLIST_FETCH_INTERVAL: Duration = Duration::from_millis(1_000);
-const INACTIVE_PLAY_DURATION: Duration = Duration::from_secs(60);
 
 pub type PlayerSink = ResponseSink;
 
 pub struct StreamPlayer {
     client: HttpsClient,
     sinks: Rc<RefCell<Vec<PlayerSink>>>,
+    opts: Options,
 }
 
 impl StreamPlayer {
-    pub fn new(client: HttpsClient) -> Self {
+    pub fn new(opts: Options, client: HttpsClient) -> Self {
         Self {
             client: client,
             sinks: Rc::new(RefCell::new(Vec::new())),
+            opts: opts,
         }
     }
 
@@ -36,6 +36,7 @@ impl StreamPlayer {
     {
         let write_to_sinks = {
             let sinks = Rc::clone(&self.sinks);
+            let inactive_timeout = self.opts.player_inactive_timeout;
             let mut last_active = Instant::now();
 
             move |data: hyper::Chunk| {
@@ -49,7 +50,7 @@ impl StreamPlayer {
 
                 if !sinks.is_empty() { last_active = Instant::now(); }
 
-                let timed_out = last_active.elapsed() > INACTIVE_PLAY_DURATION;
+                let timed_out = last_active.elapsed() > inactive_timeout;
                 match timed_out {
                     true  => future::err(StreamPlayerError::InactiveTooLong),
                     false => future::ok(())
@@ -57,7 +58,7 @@ impl StreamPlayer {
             }
         };
 
-        segment_stream(self.client.clone(), playlist_info)
+        segment_stream(self.client.clone(), playlist_info, self.opts.player_playlist_fetch_interval)
             .for_each(write_to_sinks)
     }
 
@@ -66,7 +67,9 @@ impl StreamPlayer {
     }
 }
 
-fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo)
+type PlayerFuture<T> = Box<Future<Item = T, Error = StreamPlayerError>>;
+
+fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interval: Duration)
     -> impl Stream<Item = hyper::Chunk, Error = StreamPlayerError>
 {
     use twitch::api::playlist;
@@ -83,7 +86,7 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo)
     let fetch_latest_segment = {
         let mut last_segment = None;
 
-        move |mut playlist: Playlist| -> Box<Future<Item = _, Error = StreamPlayerError>> {
+        move |mut playlist: Playlist| -> PlayerFuture<_> {
             let to_download = match last_segment {
                 None => playlist.pop(),
                 Some(ref segment) => {
@@ -108,7 +111,7 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo)
     };
 
     let playlist_stream = Timer::default()
-        .interval(PLAYLIST_FETCH_INTERVAL)
+        .interval(fetch_interval)
         .map_err(StreamPlayerError::TimerError)
         .and_then(fetch_playlist);
 
