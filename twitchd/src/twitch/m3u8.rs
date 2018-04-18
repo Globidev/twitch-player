@@ -75,13 +75,21 @@ named!(playlist_info_parser<PlaylistInfo>, do_parse!(
     })
 ));
 
+named!(restricted_playlist_info_parser<RestrictedPlaylistInfo>, delimited!(
+    tag!("#EXT-X-TWITCH-RESTRICTED:"),
+    map_res!(raw_info_parser, extract_restricted_playlist_info),
+    tag!("\n")
+));
+
 named!(stream_index_parser<StreamIndex>, do_parse!(
     tag!("#EXTM3U") >> tag!("\n") >>
     twitch_info: twitch_info_parser >> tag!("\n") >>
+    restricted_playlists_infos: many0!(restricted_playlist_info_parser) >>
     playlist_infos: many1!(playlist_info_parser) >>
     (StreamIndex {
         twitch_info: twitch_info,
-        playlist_infos: playlist_infos
+        playlist_infos: playlist_infos,
+        restricted_playlists_infos: restricted_playlists_infos
     })
 ));
 
@@ -148,6 +156,18 @@ fn extract_stream_info(raw_info: RawInfoMap) -> Result<StreamInfo, ExtractInfoEr
     };
 
     Ok(stream_info)
+}
+
+fn extract_restricted_playlist_info(raw_info: RawInfoMap)
+    -> Result<RestrictedPlaylistInfo, ExtractInfoError>
+{
+    let restricted_playlist_info = RestrictedPlaylistInfo {
+        group_id:    extract_raw(&raw_info, "GROUP-ID")?,
+        name:        extract_raw(&raw_info, "NAME")?,
+        restriction: extract_raw(&raw_info, "RESTRICTION")?,
+    };
+
+    Ok(restricted_playlist_info)
 }
 
 fn extract_raw<T : Extractable>(raw_info: &RawInfoMap, key: &str) -> Result<T, ExtractInfoError> {

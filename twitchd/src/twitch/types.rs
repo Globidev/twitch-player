@@ -11,6 +11,7 @@ pub struct AccessToken {
 pub struct StreamIndex {
     pub twitch_info: TwitchInfo,
     pub playlist_infos: Vec<PlaylistInfo>,
+    pub restricted_playlists_infos: Vec<RestrictedPlaylistInfo>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -64,6 +65,13 @@ pub struct StreamInfo {
 pub struct Resolution {
     pub width: u32,
     pub height: u32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RestrictedPlaylistInfo {
+    pub group_id: String,
+    pub name: String,
+    pub restriction: String,
 }
 
 pub type SegmentUrl = String;
