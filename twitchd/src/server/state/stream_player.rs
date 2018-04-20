@@ -75,6 +75,11 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
     use twitch::api::playlist;
     use self::hyper::{Request, Get};
 
+    let origin = {
+        let parts = playlist_info.url.rsplitn(2, '/').collect::<Vec<_>>();
+        String::from(parts[1])
+    };
+
     let fetch_playlist = {
         let client = client.clone();
         move |_| {
@@ -98,7 +103,12 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
             };
 
             if let Some(segment) = to_download {
-                let request = Request::new(Get, segment.parse().unwrap());
+                let segment_url = if segment.starts_with("http://") {
+                    segment.clone()
+                } else {
+                    format!("{}/{}", origin, segment)
+                };
+                let request = Request::new(Get, segment_url.parse().unwrap());
                 let future = fetch(&client, request)
                     .map(Option::from)
                     .map_err(StreamPlayerError::FetchSegmentFail);

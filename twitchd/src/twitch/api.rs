@@ -97,7 +97,7 @@ fn parse_playlist(data: hyper::Chunk) -> ParseResult<Playlist> {
         .map_err(|error| ApiError::FormatError(error.to_string()))
         .map(|string| {
             string.split('\n')
-                .filter(|line| line.starts_with("http://"))
+                .filter(|line| line.starts_with("index-") || line.starts_with("http://"))
                 .map(ToString::to_string)
                 .collect()
         })
