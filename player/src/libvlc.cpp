@@ -16,7 +16,10 @@ Instance::Instance():
 
 MediaPlayer::MediaPlayer(Instance &instance):
     CWrapper(libvlc_media_player_new(&instance), libvlc_media_player_release)
-{ }
+{
+    libvlc_video_set_mouse_input(&*this, false);
+    libvlc_video_set_key_input(&*this, false);
+}
 
 void MediaPlayer::set_media(Media &media) {
     libvlc_media_player_set_media(&*this, &media);
