@@ -63,6 +63,13 @@ void MainWindow::add_stream(QString channel) {
         ui->gridLayout->addWidget(widget, 0, 0);
         widget->video.play(channel);
         widget->video.set_volume(25);
+        streams.insert(widget);
+        timer->stop();
     });
     timer->start(250);
+}
+
+void MainWindow::moveEvent(QMoveEvent *) {
+    for (auto widget: streams)
+        widget->video.update_overlay_position();
 }
