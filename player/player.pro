@@ -8,10 +8,14 @@ QMAKE_CXXFLAGS  +=  /std:c++latest
 SOURCES         +=  src/main.cpp \
                     src/main_window.cpp \
                     src/video_widget.cpp \
+                    src/foreign_widget.cpp \
+                    src/stream_widget.cpp \
                     src/libvlc.cpp
 
 HEADERS         +=  include/main_window.hpp \
                     include/video_widget.hpp \
+                    include/foreign_widget.hpp \
+                    include/stream_widget.hpp \
                     include/libvlc.hpp \
                     include/constants.hpp
 

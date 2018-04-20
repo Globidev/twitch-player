@@ -1,7 +1,5 @@
 #include "video_widget.hpp"
 
-#include <QPainter>
-
 VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     QWidget(parent), _instance(instance), _media_player(libvlc::MediaPlayer(instance))
 {
