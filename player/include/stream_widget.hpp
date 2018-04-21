@@ -13,6 +13,14 @@ struct StreamWidget: QSplitter {
 
     VideoWidget video;
     ForeignWidget chat;
+
+private:
+    enum class ChatPosition { Left, Right };
+
+    void reposition(ChatPosition position);
+
+    int _chat_size, _video_size;
+    ChatPosition _chat_position;
 };
 
 #endif // STREAM_WIDGET_HPP
