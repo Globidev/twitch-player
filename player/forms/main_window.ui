@@ -75,7 +75,11 @@
    </palette>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Twitch Player</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../build/player.qrc">
+    <normaloff>:/icons/icon.ico</normaloff>:/icons/icon.ico</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
@@ -105,6 +109,8 @@
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <resources/>
+ <resources>
+  <include location="../build/player.qrc"/>
+ </resources>
  <connections/>
 </ui>
