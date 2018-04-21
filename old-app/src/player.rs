@@ -116,7 +116,7 @@ fn parse_playlist(data: Chunk) -> Playlist {
 
     from_utf8(&data).unwrap_or("")
         .split('\n')
-        .filter(|line| line.starts_with("http://"))
+        .filter(|line| line.starts_with("index-") || line.starts_with("http://"))
         .map(ToString::to_string)
         .collect()
 }
@@ -135,6 +135,11 @@ fn fetch_playlists_info(client: &HttpClient, channel: &str)
 fn segment_stream<'a>(client: &'a HttpClient, playlist_url: String)
     -> impl Stream<Item = Chunk, Error = PlayerError> + 'a
 {
+    let origin = {
+        let origin_parts = playlist_url.rsplitn(2, '/').collect::<Vec<_>>();
+        String::from(origin_parts[1])
+    };
+
     let playlists = ticks(Duration::from_millis(1_000))
         .and_then(move |_| fetch_playlist(client, &playlist_url));
 
@@ -152,7 +157,12 @@ fn segment_stream<'a>(client: &'a HttpClient, playlist_url: String)
         };
 
         if let Some(segment) = to_download {
-            let future = fetch_segment(client, &segment).map(Option::from);
+            let segment_url = if segment.starts_with("http://") {
+                segment.clone()
+            } else {
+                format!("{}/{}", origin, segment)
+            };
+            let future = fetch_segment(client, &segment_url).map(Option::from);
             last_segment = Some(segment);
             Box::new(future)
         } else {

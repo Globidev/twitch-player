@@ -71,7 +71,6 @@ void MainWindow::add_stream(QString channel) {
         auto widget = new StreamWidget { _video_context, chat_window_handle, this };
         ui->gridLayout->addWidget(widget, 0, 0);
         widget->video.play(channel);
-        widget->video.set_volume(25);
         streams.insert(widget);
         timer->stop();
     });
