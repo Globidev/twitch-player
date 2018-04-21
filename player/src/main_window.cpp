@@ -8,6 +8,7 @@
 #include <QProcess>
 #include <QSplitter>
 #include <QTimer>
+#include <QShortcut>
 
 static const auto CHROME_PATH =
     R"(C:\Program Files (x86)\Google\Chrome\Application\chrome.exe)";
@@ -21,6 +22,14 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    auto sh_full_screen = new QShortcut(QKeySequence::FullScreen, this);
+    QObject::connect(sh_full_screen, &QShortcut::activated, [this] {
+        auto state = windowState();
+        if (isFullScreen()) state &= ~Qt::WindowState::WindowFullScreen;
+        else                state |=  Qt::WindowState::WindowFullScreen;
+        setWindowState(state);
+    });
 }
 
 MainWindow::MainWindow(QString channel, QWidget *parent):
