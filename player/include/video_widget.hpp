@@ -14,10 +14,10 @@ public:
         QWidget(parent)
     {
         setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
+
         setAttribute(Qt::WA_NoSystemBackground);
         setAttribute(Qt::WA_TranslucentBackground);
         setAttribute(Qt::WA_PaintOnScreen);
-
         setAttribute(Qt::WA_TransparentForMouseEvents);
 
         timer.setInterval(2500);
@@ -27,8 +27,7 @@ public:
         });
     }
 
-    void show_volume(int);
-    void show_muted(bool);
+    void show_text(QString);
 
 protected:
     void paintEvent(QPaintEvent *) override;

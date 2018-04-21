@@ -16,7 +16,7 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     setAttribute(Qt::WA_OpaquePaintEvent);
     setFocusPolicy(Qt::StrongFocus);
     _media_player.set_renderer((void *)winId());
-    set_volume(_vol);
+    _media_player.set_volume(_vol);
     _overlay->show();
     update_overlay_position();
 }
@@ -31,13 +31,13 @@ void VideoWidget::play(QString channel) {
 void VideoWidget::set_volume(int volume) {
     _vol = volume;
     _media_player.set_volume(_muted ? 0 : _vol);
-    _overlay->show_volume(_vol);
+    _overlay->show_text(QString::number(_vol) + " %");
 }
 
 void VideoWidget::set_muted(bool muted) {
     _muted = muted;
     set_volume(_vol);
-    _overlay->show_muted(muted);
+    _overlay->show_text(muted ? "Muted" : "Unmuted");
 }
 
 void VideoWidget::update_overlay_position() {
@@ -62,6 +62,10 @@ void VideoWidget::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_M) {
         set_muted(!_muted);
     }
+    if (event->key() == Qt::Key_F) {
+        _media_player.set_position(1.0f);
+        _overlay->show_text("Fast forward...");
+    }
 
     QWidget::keyPressEvent(event);
 }
@@ -83,12 +87,13 @@ void VideoWidget::showEvent(QShowEvent *event) {
 
 void VolumeOverlay::paintEvent(QPaintEvent *event) {
     if (text) {
-        QPainter painter { this };
-        QPen pen;
         QFont font;
         font.setBold(true);
         font.setPointSize(40);
         font.setWeight(40);
+
+        QPainter painter { this };
+
         painter.setFont(font);
         painter.setPen(Qt::white);
 
@@ -96,14 +101,8 @@ void VolumeOverlay::paintEvent(QPaintEvent *event) {
     }
 }
 
-void VolumeOverlay::show_volume(int volume) {
-    text.emplace(QString::number(volume) + " %");
-    repaint();
-    timer.start();
-}
-
-void VolumeOverlay::show_muted(bool muted) {
-    text.emplace(muted ? "Muted" : "Unmuted");
+void VolumeOverlay::show_text(QString new_text) {
+    text.emplace(new_text);
     repaint();
     timer.start();
 }
