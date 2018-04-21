@@ -43,6 +43,7 @@ struct MediaPlayer: CWrapper<libvlc_media_player_t> {
     void set_renderer(void *);
     void play();
     void set_volume(int);
+    void set_position(float);
 };
 
 struct Media: CWrapper<libvlc_media_t> {

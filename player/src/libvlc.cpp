@@ -1,5 +1,4 @@
 #include "libvlc.hpp"
-#include "constants.hpp"
 
 // LibVLC uses ssize_t, which is POSIX...
 #if defined(_MSC_VER)
@@ -11,7 +10,7 @@
 namespace libvlc {
 
 Instance::Instance():
-    CWrapper(libvlc_new(constants::VLC_ARGC, constants::VLC_ARGV), libvlc_release)
+    CWrapper(libvlc_new(0, nullptr), libvlc_release)
 { }
 
 MediaPlayer::MediaPlayer(Instance &instance):
@@ -35,6 +34,10 @@ void MediaPlayer::play() {
 
 void MediaPlayer::set_volume(int volume) {
     libvlc_audio_set_volume(&*this, volume);
+}
+
+void MediaPlayer::set_position(float rate) {
+    libvlc_media_player_set_position(&*this, rate);
 }
 
 Media::Media(Instance &instance, const char *location):
