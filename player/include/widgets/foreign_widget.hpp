@@ -5,15 +5,14 @@
 #include <QWindow>
 #include <QHBoxLayout>
 
-struct ForeignWidget: public QWidget {
+class ForeignWidget: public QWidget {
+public:
     ForeignWidget(void *handle, QWidget * = nullptr);
     ~ForeignWidget();
 
-  private:
+private:
     QWindow *_win;
-    QWidget *_container;
     QHBoxLayout _layout;
-    QRect _win_geometry;
     void * _handle;
 };
 

@@ -3,10 +3,9 @@
 
 #include "libvlc.hpp"
 
-#include <optional>
 #include <QWidget>
-#include <QTimer>
-#include <QFont>
+
+#include <optional>
 
 class VideoOverlay: public QWidget {
 public:
@@ -19,7 +18,7 @@ protected:
 
 private:
     std::optional<QString> _text;
-    QTimer _timer;
+    QTimer *_timer;
     QFont _text_font;
 };
 
@@ -44,21 +43,27 @@ public:
 
 protected:
     void wheelEvent(QWheelEvent *) override;
-    void keyPressEvent(QKeyEvent *) override;
-    void moveEvent(QMoveEvent *) override;
     void resizeEvent(QResizeEvent *) override;
     void showEvent(QShowEvent *) override;
+    void mousePressEvent(QMouseEvent *) override;
+    void mouseMoveEvent(QMouseEvent *) override;
 
 private:
     libvlc::Instance & _instance;
     libvlc::MediaPlayer _media_player;
     std::optional<libvlc::Media> _media;
+
     VideoOverlay *_overlay;
+
     friend class MovementFilter;
-    MovementFilter _move_filter;
+    MovementFilter *_move_filter;
+
+    QShortcut *_sh_mute, *_sh_forward;
 
     int _vol = 35;
     bool _muted = false;
+
+    QPoint _last_drag_position;
 
     void update_overlay_position();
 };

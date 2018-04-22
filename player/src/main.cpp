@@ -3,6 +3,7 @@
 
 #include <QApplication>
 #include <QProcess>
+#include <QTimer>
 
 int main(int argc, char *argv[]) {
     QProcess::startDetached(constants::TWITCHD_PATH, QStringList()
@@ -20,6 +21,16 @@ int main(int argc, char *argv[]) {
     }();
 
     MainWindow main_window { channel };
+
+    // QTimer::singleShot(3000, [&] {
+    //     main_window.add_stream("pokimane", 0, 1);
+    //     QTimer::singleShot(3000, [&] {
+    //         main_window.add_stream("loltyler1", 1, 1);
+    //         QTimer::singleShot(3000, [&] {
+    //             main_window.add_stream("asmongold", 1, 0);
+    //         });
+    //     });
+    // });
 
     main_window.show();
 

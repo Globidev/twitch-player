@@ -8,15 +8,14 @@
 ForeignWidget::ForeignWidget(void *handle, QWidget *parent):
     QWidget(parent), _handle(handle)
 {
-    _win = QWindow::fromWinId(reinterpret_cast<WId>(handle));
-    if (_win) {
-        _container = QWidget::createWindowContainer(_win);
-        if (_container)
-            _layout.addWidget(_container);
+    _layout.setContentsMargins(QMargins());
+    setContentsMargins(QMargins());
+
+    if (_win = QWindow::fromWinId(reinterpret_cast<WId>(handle)); _win) {
+        if (auto container = QWidget::createWindowContainer(_win); container)
+            _layout.addWidget(container);
     }
 
-    _layout.setContentsMargins(0, 0, 0, 0);
-    setContentsMargins(0, 0, 0, 0);
     setLayout(&_layout);
 }
 

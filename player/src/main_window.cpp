@@ -2,12 +2,13 @@
 #include "ui_main_window.h"
 
 #include "widgets/stream_widget.hpp"
+#include "widgets/video_widget.hpp"
 
 #include "win.hpp"
 
 #include <QProcess>
-#include <QSplitter>
 #include <QTimer>
+#include <QKeyEvent>
 #include <QShortcut>
 
 static const auto CHROME_PATH =
@@ -17,31 +18,56 @@ static auto find_chat_windows() {
     return find_windows_by_title_and_pname("Twitch", CHROME_PATH);
 }
 
+static auto find_new_chat_windows(const FindWindowResult & previous_results) {
+    auto new_results = find_chat_windows();
+
+    FindWindowResult new_windows;
+    std::set_difference(
+        new_results.begin(), new_results.end(),
+        previous_results.begin(), previous_results.end(),
+        std::inserter(new_windows, new_windows.begin())
+    );
+
+    return new_windows;
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow)
     _main_splitter(new QSplitter(Qt::Vertical, this)),
+    _ui(new Ui::MainWindow),
+    _sh_full_screen(new QShortcut(QKeySequence::FullScreen, this))
 {
-    ui->setupUi(this);
+    QObject::connect(
+        _sh_full_screen,
+        &QShortcut::activated,
+        [this] { toggle_fullscreen(); }
+    );
 
-    auto sh_full_screen = new QShortcut(QKeySequence::FullScreen, this);
-    QObject::connect(sh_full_screen, &QShortcut::activated, [this] {
-        auto state = windowState();
-        if (isFullScreen()) state &= ~Qt::WindowState::WindowFullScreen;
-        else                state |=  Qt::WindowState::WindowFullScreen;
-        setWindowState(state);
-    });
+    _ui->setupUi(this);
+    _ui->verticalLayout->addWidget(_main_splitter);
+}
+
+void MainWindow::changeEvent(QEvent *event) {
+    QMainWindow::changeEvent(event);
+}
+
+void MainWindow::keyPressEvent(QKeyEvent *event) {
+    if (event->key() == Qt::Key_Alt) {
+        auto handle = (HWND)window()->winId();
+        auto style = GetWindowLong(handle, GWL_STYLE);
+        SetWindowLong(handle, GWL_STYLE, style ^ (WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU));
+        if (GetWindowLong(handle, GWL_STYLE) != style) {
+            SetWindowPos(handle, nullptr, 0, 0, 0, 0, SWP_DRAWFRAME | SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+            InvalidateRect(handle, nullptr, TRUE);
+        }
+    }
+    QMainWindow::keyPressEvent(event);
 }
 
 MainWindow::MainWindow(QString channel, QWidget *parent):
     MainWindow(parent)
 {
-    add_stream(channel);
-}
-
-MainWindow::~MainWindow()
-{
-    delete ui;
+    add_stream(channel, 0, 0);
 }
 
 void MainWindow::add_stream(QString channel, int row, int col) {
@@ -50,30 +76,16 @@ void MainWindow::add_stream(QString channel, int row, int col) {
         << "--app=https://www.twitch.tv/popout/" + channel + "/chat?popout="
     );
 
-    auto timer = new QTimer { this };
+    auto timer = new QTimer(this);
     QObject::connect(timer, &QTimer::timeout, [=] {
-        auto windows = find_chat_windows();
+        auto chat_windows = find_new_chat_windows(pre_launch_windows);
 
-        if (!windows.size())
-            return;
-
-        FindWindowResult best_candidates;
-        std::set_difference(
-            windows.begin(), windows.end(),
-            pre_launch_windows.begin(), pre_launch_windows.end(),
-            std::inserter(best_candidates, best_candidates.begin())
-        );
-
-        if (!best_candidates.size())
-            return;
-
-        auto chat_window_handle = *best_candidates.begin();
-
-        auto widget = new StreamWidget { _video_context, chat_window_handle, this };
-        ui->gridLayout->addWidget(widget, 0, 0);
-        widget->video.play(channel);
-        streams.insert(widget);
-        timer->stop();
+        if (auto handle_it = chat_windows.begin();
+            handle_it != chat_windows.end())
+        {
+            add_stream_impl(channel, *handle_it, row, col);
+            timer->deleteLater();
+        }
     });
     timer->start(250);
 }

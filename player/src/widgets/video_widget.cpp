@@ -1,16 +1,29 @@
 #include "widgets/video_widget.hpp"
 
 #include <QWheelEvent>
+#include <QMouseEvent>
 #include <QPainter>
+#include <QShortcut>
+#include <QTimer>
 
 VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     QWidget(parent),
     _instance(instance),
     _media_player(libvlc::MediaPlayer(instance)),
     _overlay(new VideoOverlay(this)),
-    _move_filter(*this)
+    _move_filter(new MovementFilter(*this)),
+    _sh_mute(new QShortcut(QKeySequence(Qt::Key_M), this)),
+    _sh_forward(new QShortcut(QKeySequence(Qt::Key_F), this))
 {
-    window()->installEventFilter(&_move_filter);
+    QObject::connect(_sh_mute, &QShortcut::activated, [this] {
+        set_muted(!_muted);
+    });
+    QObject::connect(_sh_forward, &QShortcut::activated, [this] {
+        _media_player.set_position(1.0f);
+        _overlay->show_text("Fast forward...");
+    });
+
+    window()->installEventFilter(_move_filter);
     setAttribute(Qt::WA_OpaquePaintEvent);
     setFocusPolicy(Qt::StrongFocus);
     _media_player.set_renderer((void *)winId());
@@ -44,6 +57,7 @@ void VideoWidget::update_overlay_position() {
 }
 
 void VideoWidget::wheelEvent(QWheelEvent *event) {
+    this->window()->activateWindow();
     int new_volume;
     if (event->angleDelta().y() > 0)
         new_volume = std::min(_vol + 5, 100);
@@ -51,22 +65,6 @@ void VideoWidget::wheelEvent(QWheelEvent *event) {
         new_volume = std::max(0, _vol - 5);
     set_volume(new_volume);
     QWidget::wheelEvent(event);
-}
-
-void VideoWidget::keyPressEvent(QKeyEvent *event) {
-    if (event->key() == Qt::Key_M) {
-        set_muted(!_muted);
-    }
-    if (event->key() == Qt::Key_F) {
-        _media_player.set_position(1.0f);
-        _overlay->show_text("Fast forward...");
-    }
-
-    QWidget::keyPressEvent(event);
-}
-
-void VideoWidget::moveEvent(QMoveEvent *event) {
-    update_overlay_position();
 }
 
 void VideoWidget::resizeEvent(QResizeEvent *event) {
@@ -80,6 +78,23 @@ void VideoWidget::showEvent(QShowEvent *event) {
     });
 }
 
+void VideoWidget::mousePressEvent(QMouseEvent *event) {
+    if (event->buttons().testFlag(Qt::MouseButton::LeftButton))
+        _last_drag_position = event->globalPos();
+
+    QWidget::mousePressEvent(event);
+}
+
+void VideoWidget::mouseMoveEvent(QMouseEvent *event) {
+    if (event->buttons().testFlag(Qt::MouseButton::LeftButton)) {
+        auto delta = event->globalPos() - _last_drag_position;
+        window()->move(window()->pos() + delta);
+        _last_drag_position = event->globalPos();
+    }
+    else
+        QWidget::mouseMoveEvent(event);
+}
+
 MovementFilter::MovementFilter(VideoWidget & video_widget):
     _video_widget(video_widget)
 { }
@@ -91,7 +106,8 @@ bool MovementFilter::eventFilter(QObject *watched, QEvent *event) {
 }
 
 VideoOverlay::VideoOverlay(QWidget *parent):
-    QWidget(parent)
+    QWidget(parent),
+    _timer(new QTimer(this))
 {
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 
@@ -104,8 +120,8 @@ VideoOverlay::VideoOverlay(QWidget *parent):
     _text_font.setPointSize(40);
     _text_font.setWeight(40);
 
-    _timer.setInterval(2500);
-    QObject::connect(&_timer, &QTimer::timeout, [this] {
+    _timer->setInterval(2500);
+    QObject::connect(_timer, &QTimer::timeout, [this] {
         _text.reset();
         repaint();
     });
@@ -124,6 +140,6 @@ void VideoOverlay::paintEvent(QPaintEvent *event) {
 
 void VideoOverlay::show_text(QString new_text) {
     _text.emplace(new_text);
-    _timer.start();
+    _timer->start();
     repaint();
 }

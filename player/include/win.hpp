@@ -41,12 +41,14 @@ static std::string window_title(HWND handle) {
 }
 
 static std::string window_process_name(HWND handle) {
+    constexpr auto PROCESS_FLAGS = PROCESS_QUERY_INFORMATION | PROCESS_VM_READ;
+
     DWORD pid;
     GetWindowThreadProcessId(handle, &pid);
-    auto process_flags = PROCESS_QUERY_INFORMATION | PROCESS_VM_READ;
-    if (auto ph = OpenProcess(process_flags, FALSE, pid)) {
+
+    if (auto phandle = OpenProcess(PROCESS_FLAGS, FALSE, pid); phandle) {
         char buff[256];
-        auto size = GetModuleFileNameExA(ph, nullptr, buff, sizeof buff);
+        auto size = GetModuleFileNameExA(phandle, nullptr, buff, sizeof buff);
         return { buff, static_cast<std::string::size_type>(size) };
     } else {
         return { };
