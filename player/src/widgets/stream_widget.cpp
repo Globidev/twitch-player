@@ -1,4 +1,4 @@
-#include "stream_widget.hpp"
+#include "widgets/stream_widget.hpp"
 
 #include <QShortcut>
 
@@ -25,16 +25,19 @@ StreamWidget::StreamWidget(libvlc::Instance &inst, void *hwnd, QWidget *parent):
 }
 
 void StreamWidget::reposition(ChatPosition position) {
+    // Save sizes
     if (chat.isVisible()) {
         _chat_size = sizes()[indexOf(&chat)];
         _video_size = sizes()[indexOf(&video)];
     }
 
+    // Potentially swap the layout
     switch (position) {
         case ChatPosition::Right: insertWidget(1, &chat); break;
         case ChatPosition::Left: insertWidget(0, &chat); break;
     }
 
+    // Restore sizes
     if (_chat_position != position) {
         QList<int> new_sizes;
         new_sizes.insert(indexOf(&chat), _chat_size);

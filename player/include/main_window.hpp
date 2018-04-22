@@ -19,9 +19,6 @@ public:
 
     void add_stream(QString);
 
-protected:
-    void moveEvent(QMoveEvent *) override;
-
 private:
     Ui::MainWindow *ui;
 

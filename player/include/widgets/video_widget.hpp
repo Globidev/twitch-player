@@ -6,26 +6,11 @@
 #include <optional>
 #include <QWidget>
 #include <QTimer>
+#include <QFont>
 
-class VolumeOverlay: public QWidget
-{
+class VideoOverlay: public QWidget {
 public:
-    VolumeOverlay(QWidget *parent = nullptr):
-        QWidget(parent)
-    {
-        setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
-
-        setAttribute(Qt::WA_NoSystemBackground);
-        setAttribute(Qt::WA_TranslucentBackground);
-        setAttribute(Qt::WA_PaintOnScreen);
-        setAttribute(Qt::WA_TransparentForMouseEvents);
-
-        timer.setInterval(2500);
-        QObject::connect(&timer, &QTimer::timeout, [this] {
-            text.reset();
-            repaint();
-        });
-    }
+    VideoOverlay(QWidget * = nullptr);
 
     void show_text(QString);
 
@@ -33,12 +18,23 @@ protected:
     void paintEvent(QPaintEvent *) override;
 
 private:
-    std::optional<QString> text;
-    QTimer timer;
+    std::optional<QString> _text;
+    QTimer _timer;
+    QFont _text_font;
 };
 
-class VideoWidget: public QWidget
-{
+class VideoWidget;
+
+class MovementFilter: public QObject {
+public:
+    MovementFilter(VideoWidget &);
+protected:
+    bool eventFilter(QObject *, QEvent *) override;
+private:
+    VideoWidget &_video_widget;
+};
+
+class VideoWidget: public QWidget {
 public:
     VideoWidget(libvlc::Instance &, QWidget * = nullptr);
 
@@ -46,22 +42,25 @@ public:
     void set_volume(int);
     void set_muted(bool);
 
-    void update_overlay_position();
-
 protected:
     void wheelEvent(QWheelEvent *) override;
     void keyPressEvent(QKeyEvent *) override;
     void moveEvent(QMoveEvent *) override;
     void resizeEvent(QResizeEvent *) override;
     void showEvent(QShowEvent *) override;
+
 private:
     libvlc::Instance & _instance;
     libvlc::MediaPlayer _media_player;
     std::optional<libvlc::Media> _media;
-    VolumeOverlay *_overlay;
+    VideoOverlay *_overlay;
+    friend class MovementFilter;
+    MovementFilter _move_filter;
 
     int _vol = 35;
     bool _muted = false;
+
+    void update_overlay_position();
 };
 
 #endif // VIDEO_WIDGET_HPP

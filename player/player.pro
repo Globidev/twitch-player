@@ -7,17 +7,17 @@ QMAKE_CXXFLAGS  +=  /std:c++latest
 
 SOURCES         +=  src/main.cpp \
                     src/main_window.cpp \
-                    src/video_widget.cpp \
-                    src/foreign_widget.cpp \
-                    src/stream_widget.cpp \
-                    src/libvlc.cpp
+                    src/libvlc.cpp \
+                    src/widgets/video_widget.cpp \
+                    src/widgets/foreign_widget.cpp \
+                    src/widgets/stream_widget.cpp \
 
 HEADERS         +=  include/main_window.hpp \
-                    include/video_widget.hpp \
-                    include/foreign_widget.hpp \
-                    include/stream_widget.hpp \
+                    include/constants.hpp \
                     include/libvlc.hpp \
-                    include/constants.hpp
+                    include/widgets/video_widget.hpp \
+                    include/widgets/foreign_widget.hpp \
+                    include/widgets/stream_widget.hpp \
 
 FORMS           +=  forms/main_window.ui
 RESOURCES       =   build/player.qrc

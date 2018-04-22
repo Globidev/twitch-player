@@ -1,7 +1,7 @@
 #include "main_window.hpp"
 #include "ui_main_window.h"
 
-#include "stream_widget.hpp"
+#include "widgets/stream_widget.hpp"
 
 #include "win.hpp"
 
@@ -75,9 +75,4 @@ void MainWindow::add_stream(QString channel) {
         timer->stop();
     });
     timer->start(250);
-}
-
-void MainWindow::moveEvent(QMoveEvent *) {
-    for (auto widget: streams)
-        widget->video.update_overlay_position();
 }

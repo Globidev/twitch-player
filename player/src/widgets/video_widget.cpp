@@ -1,18 +1,16 @@
-#include "video_widget.hpp"
+#include "widgets/video_widget.hpp"
 
 #include <QWheelEvent>
-#include <QDebug>
 #include <QPainter>
-#include <QPen>
-#include <QFont>
-#include <QTimer>
 
 VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     QWidget(parent),
     _instance(instance),
     _media_player(libvlc::MediaPlayer(instance)),
-    _overlay(new VolumeOverlay(this))
+    _overlay(new VideoOverlay(this)),
+    _move_filter(*this)
 {
+    window()->installEventFilter(&_move_filter);
     setAttribute(Qt::WA_OpaquePaintEvent);
     setFocusPolicy(Qt::StrongFocus);
     _media_player.set_renderer((void *)winId());
@@ -41,10 +39,8 @@ void VideoWidget::set_muted(bool muted) {
 }
 
 void VideoWidget::update_overlay_position() {
-    QPoint p = mapToGlobal(pos());
     _overlay->resize(size());
-    _overlay->move(p);
-    _overlay->raise();
+    _overlay->move(mapToGlobal(pos()) - pos());
 }
 
 void VideoWidget::wheelEvent(QWheelEvent *event) {
@@ -58,7 +54,6 @@ void VideoWidget::wheelEvent(QWheelEvent *event) {
 }
 
 void VideoWidget::keyPressEvent(QKeyEvent *event) {
-    qDebug() << event;
     if (event->key() == Qt::Key_M) {
         set_muted(!_muted);
     }
@@ -79,30 +74,56 @@ void VideoWidget::resizeEvent(QResizeEvent *event) {
 }
 
 void VideoWidget::showEvent(QShowEvent *event) {
-    // have to actually wait for it to be shown...
+    // have to actually wait for it to be shown ...
     QTimer::singleShot(250, [this] {
         update_overlay_position();
     });
 }
 
-void VolumeOverlay::paintEvent(QPaintEvent *event) {
-    if (text) {
-        QFont font;
-        font.setBold(true);
-        font.setPointSize(40);
-        font.setWeight(40);
+MovementFilter::MovementFilter(VideoWidget & video_widget):
+    _video_widget(video_widget)
+{ }
 
+bool MovementFilter::eventFilter(QObject *watched, QEvent *event) {
+    if (event->type() == QEvent::Type::Move)
+        _video_widget.update_overlay_position();
+    return QObject::eventFilter(watched, event);
+}
+
+VideoOverlay::VideoOverlay(QWidget *parent):
+    QWidget(parent)
+{
+    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
+
+    setAttribute(Qt::WA_NoSystemBackground);
+    setAttribute(Qt::WA_TranslucentBackground);
+    setAttribute(Qt::WA_PaintOnScreen);
+    setAttribute(Qt::WA_TransparentForMouseEvents);
+
+    _text_font.setBold(true);
+    _text_font.setPointSize(40);
+    _text_font.setWeight(40);
+
+    _timer.setInterval(2500);
+    QObject::connect(&_timer, &QTimer::timeout, [this] {
+        _text.reset();
+        repaint();
+    });
+}
+
+void VideoOverlay::paintEvent(QPaintEvent *event) {
+    if (_text) {
         QPainter painter { this };
 
-        painter.setFont(font);
+        painter.setFont(_text_font);
         painter.setPen(Qt::white);
 
-        painter.drawText(rect(), Qt::AlignTop | Qt::AlignRight, *text);
+        painter.drawText(rect(), Qt::AlignTop | Qt::AlignRight, *_text);
     }
 }
 
-void VolumeOverlay::show_text(QString new_text) {
-    text.emplace(new_text);
+void VideoOverlay::show_text(QString new_text) {
+    _text.emplace(new_text);
+    _timer.start();
     repaint();
-    timer.start();
 }
