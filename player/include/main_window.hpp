@@ -7,12 +7,11 @@
 
 #include <vector>
 
-class QSplitter;
-
 namespace Ui {
 class MainWindow;
 }
 
+class QSplitter;
 class StreamWidget;
 
 class MainWindow : public QMainWindow {

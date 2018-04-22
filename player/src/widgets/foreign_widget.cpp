@@ -6,17 +6,19 @@
 #include <windows.h>
 
 ForeignWidget::ForeignWidget(void *handle, QWidget *parent):
-    QWidget(parent), _handle(handle)
+    QWidget(parent),
+    _layout(new QHBoxLayout(this)) ,
+    _handle(handle)
 {
-    _layout.setContentsMargins(QMargins());
+    _layout->setContentsMargins(QMargins());
     setContentsMargins(QMargins());
 
     if (_win = QWindow::fromWinId(reinterpret_cast<WId>(handle)); _win) {
         if (auto container = QWidget::createWindowContainer(_win); container)
-            _layout.addWidget(container);
+            _layout->addWidget(container);
     }
 
-    setLayout(&_layout);
+    setLayout(_layout);
 }
 
 ForeignWidget::~ForeignWidget() {

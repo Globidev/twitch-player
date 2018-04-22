@@ -47,6 +47,7 @@ protected:
     void showEvent(QShowEvent *) override;
     void mousePressEvent(QMouseEvent *) override;
     void mouseMoveEvent(QMouseEvent *) override;
+    void keyPressEvent(QKeyEvent *) override;
 
 private:
     libvlc::Instance & _instance;
@@ -57,8 +58,6 @@ private:
 
     friend class MovementFilter;
     MovementFilter *_move_filter;
-
-    QShortcut *_sh_mute, *_sh_forward;
 
     int _vol = 35;
     bool _muted = false;

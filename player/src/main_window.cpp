@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <QKeyEvent>
 #include <QShortcut>
+#include <QSplitter>
 
 static const auto CHROME_PATH =
     R"(C:\Program Files (x86)\Google\Chrome\Application\chrome.exe)";

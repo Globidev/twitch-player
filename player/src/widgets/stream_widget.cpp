@@ -4,49 +4,59 @@
 
 #include "libvlc.hpp"
 
-#include <QShortcut>
+#include <QKeyEvent>
+#include <QSplitter>
 
 StreamWidget::StreamWidget(libvlc::Instance &inst, void *hwnd, QWidget *parent):
-    QSplitter(parent),
+    QWidget(parent),
     video(new VideoWidget(inst, this)),
     chat(new ForeignWidget(hwnd, this)),
-    _chat_position(ChatPosition::Right),
-    _chat_size(20),
-    _video_size(80),
-    _sh_toggle_chat_left(new QShortcut(QKeySequence("ctrl+left"), this)),
-    _sh_toggle_chat_right(new QShortcut(QKeySequence("ctrl+right"), this))
+    _splitter(new QSplitter(this)),
+    _layout(new QHBoxLayout(this))
 {
-    QObject::connect(_sh_toggle_chat_left, &QShortcut::activated, [this] {
-        reposition(ChatPosition::Left);
-    });
-    QObject::connect(_sh_toggle_chat_right, &QShortcut::activated, [this] {
-        reposition(ChatPosition::Right);
-    });
+    setLayout(_layout);
 
-    setSizes(QList<int>() << _video_size << _chat_size);
-    addWidget(video);
-    addWidget(chat);
+    _layout->setContentsMargins(QMargins());
+    _layout->addWidget(_splitter);
+
+    _splitter->addWidget(video);
+    _splitter->addWidget(chat);
+    _splitter->setSizes(QList<int>() << _video_size << _chat_size);
+}
+
+void StreamWidget::keyPressEvent(QKeyEvent * event) {
+    if (event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier)) {
+        switch (event->key()) {
+            case Qt::Key_Left:
+                reposition(ChatPosition::Left);
+                break;
+            case Qt::Key_Right:
+                reposition(ChatPosition::Right);
+                break;
+        }
+    }
+    QWidget::keyPressEvent(event);
 }
 
 void StreamWidget::reposition(ChatPosition position) {
     // Save sizes
     if (chat->isVisible()) {
-        _chat_size = sizes()[indexOf(chat)];
-        _video_size = sizes()[indexOf(video)];
+        _chat_size = _splitter->sizes()[_splitter->indexOf(chat)];
+        _video_size = _splitter->sizes()[_splitter->indexOf(video)];
     }
 
     // Potentially swap the layout
     switch (position) {
-        case ChatPosition::Right: insertWidget(1, chat); break;
-        case ChatPosition::Left: insertWidget(0, chat); break;
+        case ChatPosition::Right: _splitter->insertWidget(1, chat); break;
+        case ChatPosition::Left: _splitter->insertWidget(0, chat); break;
     }
 
     // Restore sizes
     if (_chat_position != position) {
         QList<int> new_sizes;
-        new_sizes.insert(indexOf(chat), _chat_size);
-        new_sizes.insert(indexOf(video), _video_size);
-        setSizes(new_sizes);
+        new_sizes.insert(_splitter->indexOf(chat), _chat_size);
+        new_sizes.insert(_splitter->indexOf(video), _video_size);
+        _splitter->setSizes(new_sizes);
     }
 
     chat->setVisible(!chat->isVisible() || _chat_position != position);

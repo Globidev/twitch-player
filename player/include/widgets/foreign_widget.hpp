@@ -12,8 +12,8 @@ public:
 
 private:
     QWindow *_win;
-    QHBoxLayout _layout;
-    void * _handle;
+    QHBoxLayout *_layout;
+    void *_handle;
 };
 
 #endif // FOREIGN_WIDGET_HPP
