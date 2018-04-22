@@ -24,6 +24,8 @@ private:
 
     libvlc::Instance _video_context;
     std::set<StreamWidget *> streams;
+    std::vector<StreamWidget *> _streams;
+    QSplitter *_main_splitter;
 };
 
 #endif // MAIN_WINDOW_HPP

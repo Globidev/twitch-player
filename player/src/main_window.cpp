@@ -20,6 +20,7 @@ static auto find_chat_windows() {
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
+    _main_splitter(new QSplitter(Qt::Vertical, this)),
 {
     ui->setupUi(this);
 
@@ -43,7 +44,7 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::add_stream(QString channel) {
+void MainWindow::add_stream(QString channel, int row, int col) {
     auto pre_launch_windows = find_chat_windows();
     QProcess::startDetached(CHROME_PATH, QStringList()
         << "--app=https://www.twitch.tv/popout/" + channel + "/chat?popout="
@@ -75,4 +76,31 @@ void MainWindow::add_stream(QString channel) {
         timer->stop();
     });
     timer->start(250);
+}
+
+void MainWindow::add_stream_impl(QString channel, HWND chat_window_handle, int row, int col) {
+    QSplitter *sp;
+    if (row >= rows.size()) {
+        sp = new QSplitter(this);
+        _main_splitter->addWidget(sp);
+        rows.push_back(sp);
+    } else {
+        sp = rows[row];
+    }
+
+    auto stream_widget = new StreamWidget {
+        _video_context,
+        chat_window_handle,
+        this
+    };
+
+    sp->insertWidget(col, stream_widget);
+    stream_widget->video->play(channel);
+    _streams.push_back(stream_widget);
+}
+
+void MainWindow::toggle_fullscreen() {
+    auto state = windowState();
+    state.setFlag(Qt::WindowState::WindowFullScreen, !isFullScreen());
+    setWindowState(state);
 }
