@@ -12,14 +12,14 @@ class MainWindow;
 }
 
 class QSplitter;
-class StreamWidget;
+class StreamContainer;
 
 class MainWindow : public QMainWindow {
 public:
     MainWindow(QWidget * = nullptr);
-    MainWindow(QString, QWidget * = nullptr);
 
-    void add_stream(QString, int, int);
+    void add_picker(int, int);
+    void add_stream(int, int, QString);
 
 protected:
     void changeEvent(QEvent *) override;
@@ -30,11 +30,10 @@ private:
 
     Ui::MainWindow *_ui;
     std::vector<QSplitter *> rows;
-    std::vector<StreamWidget *> _streams;
+    std::vector<StreamContainer *> _streams;
     QSplitter *_main_splitter;
     QShortcut *_sh_full_screen;
 
-    void add_stream_impl(QString, HWND, int, int);
     void toggle_fullscreen();
 };
 

@@ -1,36 +1,13 @@
 #include "main_window.hpp"
 #include "ui_main_window.h"
 
-#include "widgets/stream_widget.hpp"
-#include "widgets/video_widget.hpp"
+#include "widgets/stream_container.hpp"
 
-#include "win.hpp"
-
-#include <QProcess>
-#include <QTimer>
 #include <QKeyEvent>
 #include <QShortcut>
 #include <QSplitter>
 
-static const auto CHROME_PATH =
-    R"(C:\Program Files (x86)\Google\Chrome\Application\chrome.exe)";
-
-static auto find_chat_windows() {
-    return find_windows_by_title_and_pname("Twitch", CHROME_PATH);
-}
-
-static auto find_new_chat_windows(const FindWindowResult & previous_results) {
-    auto new_results = find_chat_windows();
-
-    FindWindowResult new_windows;
-    std::set_difference(
-        new_results.begin(), new_results.end(),
-        previous_results.begin(), previous_results.end(),
-        std::inserter(new_windows, new_windows.begin())
-    );
-
-    return new_windows;
-}
+#include <windows.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -65,33 +42,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     QMainWindow::keyPressEvent(event);
 }
 
-MainWindow::MainWindow(QString channel, QWidget *parent):
-    MainWindow(parent)
-{
-    add_stream(channel, 0, 0);
-}
-
-void MainWindow::add_stream(QString channel, int row, int col) {
-    auto pre_launch_windows = find_chat_windows();
-    QProcess::startDetached(CHROME_PATH, QStringList()
-        << "--app=https://www.twitch.tv/popout/" + channel + "/chat?popout="
-    );
-
-    auto timer = new QTimer(this);
-    QObject::connect(timer, &QTimer::timeout, [=] {
-        auto chat_windows = find_new_chat_windows(pre_launch_windows);
-
-        if (auto handle_it = chat_windows.begin();
-            handle_it != chat_windows.end())
-        {
-            add_stream_impl(channel, *handle_it, row, col);
-            timer->deleteLater();
-        }
-    });
-    timer->start(250);
-}
-
-void MainWindow::add_stream_impl(QString channel, HWND chat_window_handle, int row, int col) {
+void MainWindow::add_picker(int row, int col) {
     QSplitter *sp;
     if (row >= rows.size()) {
         sp = new QSplitter(this);
@@ -101,15 +52,15 @@ void MainWindow::add_stream_impl(QString channel, HWND chat_window_handle, int r
         sp = rows[row];
     }
 
-    auto stream_widget = new StreamWidget {
-        _video_context,
-        chat_window_handle,
-        this
-    };
+    auto stream_container = new StreamContainer(_video_context, this);
 
-    sp->insertWidget(col, stream_widget);
-    stream_widget->video->play(channel);
-    _streams.push_back(stream_widget);
+    sp->insertWidget(col, stream_container);
+    _streams.push_back(stream_container);
+}
+
+void MainWindow::add_stream(int row, int col, QString channel) {
+    add_picker(row, col);
+    _streams.back()->play(channel);
 }
 
 void MainWindow::toggle_fullscreen() {

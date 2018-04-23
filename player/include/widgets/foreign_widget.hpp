@@ -2,18 +2,23 @@
 #define FOREIGN_WIDGET_HPP
 
 #include <QWidget>
-#include <QWindow>
-#include <QHBoxLayout>
+
+#include <optional>
+
+class QHBoxLayout;
 
 class ForeignWidget: public QWidget {
 public:
-    ForeignWidget(void *handle, QWidget * = nullptr);
+    ForeignWidget(QWidget * = nullptr);
     ~ForeignWidget();
 
+    void grab(void *);
+
 private:
-    QWindow *_win;
+    std::optional<QWindow *> _foreign_win_ptr;
     QHBoxLayout *_layout;
-    void *_handle;
+
+    void release_window();
 };
 
 #endif // FOREIGN_WIDGET_HPP

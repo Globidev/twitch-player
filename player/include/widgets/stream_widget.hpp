@@ -15,10 +15,9 @@ class QHBoxLayout;
 
 class StreamWidget: public QWidget {
 public:
-    StreamWidget(libvlc::Instance &, void *, QWidget * = nullptr);
+    StreamWidget(libvlc::Instance &, QWidget * = nullptr);
 
-    VideoWidget *video;
-    ForeignWidget *chat;
+    void play(QString);
 
 protected:
     void keyPressEvent(QKeyEvent *) override;
@@ -28,6 +27,8 @@ private:
 
     QSplitter *_splitter;
     QHBoxLayout *_layout;
+    VideoWidget *_video;
+    ForeignWidget *_chat;
 
     int _chat_size = 20, _video_size = 80;
     ChatPosition _chat_position = ChatPosition::Right;

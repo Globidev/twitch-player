@@ -11,6 +11,8 @@ SOURCES         +=  src/main.cpp \
                     src/widgets/video_widget.cpp \
                     src/widgets/foreign_widget.cpp \
                     src/widgets/stream_widget.cpp \
+                    src/widgets/stream_picker.cpp \
+                    src/widgets/stream_container.cpp \
 
 HEADERS         +=  include/main_window.hpp \
                     include/constants.hpp \
@@ -18,8 +20,11 @@ HEADERS         +=  include/main_window.hpp \
                     include/widgets/video_widget.hpp \
                     include/widgets/foreign_widget.hpp \
                     include/widgets/stream_widget.hpp \
+                    include/widgets/stream_picker.hpp \
+                    include/widgets/stream_container.hpp \
 
-FORMS           +=  forms/main_window.ui
+FORMS           +=  forms/main_window.ui \
+                    forms/stream_picker.ui
 RESOURCES       =   build/player.qrc
 
 INCLUDEPATH     +=  "C:\Users\depar\dev\vlc-3.0.1\include" \

@@ -1,29 +1,39 @@
 #include "widgets/foreign_widget.hpp"
 
-#include <QApplication>
-#include <QDebug>
+#include <QHBoxLayout>
+#include <QWindow>
 
 #include <windows.h>
 
-ForeignWidget::ForeignWidget(void *handle, QWidget *parent):
+ForeignWidget::ForeignWidget(QWidget *parent):
     QWidget(parent),
-    _layout(new QHBoxLayout(this)) ,
-    _handle(handle)
+    _layout(new QHBoxLayout(this))
 {
+    setLayout(_layout);
+
     _layout->setContentsMargins(QMargins());
     setContentsMargins(QMargins());
+}
 
-    if (_win = QWindow::fromWinId(reinterpret_cast<WId>(handle)); _win) {
-        if (auto container = QWidget::createWindowContainer(_win); container)
+void ForeignWidget::grab(void *handle) {
+    release_window();
+
+    auto native_handle = reinterpret_cast<WId>(handle);
+    if (auto win_ptr = QWindow::fromWinId(native_handle); win_ptr) {
+        _foreign_win_ptr = win_ptr;
+        if (auto container = QWidget::createWindowContainer(win_ptr); container)
             _layout->addWidget(container);
     }
-
-    setLayout(_layout);
 }
 
 ForeignWidget::~ForeignWidget() {
-    if (_win) {
-        _win->setParent(nullptr);
-        SendMessage(reinterpret_cast<HWND>(_handle), WM_SYSCOMMAND, SC_CLOSE, 0);
+    release_window();
+}
+
+void ForeignWidget::release_window() {
+    if (_foreign_win_ptr) {
+        (*_foreign_win_ptr)->setParent(nullptr);
+        auto handle = reinterpret_cast<HWND>((*_foreign_win_ptr)->winId());
+        SendMessage(handle, WM_SYSCOMMAND, SC_CLOSE, 0);
     }
 }
