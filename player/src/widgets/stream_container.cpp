@@ -5,6 +5,8 @@
 #include "libvlc.hpp"
 
 #include <QHboxLayout>
+#include <QPainter>
+#include <QApplication>
 
 StreamContainer::StreamContainer(libvlc::Instance &video_ctx, QWidget *parent):
     QWidget(parent),
@@ -15,19 +17,50 @@ StreamContainer::StreamContainer(libvlc::Instance &video_ctx, QWidget *parent):
     QObject::connect(
         _picker,
         &StreamPicker::stream_picked,
-        [this](QString channel) { play(channel); });
+        [this](QString channel) { play(channel); }
+    );
 
+    _stream->hide();
     setLayout(_layout);
 
     _layout->addWidget(_picker);
-    _layout->setContentsMargins(QMargins());
-    setContentsMargins(QMargins());
+
+    setFocusPolicy(Qt::StrongFocus);
+    setAutoFillBackground(true);
 }
 
 void StreamContainer::play(QString channel) {
     _picker->hide();
     _layout->removeWidget(_picker);
+
     repaint();
+
     _layout->addWidget(_stream);
+    _stream->show();
     _stream->play(channel);
+}
+
+void StreamContainer::paintEvent(QPaintEvent *event) {
+    constexpr auto border_width = 3;
+
+    if (isAncestorOf(qApp->focusWidget())) {
+        QPainter painter(this);
+
+        painter.setPen(QPen(QColor(0, 0xFF, 0, 0xA0)));
+        painter.drawRect(
+            border_width, border_width,
+            width() - border_width * 2,
+            height() - border_width * 2
+        );
+    }
+
+    QWidget::paintEvent(event);
+}
+
+void StreamContainer::focusOutEvent(QFocusEvent *) {
+    repaint();
+}
+
+void StreamContainer::focusInEvent(QFocusEvent *) {
+    repaint();
 }

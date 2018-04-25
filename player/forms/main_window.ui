@@ -82,7 +82,7 @@
     <normaloff>:/icons/icon.ico</normaloff>:/icons/icon.ico</iconset>
   </property>
   <property name="autoFillBackground">
-   <bool>true</bool>
+   <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -127,6 +127,7 @@
     <addaction name="separator"/>
     <addaction name="actionAddStreamVertically"/>
     <addaction name="actionAddStreamHorizontally"/>
+    <addaction name="actionRemoveStream"/>
    </widget>
    <widget class="QMenu" name="menuPreferences">
     <property name="title">
@@ -199,6 +200,14 @@
   <action name="actionToggle_Menu_Bar">
    <property name="text">
     <string>Toggle Menu Bar</string>
+   </property>
+  </action>
+  <action name="actionRemoveStream">
+   <property name="text">
+    <string>Remove Stream</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Del</string>
    </property>
   </action>
  </widget>

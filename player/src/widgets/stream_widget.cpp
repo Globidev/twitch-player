@@ -82,6 +82,7 @@ void StreamWidget::play(QString channel) {
                 handle_it != chat_windows.end())
             {
                 _chat->grab(*handle_it);
+                activateWindow();
                 timer->deleteLater();
             }
         });

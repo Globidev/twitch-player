@@ -6,6 +6,7 @@
 #include <QMainWindow>
 
 #include <vector>
+#include <set>
 
 namespace Ui {
 class MainWindow;
@@ -26,17 +27,19 @@ public:
 protected:
     void changeEvent(QEvent *) override;
     void keyPressEvent(QKeyEvent *) override;
+    void mousePressEvent(QMouseEvent *) override;
 
 private:
     libvlc::Instance _video_context;
 
     Ui::MainWindow *_ui;
     std::vector<QSplitter *> rows;
-    std::vector<StreamContainer *> _streams;
+    std::set<StreamContainer *> _streams;
     QSplitter *_main_splitter;
     VLCLogViewer *_vlc_log_viewer;
 
     void toggle_fullscreen();
+    std::pair<int, int> find_focused_stream();
 };
 
 #endif // MAIN_WINDOW_HPP

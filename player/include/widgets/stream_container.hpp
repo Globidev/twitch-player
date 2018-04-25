@@ -17,6 +17,10 @@ public:
 
     void play(QString);
 
+    void paintEvent(QPaintEvent *) override;
+    void focusOutEvent(QFocusEvent *) override;
+    void focusInEvent(QFocusEvent *) override;
+
 private:
     QHBoxLayout *_layout;
     StreamPicker *_picker;

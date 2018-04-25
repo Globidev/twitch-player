@@ -30,11 +30,24 @@ MainWindow::MainWindow(QWidget *parent) :
         toggle_window_borders(win_handle);
     });
     add_action(_ui->actionAddStreamHorizontally, [this] {
-        add_picker(0, rows[0]->count());
+        auto [row, col] = find_focused_stream();
+        add_picker(row, col + 1);
     });
     add_action(_ui->actionAddStreamVertically, [this] {
-        add_picker(rows.size(), 0);
+        auto [row, col] = find_focused_stream();
+        add_picker(row + 1, col);
     });
+    add_action(_ui->actionRemoveStream, [this] {
+        auto [row, col] = find_focused_stream();
+        if (row < rows.size()) {
+            if (col < rows[row]->count()) {
+                auto stream_widget = rows[row]->widget(col);
+                _streams.erase(static_cast<StreamContainer *>(stream_widget));
+                stream_widget->deleteLater();
+            }
+        }
+    });
+
     add_action(_ui->actionLogs, [this] { _vlc_log_viewer->show(); });
 
     add_action(_ui->actionOptions, [this] {
@@ -57,11 +70,22 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     QMainWindow::keyPressEvent(event);
 }
 
+void MainWindow::mousePressEvent(QMouseEvent *) {
+    for (auto s: _streams)
+        s->repaint();
+}
+
 void MainWindow::add_picker(int row, int col) {
     QSplitter *sp;
     if (row >= rows.size()) {
         sp = new QSplitter(this);
         _main_splitter->addWidget(sp);
+        if (_main_splitter->count() > 1) {
+            QList<int> sizes;
+            for (auto i = 0; i < _main_splitter->count(); ++i)
+                sizes << 100 / _main_splitter->count();
+            _main_splitter->setSizes(sizes);
+        }
         rows.push_back(sp);
     } else {
         sp = rows[row];
@@ -70,16 +94,37 @@ void MainWindow::add_picker(int row, int col) {
     auto stream_container = new StreamContainer(_video_context, this);
 
     sp->insertWidget(col, stream_container);
-    _streams.push_back(stream_container);
+    if (sp->count() > 1) {
+        QList<int> sizes;
+        for (auto i = 0; i < sp->count(); ++i)
+            sizes << 100 / sp->count();
+        sp->setSizes(sizes);
+    }
+    _streams.insert(stream_container);
+    stream_container->setFocus();
+    stream_container->activateWindow();
 }
 
 void MainWindow::add_stream(int row, int col, QString channel) {
     add_picker(row, col);
-    _streams.back()->play(channel);
+    (*_streams.rbegin())->play(channel);
 }
 
 void MainWindow::toggle_fullscreen() {
     auto state = windowState();
     state.setFlag(Qt::WindowState::WindowFullScreen, !isFullScreen());
     setWindowState(state);
+}
+
+std::pair<int, int> MainWindow::find_focused_stream() {
+    auto focusedWidget = qApp->focusWidget();
+
+    for (auto row = 0; row < rows.size(); ++row) {
+        for (auto col = 0; col < rows[row]->count(); ++col) {
+            if (rows[row]->widget(col)->isAncestorOf(focusedWidget))
+                return { row, col };
+        }
+    }
+
+    return { 0, 0 };
 }

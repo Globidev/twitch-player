@@ -6,6 +6,14 @@
 #include <QShortcut>
 #include <QTimer>
 
+template <class Slot>
+static void delayed(VideoWidget *parent, int ms, Slot slot) {
+    auto timer = new QTimer(parent);
+    QObject::connect(timer, &QTimer::timeout, slot);
+    timer->setSingleShot(true);
+    timer->start(ms);
+}
+
 VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     QWidget(parent),
     _instance(instance),
@@ -15,11 +23,12 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
 {
     window()->installEventFilter(_move_filter);
     setAttribute(Qt::WA_OpaquePaintEvent);
-    setFocusPolicy(Qt::StrongFocus);
+    setFocusPolicy(Qt::WheelFocus);
     _media_player.set_renderer((void *)winId());
     _media_player.set_volume(_vol);
     _overlay->show();
     update_overlay_position();
+    setMinimumSize(160, 90);
 }
 
 void VideoWidget::play(QString channel) {
@@ -63,9 +72,7 @@ void VideoWidget::resizeEvent(QResizeEvent *event) {
 
 void VideoWidget::showEvent(QShowEvent *event) {
     // have to actually wait for it to be shown ...
-    QTimer::singleShot(250, [this] {
-        update_overlay_position();
-    });
+    delayed(this, 250, [this] { update_overlay_position(); });
 }
 
 void VideoWidget::mousePressEvent(QMouseEvent *event) {
@@ -100,10 +107,11 @@ void VideoWidget::keyPressEvent(QKeyEvent *event) {
     // overlay. It's hard to detect without adding strong coupling with the
     // parent so for now let's just schedule an overlay update for the next
     // event loop iteration
-    QTimer::singleShot(0, [this] { update_overlay_position(); });
+    delayed(this, 0, [this] { update_overlay_position(); });
 }
 
 MovementFilter::MovementFilter(VideoWidget & video_widget):
+    QObject(&video_widget),
     _video_widget(video_widget)
 { }
 

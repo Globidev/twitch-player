@@ -8,7 +8,6 @@ StreamPicker::StreamPicker(QWidget *parent):
     _ui(new Ui::StreamPicker)
 {
     _ui->setupUi(this);
-    setAutoFillBackground(true);
 
     QObject::connect(_ui->pick_button, &QPushButton::clicked, [this] {
         bool picked;
