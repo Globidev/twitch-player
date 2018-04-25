@@ -14,22 +14,42 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     _main_splitter(new QSplitter(Qt::Vertical, this)),
     _ui(new Ui::MainWindow),
-    _sh_full_screen(new QShortcut(QKeySequence::FullScreen, this)),
     _vlc_log_viewer(new VLCLogViewer(_video_context))
 {
+    _ui->setupUi(this);
+    _ui->verticalLayout->addWidget(_main_splitter);
+
     QObject::connect(
-        _sh_full_screen,
-        &QShortcut::activated,
+        _ui->actionFullScreen,
+        &QAction::triggered,
         [this] { toggle_fullscreen(); }
     );
 
-    _ui->setupUi(this);
-    _ui->verticalLayout->addWidget(_main_splitter);
+    QObject::connect(
+        _ui->actionToggleWIndowBorders,
+        &QAction::triggered,
+        [this] {
+            auto win_handle = reinterpret_cast<WindowHandle>(window()->winId());
+            toggle_window_borders(win_handle);
+        }
+    );
 
     QObject::connect(
         _ui->actionLogs,
         &QAction::triggered,
         [this] { _vlc_log_viewer->show(); }
+    );
+
+    QObject::connect(
+        _ui->actionAddStreamHorizontally,
+        &QAction::triggered,
+        [this] { add_picker(0, rows[0]->count()); }
+    );
+
+    QObject::connect(
+        _ui->actionAddStreamVertically,
+        &QAction::triggered,
+        [this] { add_picker(rows.size(), 0); }
     );
 }
 
@@ -38,15 +58,12 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::changeEvent(QEvent *event) {
+    if (event->type() == QEvent::ActivationChange)
+        _ui->menuBar->setVisible(isActiveWindow());
     QMainWindow::changeEvent(event);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-    if (event->key() == Qt::Key_Alt) {
-        auto win_handle = reinterpret_cast<WindowHandle>(window()->winId());
-        toggle_window_borders(win_handle);
-        _ui->menuBar->setVisible(!_ui->menuBar->isVisible());
-    }
     QMainWindow::keyPressEvent(event);
 }
 

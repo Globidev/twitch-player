@@ -34,7 +34,6 @@ private:
     std::vector<QSplitter *> rows;
     std::vector<StreamContainer *> _streams;
     QSplitter *_main_splitter;
-    QShortcut *_sh_full_screen;
     VLCLogViewer *_vlc_log_viewer;
 
     void toggle_fullscreen();
