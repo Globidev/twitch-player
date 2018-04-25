@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>Twitch Player</Name>
+    <Version>0.1.0</Version>
+    <Title>Twitch-Player Installer</Title>
+    <Publisher>Globi</Publisher>
+    <StartMenuDir>Twitch Player</StartMenuDir>
+    <TargetDir>@ApplicationsDir@/TwitchPlayer</TargetDir>
+    <RemoteRepositories>
+        <Repository>
+            <Url>http://glo.bi/twitch-player/</Url>
+            <Enabled>1</Enabled>
+            <DisplayName>Globi repository</DisplayName>
+        </Repository>
+    </RemoteRepositories>
+</Installer>

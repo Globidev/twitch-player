@@ -1,7 +1,7 @@
 @echo off
 cd target
 if "%1" == "deploy" (
-    %QMAKE_STATIC% ..
+    %QT_STATIC_BIN_PATH%\qmake.exe ..
 ) else (
     qmake ..
 )

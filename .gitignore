@@ -1,0 +1,3 @@
+dist/packages/**/data/*
+dist/*.exe
+dist/twitch-player_*
