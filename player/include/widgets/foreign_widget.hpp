@@ -5,6 +5,8 @@
 
 #include <optional>
 
+#include "native/capabilities.hpp"
+
 class QHBoxLayout;
 
 class ForeignWidget: public QWidget {
@@ -12,7 +14,7 @@ public:
     ForeignWidget(QWidget * = nullptr);
     ~ForeignWidget();
 
-    void grab(void *);
+    void grab(WindowHandle);
 
 private:
     std::optional<QWindow *> _foreign_win_ptr;

@@ -3,7 +3,6 @@
 #include "widgets/foreign_widget.hpp"
 
 #include "libvlc.hpp"
-#include "win.hpp"
 
 #include <QHBoxLayout>
 #include <QKeyEvent>

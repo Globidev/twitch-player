@@ -1,12 +1,7 @@
-#ifndef WIN_HPP
-#define WIN_HPP
+#include "native/win32.hpp"
 
 #include <Windows.h>
 #include <Psapi.h>
-#include <string>
-#include <set>
-
-using FindWindowResult = std::set<HWND>;
 
 template <class Predicate>
 struct FindWindowContext {
@@ -15,7 +10,7 @@ struct FindWindowContext {
 };
 
 template <class Pred>
-BOOL on_window(HWND handle, LPARAM erased_context)
+static BOOL on_window(HWND handle, LPARAM erased_context)
 {
     auto context = reinterpret_cast<FindWindowContext<Pred> *>(erased_context);
 
@@ -26,7 +21,7 @@ BOOL on_window(HWND handle, LPARAM erased_context)
 }
 
 template <class Pred>
-FindWindowResult find_windows_by(Pred pred) {
+static FindWindowResult find_windows_by(Pred pred) {
     auto context = FindWindowContext<Pred> { pred };
 
     (void)EnumWindows(on_window<Pred>, reinterpret_cast<LPARAM>(&context));
@@ -55,9 +50,8 @@ static std::string window_process_name(HWND handle) {
     }
 }
 
-FindWindowResult find_windows_by_title_and_pname(
-    std::string title, std::string pname
-)
+FindWindowResult find_windows_by_title_and_pname(std::string title,
+                                                 std::string pname)
 {
     auto predicate = [&](HWND handle) {
         auto handle_title = window_title(handle);
@@ -72,4 +66,29 @@ FindWindowResult find_windows_by_title_and_pname(
     return find_windows_by(predicate);
 }
 
-#endif // WIN_HPP
+void toggle_window_borders(HWND handle) {
+    constexpr auto BORDER_FLAGS = WS_CAPTION
+                                | WS_THICKFRAME
+                                | WS_MINIMIZEBOX
+                                | WS_MAXIMIZEBOX
+                                | WS_SYSMENU
+                                ;
+
+    constexpr auto REPOSITION_FLAGS = SWP_DRAWFRAME
+                                    | SWP_FRAMECHANGED
+                                    | SWP_NOMOVE
+                                    | SWP_NOSIZE
+                                    | SWP_NOZORDER
+                                    | SWP_NOACTIVATE
+                                    ;
+
+    auto current_style = GetWindowLong(handle, GWL_STYLE);
+    auto new_style = current_style ^ BORDER_FLAGS;
+    SetWindowLong(handle, GWL_STYLE, new_style);
+    SetWindowPos(handle, nullptr, 0, 0, 0, 0, REPOSITION_FLAGS);
+    InvalidateRect(handle, nullptr, TRUE);
+}
+
+void sysclose_window(HWND handle) {
+    SendMessage(handle, WM_SYSCOMMAND, SC_CLOSE, 0);
+}

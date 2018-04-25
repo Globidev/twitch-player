@@ -3,8 +3,6 @@
 #include <QHBoxLayout>
 #include <QWindow>
 
-#include <windows.h>
-
 ForeignWidget::ForeignWidget(QWidget *parent):
     QWidget(parent),
     _layout(new QHBoxLayout(this))
@@ -15,11 +13,11 @@ ForeignWidget::ForeignWidget(QWidget *parent):
     setContentsMargins(QMargins());
 }
 
-void ForeignWidget::grab(void *handle) {
+void ForeignWidget::grab(WindowHandle handle) {
     release_window();
 
-    auto native_handle = reinterpret_cast<WId>(handle);
-    if (auto win_ptr = QWindow::fromWinId(native_handle); win_ptr) {
+    auto abstract_handle = reinterpret_cast<WId>(handle);
+    if (auto win_ptr = QWindow::fromWinId(abstract_handle); win_ptr) {
         _foreign_win_ptr = win_ptr;
         if (auto container = QWidget::createWindowContainer(win_ptr); container)
             _layout->addWidget(container);
@@ -32,8 +30,10 @@ ForeignWidget::~ForeignWidget() {
 
 void ForeignWidget::release_window() {
     if (_foreign_win_ptr) {
-        (*_foreign_win_ptr)->setParent(nullptr);
-        auto handle = reinterpret_cast<HWND>((*_foreign_win_ptr)->winId());
-        SendMessage(handle, WM_SYSCOMMAND, SC_CLOSE, 0);
+        auto win_ptr = *_foreign_win_ptr;
+        auto handle = reinterpret_cast<WindowHandle>(win_ptr->winId());
+
+        win_ptr->setParent(nullptr);
+        sysclose_window(handle);
     }
 }

@@ -2,12 +2,11 @@
 #include "ui_main_window.h"
 
 #include "widgets/stream_container.hpp"
+#include "native/capabilities.hpp"
 
 #include <QKeyEvent>
 #include <QShortcut>
 #include <QSplitter>
-
-#include <windows.h>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -31,13 +30,8 @@ void MainWindow::changeEvent(QEvent *event) {
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Alt) {
-        auto handle = (HWND)window()->winId();
-        auto style = GetWindowLong(handle, GWL_STYLE);
-        SetWindowLong(handle, GWL_STYLE, style ^ (WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU));
-        if (GetWindowLong(handle, GWL_STYLE) != style) {
-            SetWindowPos(handle, nullptr, 0, 0, 0, 0, SWP_DRAWFRAME | SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-            InvalidateRect(handle, nullptr, TRUE);
-        }
+        auto win_handle = reinterpret_cast<WindowHandle>(window()->winId());
+        toggle_window_borders(win_handle);
     }
     QMainWindow::keyPressEvent(event);
 }
