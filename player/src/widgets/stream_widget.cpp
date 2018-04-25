@@ -3,22 +3,24 @@
 #include "widgets/foreign_widget.hpp"
 
 #include "libvlc.hpp"
+#include "constants.hpp"
 
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QSplitter>
 #include <QProcess>
+#include <QSettings>
 #include <QTimer>
+#include <QMessageBox>
 
-static const auto CHROME_PATH =
-    R"(C:\Program Files (x86)\Google\Chrome\Application\chrome.exe)";
-
-static auto find_chat_windows() {
-    return find_windows_by_title_and_pname("Twitch", CHROME_PATH);
+static auto find_chat_windows(QString renderer_path) {
+    auto normalized_path = renderer_path.replace("/", "\\").toStdString();
+    return find_windows_by_title_and_pname("Twitch", normalized_path);
 }
 
-static auto find_new_chat_windows(const FindWindowResult & previous_results) {
-    auto new_results = find_chat_windows();
+static auto find_new_chat_windows(QString renderer_path,
+                                  const FindWindowResult & previous_results) {
+    auto new_results = find_chat_windows(renderer_path);
 
     FindWindowResult new_windows;
     std::set_difference(
@@ -48,25 +50,43 @@ StreamWidget::StreamWidget(libvlc::Instance &inst, QWidget *parent):
 }
 
 void StreamWidget::play(QString channel) {
+    using namespace constants::settings::paths;
+
     _video->play(channel);
 
-    auto pre_launch_windows = find_chat_windows();
-    QProcess::startDetached(CHROME_PATH, QStringList()
-        << "--app=https://www.twitch.tv/popout/" + channel + "/chat?popout="
-    );
+    QSettings settings;
+    auto renderer_path = settings
+        .value(KEY_CHAT_RENDERER_PATH, DEFAULT_CHAT_RENDERER_PATH)
+        .toString();
+    auto raw_renderer_args = settings
+        .value(KEY_CHAT_RENDERER_ARGS, DEFAULT_CHAT_RENDERER_ARGS)
+        .toStringList();
+    QStringList renderer_args;
+    for (auto raw_arg: raw_renderer_args)
+        renderer_args.append(raw_arg.replace("${channel}", channel));
+    auto pre_launch_windows = find_chat_windows(renderer_path);
+    bool started = QProcess::startDetached(renderer_path, renderer_args);
 
-    auto timer = new QTimer(this);
-    QObject::connect(timer, &QTimer::timeout, [=] {
-        auto chat_windows = find_new_chat_windows(pre_launch_windows);
+    if (!started)
+        QMessageBox::critical(
+            window(),
+            "Error starting chat renderer",
+            QString("Failed to start the chat process: %1").arg(renderer_path)
+        );
+    else {
+        auto timer = new QTimer(this);
+        QObject::connect(timer, &QTimer::timeout, [=] {
+            auto chat_windows = find_new_chat_windows(renderer_path, pre_launch_windows);
 
-        if (auto handle_it = chat_windows.begin();
-            handle_it != chat_windows.end())
-        {
-            _chat->grab(*handle_it);
-            timer->deleteLater();
-        }
-    });
-    timer->start(250);
+            if (auto handle_it = chat_windows.begin();
+                handle_it != chat_windows.end())
+            {
+                _chat->grab(*handle_it);
+                timer->deleteLater();
+            }
+        });
+        timer->start(250);
+    }
 }
 
 void StreamWidget::keyPressEvent(QKeyEvent * event) {

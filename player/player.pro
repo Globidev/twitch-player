@@ -16,6 +16,7 @@ SOURCES         +=  src/main.cpp \
                     src/widgets/stream_picker.cpp \
                     src/widgets/stream_container.cpp \
                     src/widgets/vlc_log_viewer.cpp \
+                    src/widgets/options_dialog.cpp \
 
 win32:SOURCES   +=  src/native/win32.cpp
 
@@ -28,13 +29,15 @@ HEADERS         +=  include/main_window.hpp \
                     include/widgets/stream_picker.hpp \
                     include/widgets/stream_container.hpp \
                     include/widgets/vlc_log_viewer.hpp \
+                    include/widgets/options_dialog.hpp \
                     include/native/capabilities.hpp \
 
 win32:HEADERS   +=  include/native/win32.hpp
 
 FORMS           +=  forms/main_window.ui \
                     forms/stream_picker.ui \
-                    forms/vlc_log_viewer.ui
+                    forms/vlc_log_viewer.ui \
+                    forms/options_dialog.ui
 
 RESOURCES       =   resources/player.qrc
 

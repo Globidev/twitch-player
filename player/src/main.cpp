@@ -10,6 +10,9 @@ int main(int argc, char *argv[]) {
         << "--client-id" << constants::TWITCHD_CLIENT_ID
     );
 
+    QCoreApplication::setOrganizationName("GlobiCorp");
+    QCoreApplication::setApplicationName("Twitch Player");
+
     QApplication app { argc, argv };
 
     MainWindow main_window;

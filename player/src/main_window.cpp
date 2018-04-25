@@ -3,6 +3,7 @@
 
 #include "widgets/stream_container.hpp"
 #include "widgets/vlc_log_viewer.hpp"
+#include "widgets/options_dialog.hpp"
 
 #include "native/capabilities.hpp"
 
@@ -19,38 +20,27 @@ MainWindow::MainWindow(QWidget *parent) :
     _ui->setupUi(this);
     _ui->verticalLayout->addWidget(_main_splitter);
 
-    QObject::connect(
-        _ui->actionFullScreen,
-        &QAction::triggered,
-        [this] { toggle_fullscreen(); }
-    );
+    auto add_action = [this](auto action, auto slot) {
+        QObject::connect(action, &QAction::triggered, slot);
+    };
 
-    QObject::connect(
-        _ui->actionToggleWIndowBorders,
-        &QAction::triggered,
-        [this] {
-            auto win_handle = reinterpret_cast<WindowHandle>(window()->winId());
-            toggle_window_borders(win_handle);
-        }
-    );
+    add_action(_ui->actionFullScreen, [this] { toggle_fullscreen(); });
+    add_action(_ui->actionToggleWindowBorders, [this] {
+        auto win_handle = reinterpret_cast<WindowHandle>(window()->winId());
+        toggle_window_borders(win_handle);
+    });
+    add_action(_ui->actionAddStreamHorizontally, [this] {
+        add_picker(0, rows[0]->count());
+    });
+    add_action(_ui->actionAddStreamVertically, [this] {
+        add_picker(rows.size(), 0);
+    });
+    add_action(_ui->actionLogs, [this] { _vlc_log_viewer->show(); });
 
-    QObject::connect(
-        _ui->actionLogs,
-        &QAction::triggered,
-        [this] { _vlc_log_viewer->show(); }
-    );
-
-    QObject::connect(
-        _ui->actionAddStreamHorizontally,
-        &QAction::triggered,
-        [this] { add_picker(0, rows[0]->count()); }
-    );
-
-    QObject::connect(
-        _ui->actionAddStreamVertically,
-        &QAction::triggered,
-        [this] { add_picker(rows.size(), 0); }
-    );
+    add_action(_ui->actionOptions, [this] {
+        auto options_dialog = new OptionsDialog(this);
+        options_dialog->show();
+    });
 }
 
 MainWindow::~MainWindow() {
