@@ -3,7 +3,9 @@ TEMPLATE        =   app
 
 QT              +=  core gui widgets
 
-QMAKE_CXXFLAGS  +=  /std:c++latest
+win32:QMAKE_CXXFLAGS    +=  /std:c++latest
+
+release:CONFIG  +=  static
 
 SOURCES         +=  src/main.cpp \
                     src/main_window.cpp \
@@ -14,6 +16,8 @@ SOURCES         +=  src/main.cpp \
                     src/widgets/stream_picker.cpp \
                     src/widgets/stream_container.cpp \
 
+win32:SOURCES   +=  src/native/win32.cpp
+
 HEADERS         +=  include/main_window.hpp \
                     include/constants.hpp \
                     include/libvlc.hpp \
@@ -22,23 +26,36 @@ HEADERS         +=  include/main_window.hpp \
                     include/widgets/stream_widget.hpp \
                     include/widgets/stream_picker.hpp \
                     include/widgets/stream_container.hpp \
+                    include/native/capabilities.hpp \
+
+win32:HEADERS   +=  include/native/win32.hpp
 
 FORMS           +=  forms/main_window.ui \
                     forms/stream_picker.ui
-RESOURCES       =   build/player.qrc
 
-INCLUDEPATH     +=  "C:\Users\depar\dev\vlc-3.0.1\include" \
-                    include
+RESOURCES       =   resources/player.qrc
 
-LIBS            +=  -L"C:\Program Files\VideoLAN\VLC" \
-                    -llibvlc \
-                    -luser32
+LIBVLC_INCLUDE_DIR  =   $$(LIBVLC_INCLUDE_DIR)
+LIBVLC_LIB_DIR      =   $$(LIBVLC_LIB_DIR)
+isEmpty(LIBVLC_INCLUDE_DIR) {
+    warning("the LIBVLC_INCLUDE_DIR variable is not set!")
+}
+isEmpty(LIBVLC_LIB_DIR) {
+    warning("the LIBVLC_LIB_DIR variable is not set!")
+}
+
+INCLUDEPATH     +=  include \
+                    $${LIBVLC_INCLUDE_DIR}
+
+LIBS            +=  -L$${LIBVLC_LIB_DIR} -llibvlc
+win32:LIBS      +=  -luser32
 
 release:DESTDIR = release
 debug:DESTDIR   = debug
 
-OBJECTS_DIR     = $${DESTDIR}/.obj
 MOC_DIR         = $${DESTDIR}/.moc
+OBJECTS_DIR     = $${DESTDIR}/.obj
+RCC_DIR         = $${DESTDIR}/.rcc
 UI_DIR          = $${DESTDIR}/.ui
 
-win32:RC_ICONS  += build/icon.ico
+win32:RC_ICONS  += resources/icon.ico

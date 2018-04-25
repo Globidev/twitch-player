@@ -4,40 +4,42 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "compile",
+            "label": "dev: qmake",
+            "group": "build",
+            "type": "shell",
+            "windows": {
+                "command": "${workspaceFolder}/scripts/win32/qmake.bat"
+            }
+        },
+        {
+            "label": "dev: compile (debug)",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
             "type": "shell",
             "windows": {
-                "command": "${workspaceFolder}/scripts/build.bat",
-                "args": [
-                    "debug"
-                ]
+                "command": "${workspaceFolder}/scripts/win32/build.bat",
+                "args": ["debug"]
             },
-            "command": "nmake",
         },
         {
-            "label": "qmake",
+            "label": "deploy: qmake",
             "group": "build",
             "type": "shell",
             "windows": {
-                "command": "${workspaceFolder}/scripts/qmake.bat"
+                "command": "${workspaceFolder}/scripts/win32/qmake.bat",
+                "args": ["deploy"]
             }
         },
         {
-            "label": "release",
+            "label": "deploy: compile (release)",
             "group": "build",
             "type": "shell",
             "windows": {
-                "command": "${workspaceFolder}/scripts/build.bat",
-                "args": [
-                    "release"
-                ]
+                "command": "${workspaceFolder}/scripts/win32/build.bat",
+                "args": ["release"]
             },
-            "command": "nmake",
-
         },
     ]
 }

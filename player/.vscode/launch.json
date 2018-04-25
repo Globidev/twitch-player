@@ -17,7 +17,7 @@
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": true,
-            "preLaunchTask": "compile"
+            "preLaunchTask": "dev: compile (debug)"
         }
     ]
 }
