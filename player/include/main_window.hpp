@@ -13,10 +13,12 @@ class MainWindow;
 
 class QSplitter;
 class StreamContainer;
+class VLCLogViewer;
 
 class MainWindow : public QMainWindow {
 public:
     MainWindow(QWidget * = nullptr);
+    ~MainWindow();
 
     void add_picker(int, int);
     void add_stream(int, int, QString);
@@ -33,6 +35,7 @@ private:
     std::vector<StreamContainer *> _streams;
     QSplitter *_main_splitter;
     QShortcut *_sh_full_screen;
+    VLCLogViewer *_vlc_log_viewer;
 
     void toggle_fullscreen();
 };

@@ -2,10 +2,12 @@
 #define LIBVLC_HPP
 
 #include <memory>
+#include <functional>
 
 struct libvlc_instance_t;
 struct libvlc_media_player_t;
 struct libvlc_media_t;
+struct vlc_log_t;
 
 namespace libvlc {
 
@@ -28,12 +30,33 @@ private:
     resource_t resource;
 };
 
+enum class LogLevel {
+    Debug,
+    Notice,
+    Warning,
+    Error,
+    Unknown
+};
+
+struct LogEntry {
+    LogLevel level;
+    std::string text;
+};
+
 struct Instance;
 struct MediaPlayer;
 struct Media;
 
 struct Instance: CWrapper<libvlc_instance_t> {
     Instance();
+
+    using log_cb_t = std::function<void (LogEntry)>;
+
+    void set_log_callback(log_cb_t);
+    void unset_log_callback();
+
+private:
+    log_cb_t _cb;
 };
 
 struct MediaPlayer: CWrapper<libvlc_media_player_t> {

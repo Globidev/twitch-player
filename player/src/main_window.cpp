@@ -2,6 +2,8 @@
 #include "ui_main_window.h"
 
 #include "widgets/stream_container.hpp"
+#include "widgets/vlc_log_viewer.hpp"
+
 #include "native/capabilities.hpp"
 
 #include <QKeyEvent>
@@ -12,7 +14,8 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     _main_splitter(new QSplitter(Qt::Vertical, this)),
     _ui(new Ui::MainWindow),
-    _sh_full_screen(new QShortcut(QKeySequence::FullScreen, this))
+    _sh_full_screen(new QShortcut(QKeySequence::FullScreen, this)),
+    _vlc_log_viewer(new VLCLogViewer(_video_context))
 {
     QObject::connect(
         _sh_full_screen,
@@ -22,6 +25,16 @@ MainWindow::MainWindow(QWidget *parent) :
 
     _ui->setupUi(this);
     _ui->verticalLayout->addWidget(_main_splitter);
+
+    QObject::connect(
+        _ui->actionLogs,
+        &QAction::triggered,
+        [this] { _vlc_log_viewer->show(); }
+    );
+}
+
+MainWindow::~MainWindow() {
+    delete _vlc_log_viewer;
 }
 
 void MainWindow::changeEvent(QEvent *event) {
@@ -32,6 +45,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Alt) {
         auto win_handle = reinterpret_cast<WindowHandle>(window()->winId());
         toggle_window_borders(win_handle);
+        _ui->menuBar->setVisible(!_ui->menuBar->isVisible());
     }
     QMainWindow::keyPressEvent(event);
 }

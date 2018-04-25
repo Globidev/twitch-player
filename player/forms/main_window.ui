@@ -78,7 +78,7 @@
    <string>Twitch Player</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../build/player.qrc">
+   <iconset resource="../resources/player.qrc">
     <normaloff>:/icons/icon.ico</normaloff>:/icons/icon.ico</iconset>
   </property>
   <widget class="QWidget" name="centralWidget">
@@ -109,11 +109,24 @@
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuPlayer">
+    <property name="title">
+     <string>Player</string>
+    </property>
+    <addaction name="actionLogs"/>
+   </widget>
+   <addaction name="menuPlayer"/>
   </widget>
+  <action name="actionLogs">
+   <property name="text">
+    <string>Logs</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
   <include location="../build/player.qrc"/>
+  <include location="../resources/player.qrc"/>
  </resources>
  <connections/>
 </ui>

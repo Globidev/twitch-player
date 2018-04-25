@@ -7,11 +7,44 @@
 #endif
 #include <vlc/vlc.h>
 
+libvlc::LogLevel reify_log_level(int level) {
+    switch (level) {
+        case LIBVLC_DEBUG:   return libvlc::LogLevel::Debug;
+        case LIBVLC_NOTICE:  return libvlc::LogLevel::Notice;
+        case LIBVLC_WARNING: return libvlc::LogLevel::Warning;
+        case LIBVLC_ERROR:   return libvlc::LogLevel::Error;
+        default:             return libvlc::LogLevel::Unknown;
+    }
+}
+
+static void on_log(void *data, int level, const vlc_log_t *, const char *fmt, va_list args) {
+    auto callback = reinterpret_cast<libvlc::Instance::log_cb_t *>(data);
+    char buff[4096];
+
+    auto size = vsnprintf(buff, sizeof buff, fmt, args);
+    if (size > 0) {
+        auto entry = libvlc::LogEntry {
+            reify_log_level(level),
+            { buff, static_cast<std::string::size_type>(size) }
+        };
+        (*callback)(entry);
+    }
+}
+
 namespace libvlc {
 
 Instance::Instance():
     CWrapper(libvlc_new(0, nullptr), libvlc_release)
 { }
+
+void Instance::set_log_callback(log_cb_t cb) {
+    _cb = cb;
+    libvlc_log_set(&*this, &on_log, (void*)&_cb);
+}
+
+void Instance::unset_log_callback() {
+    libvlc_log_unset(&*this);
+}
 
 MediaPlayer::MediaPlayer(Instance &instance):
     CWrapper(libvlc_media_player_new(&instance), libvlc_media_player_release)
