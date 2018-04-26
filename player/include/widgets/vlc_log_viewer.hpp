@@ -16,6 +16,8 @@ namespace Ui {
     class VLCLogViewer;
 }
 
+class VLCLogger;
+
 class VLCLogItemModel: public QAbstractItemModel {
 public:
     VLCLogItemModel(QObject * = nullptr);
@@ -56,7 +58,7 @@ private:
     Ui::VLCLogViewer *_ui;
     VLCLogItemModel *_item_model;
     VLCLogItemFilter *_filter_proxy_model;
-    libvlc::Instance &_video_context;
+    VLCLogger *_logger;
     std::mutex _log_mutex;
 };
 

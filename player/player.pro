@@ -10,6 +10,7 @@ release:CONFIG  +=  static
 SOURCES         +=  src/main.cpp \
                     src/main_window.cpp \
                     src/libvlc.cpp \
+                    src/vlc_logger.cpp \
                     src/widgets/video_widget.cpp \
                     src/widgets/foreign_widget.cpp \
                     src/widgets/stream_widget.cpp \
@@ -23,6 +24,7 @@ win32:SOURCES   +=  src/native/win32.cpp
 HEADERS         +=  include/main_window.hpp \
                     include/constants.hpp \
                     include/libvlc.hpp \
+                    include/vlc_logger.hpp \
                     include/widgets/video_widget.hpp \
                     include/widgets/foreign_widget.hpp \
                     include/widgets/stream_widget.hpp \

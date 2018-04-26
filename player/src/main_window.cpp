@@ -8,7 +8,6 @@
 #include "native/capabilities.hpp"
 
 #include <QKeyEvent>
-#include <QShortcut>
 #include <QSplitter>
 
 MainWindow::MainWindow(QWidget *parent) :

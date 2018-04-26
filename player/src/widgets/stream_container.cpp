@@ -8,6 +8,8 @@
 #include <QPainter>
 #include <QApplication>
 
+constexpr auto border_width = 1;
+
 StreamContainer::StreamContainer(libvlc::Instance &video_ctx, QWidget *parent):
     QWidget(parent),
     _layout(new QHBoxLayout(this)),
@@ -26,6 +28,9 @@ StreamContainer::StreamContainer(libvlc::Instance &video_ctx, QWidget *parent):
     _layout->addWidget(_picker);
 
     setFocusPolicy(Qt::StrongFocus);
+    auto margins = QMargins(border_width, border_width, border_width, border_width);
+    _layout->setContentsMargins(margins);
+    setContentsMargins(margins);
     setAutoFillBackground(true);
 }
 
@@ -41,12 +46,10 @@ void StreamContainer::play(QString channel) {
 }
 
 void StreamContainer::paintEvent(QPaintEvent *event) {
-    constexpr auto border_width = 3;
-
     if (isAncestorOf(qApp->focusWidget())) {
         QPainter painter(this);
 
-        painter.setPen(QPen(QColor(0, 0xFF, 0, 0xA0)));
+        painter.setPen(QPen(Qt::cyan));
         painter.drawRect(
             border_width, border_width,
             width() - border_width * 2,

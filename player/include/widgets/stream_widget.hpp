@@ -30,7 +30,7 @@ private:
     VideoWidget *_video;
     ForeignWidget *_chat;
 
-    int _chat_size = 20, _video_size = 80;
+    int _chat_size = 50, _video_size = 50;
     ChatPosition _chat_position = ChatPosition::Right;
 
     void reposition(ChatPosition);

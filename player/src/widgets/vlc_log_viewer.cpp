@@ -1,6 +1,8 @@
 #include "widgets/vlc_log_viewer.hpp"
 #include "ui_vlc_log_viewer.h"
 
+#include "vlc_logger.hpp"
+
 static QColor level_color(libvlc::LogLevel log_level) {
     switch (log_level) {
         case libvlc::LogLevel::Debug:   return Qt::gray;
@@ -26,7 +28,7 @@ VLCLogViewer::VLCLogViewer(libvlc::Instance &video_context, QWidget *parent):
     _ui(new Ui::VLCLogViewer),
     _item_model(new VLCLogItemModel(this)),
     _filter_proxy_model(new VLCLogItemFilter(*_item_model, this)),
-    _video_context(video_context)
+    _logger(new VLCLogger(video_context, this))
 {
     _ui->setupUi(this);
 
@@ -34,13 +36,16 @@ VLCLogViewer::VLCLogViewer(libvlc::Instance &video_context, QWidget *parent):
     _ui->tableView->horizontalHeader()
         ->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-    video_context.set_log_callback([this](libvlc::LogEntry entry) {
-        std::lock_guard<std::mutex> lock(_log_mutex);
-        _item_model->add_log_entry(entry);
-        auto as_text = QString("[%1] %2")
-            .arg(level_string(entry.level), QString::fromStdString(entry.text));
-        _ui->textView->append(as_text);
-    });
+    QObject::connect(
+        _logger,
+        &VLCLogger::newLogEntry,
+        [this](auto entry) {
+            _item_model->add_log_entry(entry);
+            auto as_text = QString("[%1] %2")
+                .arg(level_string(entry.level), QString::fromStdString(entry.text));
+            _ui->textView->append(as_text);
+        }
+    );
 
     auto add_filter = [this](auto check_box, auto log_level) {
         QObject::connect(check_box, &QCheckBox::toggled, [=](bool toggled) {
@@ -55,7 +60,6 @@ VLCLogViewer::VLCLogViewer(libvlc::Instance &video_context, QWidget *parent):
 }
 
 VLCLogViewer::~VLCLogViewer() {
-    _video_context.unset_log_callback();
     delete _ui;
 }
 
