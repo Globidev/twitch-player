@@ -2,7 +2,7 @@
 <Package>
     <DisplayName>libvlc</DisplayName>
     <Description>Install the libvlc dependencies</Description>
-    <Version>3.0.1.1</Version>
+    <Version>3.0.2</Version>
     <ReleaseDate>2018-04-26</ReleaseDate>
     <Default>true</Default>
 </Package>
