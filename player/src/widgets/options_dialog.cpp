@@ -6,6 +6,10 @@
 #include <QFileDialog>
 #include <QSettings>
 
+constexpr auto LIST_WIDGET_ITEM_FLAGS = Qt::ItemIsEnabled
+                                      | Qt::ItemIsEditable
+                                      | Qt::ItemIsSelectable;
+
 OptionsDialog::OptionsDialog(QWidget *parent):
     QDialog(parent),
     _ui(new Ui::OptionsDialog)
@@ -27,6 +31,16 @@ OptionsDialog::OptionsDialog(QWidget *parent):
             _ui->chatRendererPath->setText(path);
     });
 
+    QObject::connect(_ui->libvlcOptionsListAdd, &QPushButton::clicked, [this] {
+        auto new_item = new QListWidgetItem("...", _ui->libvlcOptionsList);
+        new_item->setFlags(LIST_WIDGET_ITEM_FLAGS);
+        _ui->libvlcOptionsList->editItem(new_item);
+    });
+
+    QObject::connect(_ui->libvlcOptionsListDel, &QPushButton::clicked, [this] {
+        for (auto item: _ui->libvlcOptionsList->selectedItems())
+            delete item;
+    });
 }
 
 OptionsDialog::~OptionsDialog() {
@@ -36,6 +50,7 @@ OptionsDialog::~OptionsDialog() {
 
 void OptionsDialog::load_settings() {
     using namespace constants::settings::paths;
+    using namespace constants::settings::vlc;
 
     QSettings settings;
 
@@ -48,13 +63,27 @@ void OptionsDialog::load_settings() {
         .value(KEY_CHAT_RENDERER_ARGS, DEFAULT_CHAT_RENDERER_ARGS)
         .toStringList();
     _ui->chatRendererArgs->setText(chat_renderer_args.join(';'));
+
+    auto libvlc_options = settings
+        .value(KEY_VLC_ARGS, DEFAULT_VLC_ARGS)
+        .toStringList();
+    for (auto option: libvlc_options) {
+        auto item = new QListWidgetItem(option, _ui->libvlcOptionsList);
+        item->setFlags(LIST_WIDGET_ITEM_FLAGS);
+    }
 }
 
 void OptionsDialog::save_settings() {
     using namespace constants::settings::paths;
+    using namespace constants::settings::vlc;
 
     QSettings settings;
 
     settings.setValue(KEY_CHAT_RENDERER_PATH, _ui->chatRendererPath->text());
     settings.setValue(KEY_CHAT_RENDERER_ARGS, _ui->chatRendererArgs->text().split(';'));
+
+    QStringList libvlc_options;
+    for (auto i = 0; i < _ui->libvlcOptionsList->count(); ++i)
+        libvlc_options << _ui->libvlcOptionsList->item(i)->text();
+    settings.setValue(KEY_VLC_ARGS, libvlc_options);
 }

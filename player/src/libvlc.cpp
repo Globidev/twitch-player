@@ -33,8 +33,8 @@ static void on_log(void *data, int level, const vlc_log_t *, const char *fmt, va
 
 namespace libvlc {
 
-Instance::Instance():
-    CWrapper(libvlc_new(0, nullptr), libvlc_release)
+Instance::Instance(int argc, const char * const * argv):
+    CWrapper(libvlc_new(argc, argv), libvlc_release)
 { }
 
 void Instance::set_log_callback(log_cb_t cb) {

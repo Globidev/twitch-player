@@ -48,7 +48,7 @@ struct MediaPlayer;
 struct Media;
 
 struct Instance: CWrapper<libvlc_instance_t> {
-    Instance();
+    Instance(int, const char * const *);
 
     using log_cb_t = std::function<void (LogEntry)>;
 

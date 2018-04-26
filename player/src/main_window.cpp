@@ -7,15 +7,67 @@
 
 #include "native/capabilities.hpp"
 
+#include "constants.hpp"
+
 #include <QKeyEvent>
 #include <QSplitter>
+#include <QSettings>
+#include <QMessageBox>
+
+static auto to_string_vector(const QStringList & list) {
+    auto qstring_vector = list.toVector();
+    std::vector<std::string> string_vector;
+
+    std::transform(
+        qstring_vector.begin(),
+        qstring_vector.end(),
+        std::back_inserter(string_vector),
+        [](auto & str) { return str.toStdString(); }
+    );
+
+    return string_vector;
+}
+
+static auto borrow_string_data(const std::vector<std::string> & string_vec) {
+    std::vector<const char*> borrowed;
+
+    std::transform(
+        string_vec.begin(),
+        string_vec.end(),
+        std::back_inserter(borrowed),
+        [](auto & str) { return str.c_str(); }
+    );
+
+    return borrowed;
+}
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     _main_splitter(new QSplitter(Qt::Vertical, this)),
-    _ui(new Ui::MainWindow),
-    _vlc_log_viewer(new VLCLogViewer(_video_context))
+    _ui(new Ui::MainWindow)
 {
+    using namespace constants::settings::vlc;
+
+    QSettings settings;
+    auto vlc_args = settings.value(KEY_VLC_ARGS, DEFAULT_VLC_ARGS)
+        .toStringList();
+    auto vlc_string_args = to_string_vector(vlc_args);
+    auto vlc_argv = borrow_string_data(vlc_string_args);
+
+    auto argc = vlc_argv.size();
+    auto argv = vlc_argv.data();
+    _video_context = std::make_unique<libvlc::Instance>(argc, argv);
+    if (!&*_video_context) {
+        QMessageBox::critical(this,
+            "libvlc error",
+            "Failed to initialize libvlc, resetting options..."
+        );
+        settings.remove(KEY_VLC_ARGS);
+        qApp->exit(-1);
+        return;
+    }
+    _vlc_log_viewer = new VLCLogViewer(*_video_context);
+
     _ui->setupUi(this);
     _ui->verticalLayout->addWidget(_main_splitter);
 
@@ -47,7 +99,10 @@ MainWindow::MainWindow(QWidget *parent) :
         }
     });
 
-    add_action(_ui->actionLogs, [this] { _vlc_log_viewer->show(); });
+    add_action(_ui->actionLogs, [this] {
+        _vlc_log_viewer->show();
+        _vlc_log_viewer->raise();
+    });
 
     add_action(_ui->actionOptions, [this] {
         auto options_dialog = new OptionsDialog(this);
@@ -82,7 +137,7 @@ void MainWindow::add_picker(int row, int col) {
         if (_main_splitter->count() > 1) {
             QList<int> sizes;
             for (auto i = 0; i < _main_splitter->count(); ++i)
-                sizes << 100 / _main_splitter->count();
+                sizes << 100;
             _main_splitter->setSizes(sizes);
         }
         rows.push_back(sp);
@@ -90,13 +145,13 @@ void MainWindow::add_picker(int row, int col) {
         sp = rows[row];
     }
 
-    auto stream_container = new StreamContainer(_video_context, this);
+    auto stream_container = new StreamContainer(*_video_context, this);
 
     sp->insertWidget(col, stream_container);
     if (sp->count() > 1) {
         QList<int> sizes;
         for (auto i = 0; i < sp->count(); ++i)
-            sizes << 100 / sp->count();
+            sizes << 100;
         sp->setSizes(sizes);
     }
     _streams.insert(stream_container);

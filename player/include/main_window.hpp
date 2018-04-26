@@ -30,7 +30,7 @@ protected:
     void mousePressEvent(QMouseEvent *) override;
 
 private:
-    libvlc::Instance _video_context;
+    std::unique_ptr<libvlc::Instance> _video_context;
 
     Ui::MainWindow *_ui;
     std::vector<QSplitter *> rows;

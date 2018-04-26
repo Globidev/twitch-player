@@ -19,6 +19,12 @@ namespace constants {
             static const auto DEFAULT_CHAT_RENDERER_ARGS = QStringList()
                 << "--app=https://www.twitch.tv/popout/${channel}/chat?popout=";
         }
+
+        namespace vlc {
+            static const auto KEY_VLC_ARGS = "vlc/args";
+            static const auto DEFAULT_VLC_ARGS = QStringList()
+                << "--network-caching=3000";
+        }
     }
 }
 
