@@ -124,6 +124,7 @@
     </property>
     <addaction name="actionFullScreen"/>
     <addaction name="actionToggleWindowBorders"/>
+    <addaction name="actionAlwaysOnTop"/>
     <addaction name="separator"/>
     <addaction name="actionAddStreamVertically"/>
     <addaction name="actionAddStreamHorizontally"/>
@@ -145,6 +146,9 @@
    </property>
   </action>
   <action name="actionFullScreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Toggle Full Screen</string>
    </property>
@@ -190,6 +194,12 @@
    </property>
   </action>
   <action name="actionToggleWindowBorders">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Toggle Window Borders</string>
    </property>
@@ -210,10 +220,21 @@
     <string>Ctrl+Del</string>
    </property>
   </action>
+  <action name="actionAlwaysOnTop">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Always On Top</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="../build/player.qrc"/>
+  <include location="../resources/player.qrc"/>
   <include location="../resources/player.qrc"/>
  </resources>
  <connections/>

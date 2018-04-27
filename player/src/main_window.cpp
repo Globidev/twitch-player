@@ -75,10 +75,16 @@ MainWindow::MainWindow(QWidget *parent) :
         QObject::connect(action, &QAction::triggered, slot);
     };
 
-    add_action(_ui->actionFullScreen, [this] { toggle_fullscreen(); });
-    add_action(_ui->actionToggleWindowBorders, [this] {
+    add_action(_ui->actionFullScreen, [this](bool on) {
+        setWindowState(windowState().setFlag(Qt::WindowFullScreen, on));
+    });
+    add_action(_ui->actionToggleWindowBorders, [this](bool on) {
         auto win_handle = reinterpret_cast<WindowHandle>(window()->winId());
-        toggle_window_borders(win_handle);
+        toggle_window_borders(win_handle, on);
+    });
+    add_action(_ui->actionAlwaysOnTop, [this](bool on) {
+        auto win_handle = reinterpret_cast<WindowHandle>(window()->winId());
+        toggle_always_on_top(win_handle, on);
     });
     add_action(_ui->actionAddStreamHorizontally, [this] {
         auto [row, col] = find_focused_stream();

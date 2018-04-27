@@ -66,7 +66,7 @@ FindWindowResult find_windows_by_title_and_pname(std::string title,
     return find_windows_by(predicate);
 }
 
-void toggle_window_borders(HWND handle) {
+void toggle_window_borders(HWND handle, bool on) {
     constexpr auto BORDER_FLAGS = WS_CAPTION
                                 | WS_THICKFRAME
                                 | WS_MINIMIZEBOX
@@ -83,10 +83,17 @@ void toggle_window_borders(HWND handle) {
                                     ;
 
     auto current_style = GetWindowLong(handle, GWL_STYLE);
-    auto new_style = current_style ^ BORDER_FLAGS;
+    auto new_style = on
+                   ? current_style | BORDER_FLAGS
+                   : current_style & ~BORDER_FLAGS;
     SetWindowLong(handle, GWL_STYLE, new_style);
     SetWindowPos(handle, nullptr, 0, 0, 0, 0, REPOSITION_FLAGS);
     InvalidateRect(handle, nullptr, TRUE);
+}
+
+void toggle_always_on_top(HWND handle, bool on) {
+    auto insert_flags = on ? HWND_TOPMOST : HWND_NOTOPMOST;
+    SetWindowPos(handle, insert_flags, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 }
 
 void sysclose_window(HWND handle) {
