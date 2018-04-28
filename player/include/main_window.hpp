@@ -1,28 +1,33 @@
 #ifndef MAIN_WINDOW_HPP
 #define MAIN_WINDOW_HPP
 
-#include "libvlc.hpp"
-
 #include <QMainWindow>
 
 #include <vector>
-#include <set>
 
 namespace Ui {
 class MainWindow;
 }
 
-class QSplitter;
+namespace libvlc {
+struct Instance;
+}
+
+class ResizableGrid;
 class StreamContainer;
 class VLCLogViewer;
 
+struct PlacedStream {
+    StreamContainer *container;
+    int row, column;
+};
+
 class MainWindow : public QMainWindow {
 public:
-    MainWindow(QWidget * = nullptr);
+    MainWindow(libvlc::Instance &, QWidget * = nullptr);
     ~MainWindow();
 
-    void add_picker(int, int);
-    void add_stream(int, int, QString);
+    StreamContainer * add_container(int, int);
 
 protected:
     void changeEvent(QEvent *) override;
@@ -30,16 +35,17 @@ protected:
     void mousePressEvent(QMouseEvent *) override;
 
 private:
-    std::unique_ptr<libvlc::Instance> _video_context;
+    libvlc::Instance &_video_context;
 
-    Ui::MainWindow *_ui;
-    std::vector<QSplitter *> rows;
-    std::set<StreamContainer *> _streams;
-    QSplitter *_main_splitter;
     VLCLogViewer *_vlc_log_viewer;
 
-    void toggle_fullscreen();
+    std::vector<PlacedStream> _streams;
+    ResizableGrid *_grid;
+
+    Ui::MainWindow *_ui;
+
     std::pair<int, int> find_focused_stream();
+    void remove_stream(int, int);
 };
 
 #endif // MAIN_WINDOW_HPP

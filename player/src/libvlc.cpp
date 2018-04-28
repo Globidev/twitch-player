@@ -7,6 +7,10 @@
 #endif
 #include <vlc/vlc.h>
 
+#include <algorithm>
+
+namespace libvlc {
+
 libvlc::LogLevel reify_log_level(int level) {
     switch (level) {
         case LIBVLC_DEBUG:   return libvlc::LogLevel::Debug;
@@ -31,10 +35,23 @@ static void on_log(void *data, int level, const vlc_log_t *, const char *fmt, va
     }
 }
 
-namespace libvlc {
+static auto create_instance_from_args(std::vector<std::string> args) {
+    std::vector<const char*> raw_args_borrowed;
 
-Instance::Instance(int argc, const char * const * argv):
-    CWrapper(libvlc_new(argc, argv), libvlc_release)
+    std::transform(
+        args.begin(), args.end(),
+        std::back_inserter(raw_args_borrowed),
+        [](auto & str) { return str.c_str(); }
+    );
+
+    auto argc = static_cast<int>(args.size());
+    auto argv = raw_args_borrowed.data();
+
+    return libvlc_new(argc, argv);
+}
+
+Instance::Instance(std::vector<std::string> args):
+    CWrapper(create_instance_from_args(args), libvlc_release)
 { }
 
 void Instance::set_log_callback(log_cb_t cb) {

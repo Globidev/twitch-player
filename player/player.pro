@@ -18,6 +18,7 @@ SOURCES         +=  src/main.cpp \
                     src/widgets/stream_container.cpp \
                     src/widgets/vlc_log_viewer.cpp \
                     src/widgets/options_dialog.cpp \
+                    src/widgets/resizable_grid.cpp \
 
 win32:SOURCES   +=  src/native/win32.cpp
 
@@ -32,6 +33,7 @@ HEADERS         +=  include/main_window.hpp \
                     include/widgets/stream_container.hpp \
                     include/widgets/vlc_log_viewer.hpp \
                     include/widgets/options_dialog.hpp \
+                    include/widgets/resizable_grid.hpp \
                     include/native/capabilities.hpp \
 
 win32:HEADERS   +=  include/native/win32.hpp

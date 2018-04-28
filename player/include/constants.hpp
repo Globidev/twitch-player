@@ -8,8 +8,8 @@ namespace constants {
     static const auto TWITCHD_CLIENT_ID = "alcht5gave31yctuzv48v2i1hlwq53";
 
     namespace settings {
-        namespace paths {
-            static const auto KEY_CHAT_RENDERER_PATH = "paths/chat-renderer";
+        namespace chat_renderer {
+            static const auto KEY_CHAT_RENDERER_PATH = "chat-renderer/paths";
             // TODO: Improve default chat renderer path logic
             static const auto CHROME_PATH =
                 R"(C:\Program Files (x86)\Google\Chrome\Application\chrome.exe)";

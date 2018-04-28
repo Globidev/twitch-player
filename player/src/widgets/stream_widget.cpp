@@ -50,7 +50,7 @@ StreamWidget::StreamWidget(libvlc::Instance &inst, QWidget *parent):
 }
 
 void StreamWidget::play(QString channel) {
-    using namespace constants::settings::paths;
+    using namespace constants::settings::chat_renderer;
 
     _video->play(channel);
 

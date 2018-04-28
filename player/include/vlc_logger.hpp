@@ -8,7 +8,6 @@
 #include <optional>
 #include <queue>
 #include <mutex>
-#include <condition_variable>
 
 struct LogEntryQueue {
     void push_work(libvlc::LogEntry item);

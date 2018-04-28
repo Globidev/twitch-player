@@ -49,7 +49,7 @@ void StreamContainer::paintEvent(QPaintEvent *event) {
     if (isAncestorOf(qApp->focusWidget())) {
         QPainter painter(this);
 
-        painter.setPen(QPen(Qt::cyan));
+        painter.setPen(QPen(QColor(0x39, 0x2e, 0x5c)));
         painter.drawRect(
             border_width, border_width,
             width() - border_width * 2,

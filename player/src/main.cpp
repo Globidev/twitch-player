@@ -1,37 +1,102 @@
 #include "main_window.hpp"
 #include "constants.hpp"
+#include "libvlc.hpp"
+
+#include "widgets/stream_container.hpp"
 
 #include <QApplication>
 #include <QProcess>
-#include <QTimer>
+#include <QSettings>
+#include <QMessageBox>
+
+#include <optional>
+
+struct Options {
+    std::optional<QString> initial_channel;
+};
+
+using VLCArgs = std::vector<std::string>;
+
+Options parse_options(QStringList args);
+VLCArgs load_vlc_args();
+void handle_vlc_init_failure();
 
 int main(int argc, char *argv[]) {
     QProcess::startDetached(constants::TWITCHD_PATH, QStringList()
         << "--client-id" << constants::TWITCHD_CLIENT_ID
+        << "--host" << "127.0.0.1"
     );
-
-    QCoreApplication::setOrganizationName("GlobiCorp");
-    QCoreApplication::setApplicationName("Twitch Player");
 
     QApplication app { argc, argv };
 
-    MainWindow main_window;
+    app.setOrganizationName("GlobiCorp");
+    app.setApplicationName("Twitch Player");
 
-    auto args = app.arguments();
-    if (args.size() >= 2) {
-        auto channel = [&] {
-            if (args[1].startsWith("twitch-player://"))
-                return args[1].remove("twitch-player://").remove("/");
-            else
-                return args[1];
-        }();
-        main_window.add_stream(0, 0, channel);
+    libvlc::Instance video_context { load_vlc_args() };
+
+    if (!video_context.init_success()) {
+        handle_vlc_init_failure();
+        return EXIT_FAILURE;
     }
-    else {
-        main_window.add_picker(0, 0);
-    }
+
+    MainWindow main_window { video_context };
+    auto stream_container = main_window.add_container(0, 0);
+
+    auto options = parse_options(app.arguments());
+    if (options.initial_channel)
+        stream_container->play(*options.initial_channel);
 
     main_window.show();
 
     return app.exec();
+}
+
+static Options parse_options(QStringList args) {
+    if (args.size() <= 1)
+        return { };
+
+    auto channel = [channel_arg = args[1]] {
+        constexpr auto protocol_prefix = "twitch-player://";
+        // Check if the program was called using the registered protocol
+        // The format is "protocol-name://channel/"
+        if (channel_arg.startsWith(protocol_prefix))
+            return channel_arg.mid(strlen(protocol_prefix))
+                              .chopped(1); // Trailing slash
+        else
+            return channel_arg;
+    }();
+
+    return { channel };
+}
+
+static VLCArgs load_vlc_args() {
+    using namespace constants::settings::vlc;
+
+    QSettings settings;
+
+    auto vlc_args_as_qlist = settings.value(KEY_VLC_ARGS, DEFAULT_VLC_ARGS)
+        .toStringList();
+
+    VLCArgs vlc_args;
+    std::transform(
+        vlc_args_as_qlist.begin(), vlc_args_as_qlist.end(),
+        std::back_inserter(vlc_args),
+        [](auto & q_str) { return q_str.toStdString(); }
+    );
+
+    return vlc_args;
+}
+
+static void handle_vlc_init_failure() {
+    // Reset libvlc options
+    QSettings settings;
+    settings.remove(constants::settings::vlc::KEY_VLC_ARGS);
+
+    auto error_message = QString(
+        "Failed to initialize libvlc\n"
+        "Resetting options...\n"
+        "Try running the program again"
+    );
+
+    QMessageBox::critical(nullptr, "libvlc error", error_message);
 }

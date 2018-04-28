@@ -3,6 +3,8 @@
 
 #include <memory>
 #include <functional>
+#include <vector>
+#include <string>
 
 struct libvlc_instance_t;
 struct libvlc_media_player_t;
@@ -20,9 +22,11 @@ using CResource = std::unique_ptr<T, CDeleter<T>>;
 template <class T>
 struct CWrapper {
     CWrapper(T* resource_ptr, CDeleter<T> deleter):
-        resource(resource_ptr, deleter) { }
+        resource(resource_ptr, deleter)
+    { }
 
-    auto operator &() const { return resource.get(); }
+    auto operator &()   const { return resource.get(); }
+    bool init_success() const { return resource.get() != nullptr; }
 
 private:
     using resource_t = CResource<T>;
@@ -48,7 +52,7 @@ struct MediaPlayer;
 struct Media;
 
 struct Instance: CWrapper<libvlc_instance_t> {
-    Instance(int, const char * const *);
+    Instance(std::vector<std::string>);
 
     using log_cb_t = std::function<void (LogEntry)>;
 

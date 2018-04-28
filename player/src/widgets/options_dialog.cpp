@@ -34,6 +34,7 @@ OptionsDialog::OptionsDialog(QWidget *parent):
     QObject::connect(_ui->libvlcOptionsListAdd, &QPushButton::clicked, [this] {
         auto new_item = new QListWidgetItem("...", _ui->libvlcOptionsList);
         new_item->setFlags(LIST_WIDGET_ITEM_FLAGS);
+        _ui->libvlcOptionsList->setCurrentItem(new_item);
         _ui->libvlcOptionsList->editItem(new_item);
     });
 
@@ -49,7 +50,7 @@ OptionsDialog::~OptionsDialog() {
 
 
 void OptionsDialog::load_settings() {
-    using namespace constants::settings::paths;
+    using namespace constants::settings::chat_renderer;
     using namespace constants::settings::vlc;
 
     QSettings settings;
@@ -74,7 +75,7 @@ void OptionsDialog::load_settings() {
 }
 
 void OptionsDialog::save_settings() {
-    using namespace constants::settings::paths;
+    using namespace constants::settings::chat_renderer;
     using namespace constants::settings::vlc;
 
     QSettings settings;
