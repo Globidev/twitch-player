@@ -62,7 +62,7 @@ fn stream_index_uri(channel: &str, token: &AccessToken) -> hyper::Uri {
         .append_pair("token",        &token.token)
         .append_pair("sig",          &token.signature)
         .append_pair("allow_source", "true")
-        .append_pair("type",         "any")
+        .append_pair("fast_bread",   "true")
         .finish();
 
     let url = format!(
@@ -89,16 +89,24 @@ fn parse_index (chunk: hyper::Chunk) -> ParseResult<StreamIndex> {
         .map_err(|ParseError(error)| ApiError::FormatError(error))
 }
 
+const EXT_PREFETCH_PREFIX: &str = "#EXT-X-TWITCH-PREFETCH:";
+
 fn parse_playlist(data: hyper::Chunk) -> ParseResult<Playlist> {
     use std::str::from_utf8;
-    use std::string::ToString;
 
     from_utf8(&data)
         .map_err(|error| ApiError::FormatError(error.to_string()))
         .map(|string| {
             string.split('\n')
-                .filter(|line| line.starts_with("index-") || line.starts_with("http://"))
-                .map(ToString::to_string)
+                .filter_map(|line| {
+                    if line.starts_with("index-") || line.starts_with("http://") {
+                        Some(String::from(line))
+                    } else if line.starts_with(EXT_PREFETCH_PREFIX) {
+                        Some(String::from(&line[EXT_PREFETCH_PREFIX.len()..]))
+                    } else {
+                        None
+                    }
+                })
                 .collect()
         })
 }
