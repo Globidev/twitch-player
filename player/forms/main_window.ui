@@ -120,6 +120,10 @@
     <addaction name="actionFocusUp"/>
     <addaction name="actionFocusDown"/>
     <addaction name="separator"/>
+    <addaction name="actionToggleChatLeft"/>
+    <addaction name="actionToggleChatRight"/>
+    <addaction name="actionResizeChatLeft"/>
+    <addaction name="actionResizeChatRight"/>
    </widget>
    <widget class="QMenu" name="menuPreferences">
     <property name="title">
@@ -127,7 +131,15 @@
     </property>
     <addaction name="actionOptions"/>
    </widget>
+   <widget class="QMenu" name="menuPlayback">
+    <property name="title">
+     <string>Playback</string>
+    </property>
+    <addaction name="actionMute"/>
+    <addaction name="actionFastForward"/>
+   </widget>
    <addaction name="menuView"/>
+   <addaction name="menuPlayback"/>
    <addaction name="menuTools"/>
    <addaction name="menuPreferences"/>
   </widget>
@@ -222,60 +234,6 @@
     <string>Ctrl+A</string>
    </property>
   </action>
-  <action name="actionMute">
-   <property name="text">
-    <string>Mute</string>
-   </property>
-   <property name="shortcut">
-    <string>M</string>
-   </property>
-   <property name="shortcutContext">
-    <enum>Qt::WidgetWithChildrenShortcut</enum>
-   </property>
-  </action>
-  <action name="actionFast_Forward">
-   <property name="text">
-    <string>Fast Forward</string>
-   </property>
-   <property name="shortcut">
-    <string>F</string>
-   </property>
-   <property name="shortcutContext">
-    <enum>Qt::WidgetWithChildrenShortcut</enum>
-   </property>
-  </action>
-  <action name="actionVol">
-   <property name="text">
-    <string>Vol +</string>
-   </property>
-  </action>
-  <action name="actionVol_2">
-   <property name="text">
-    <string>Vol -</string>
-   </property>
-  </action>
-  <action name="actionToggle_Chat_Right_2">
-   <property name="text">
-    <string>Toggle Chat Right</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Right</string>
-   </property>
-   <property name="shortcutContext">
-    <enum>Qt::WidgetWithChildrenShortcut</enum>
-   </property>
-  </action>
-  <action name="actionToggle_Chat_Left_2">
-   <property name="text">
-    <string>Toggle Chat Left</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Left</string>
-   </property>
-   <property name="shortcutContext">
-    <enum>Qt::WidgetWithChildrenShortcut</enum>
-   </property>
-  </action>
   <action name="actionFocusLeft">
    <property name="text">
     <string>Move Focus Left</string>
@@ -333,6 +291,57 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Z</string>
+   </property>
+  </action>
+  <action name="actionMute">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Mute</string>
+   </property>
+   <property name="shortcut">
+    <string>M</string>
+   </property>
+  </action>
+  <action name="actionFastForward">
+   <property name="text">
+    <string>Fast Forward</string>
+   </property>
+   <property name="shortcut">
+    <string>F</string>
+   </property>
+  </action>
+  <action name="actionToggleChatRight">
+   <property name="text">
+    <string>Toggle Chat Right</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+Right</string>
+   </property>
+  </action>
+  <action name="actionToggleChatLeft">
+   <property name="text">
+    <string>Toggle Chat Left</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+Left</string>
+   </property>
+  </action>
+  <action name="actionResizeChatLeft">
+   <property name="text">
+    <string>Resize Chat Left</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Left</string>
+   </property>
+  </action>
+  <action name="actionResizeChatRight">
+   <property name="text">
+    <string>Resize Chat Right</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Right</string>
    </property>
   </action>
  </widget>

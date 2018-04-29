@@ -90,33 +90,7 @@ void StreamWidget::play(QString channel) {
     }
 }
 
-void StreamWidget::keyPressEvent(QKeyEvent * event) {
-    if (event->modifiers().testFlag(Qt::ControlModifier)) {
-        if (event->modifiers().testFlag(Qt::ShiftModifier)) {
-            switch (event->key()) {
-                case Qt::Key_Left:
-                    resize_chat(ChatPosition::Left);
-                    break;
-                case Qt::Key_Right:
-                    resize_chat(ChatPosition::Right);
-                    break;
-            }
-        }
-        else if (event->modifiers().testFlag(Qt::AltModifier)) {
-            switch (event->key()) {
-                case Qt::Key_Left:
-                    reposition(ChatPosition::Left);
-                    break;
-                case Qt::Key_Right:
-                    reposition(ChatPosition::Right);
-                    break;
-            }
-        }
-    }
-    QWidget::keyPressEvent(event);
-}
-
-void StreamWidget::reposition(ChatPosition position) {
+void StreamWidget::reposition_chat(ChatPosition position) {
     // Save sizes
     if (_chat->isVisible()) {
         _chat_size = _splitter->sizes()[_splitter->indexOf(_chat)];
@@ -159,4 +133,12 @@ void StreamWidget::resize_chat(ChatPosition position) {
     new_sizes.insert(_splitter->indexOf(_chat), _chat_size);
     new_sizes.insert(_splitter->indexOf(_video), _video_size);
     _splitter->setSizes(new_sizes);
+}
+
+VideoWidget *StreamWidget::video() const {
+    return _video;
+}
+
+ForeignWidget *StreamWidget::chat() const {
+    return _chat;
 }

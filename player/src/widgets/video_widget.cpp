@@ -39,10 +39,18 @@ void VideoWidget::play(QString channel) {
     _media_player.play();
 }
 
+int VideoWidget::volume() const {
+    return _vol;
+}
+
 void VideoWidget::set_volume(int volume) {
     _vol = volume;
     _media_player.set_volume(_muted ? 0 : _vol);
     _overlay->show_text(QString::number(_vol) + " %");
+}
+
+bool VideoWidget::muted() const {
+    return _muted;
 }
 
 void VideoWidget::set_muted(bool muted) {
@@ -51,15 +59,21 @@ void VideoWidget::set_muted(bool muted) {
     _overlay->show_text(muted ? "Muted" : "Unmuted");
 }
 
+void VideoWidget::fast_forward() {
+    _media_player.set_position(1.0f);
+    _overlay->show_text("Fast forward...");
+}
+
 void VideoWidget::update_overlay_position() {
     _overlay->resize(size());
     _overlay->move(mapToGlobal(pos()) - pos());
 }
 
 void VideoWidget::wheelEvent(QWheelEvent *event) {
-    int new_volume;
+    setFocus();
     auto delta = qApp->keyboardModifiers().testFlag(Qt::ShiftModifier)
                ? 1 : 5;
+    int new_volume;
     if (event->angleDelta().y() > 0)
         new_volume = std::min(_vol + delta, 100);
     else
@@ -97,15 +111,6 @@ void VideoWidget::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void VideoWidget::keyPressEvent(QKeyEvent *event) {
-    switch (event->key()) {
-        case Qt::Key_M:
-            set_muted(!_muted);
-            break;
-        case Qt::Key_F:
-            _media_player.set_position(1.0f);
-            _overlay->show_text("Fast forward...");
-            break;
-    }
     QWidget::keyPressEvent(event);
     // keypresses might trigger parent's shortcuts which might modify the
     // overlay. It's hard to detect without adding strong coupling with the

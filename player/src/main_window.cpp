@@ -2,6 +2,9 @@
 #include "ui_main_window.h"
 
 #include "widgets/stream_container.hpp"
+#include "widgets/stream_widget.hpp"
+#include "widgets/video_widget.hpp"
+#include "widgets/foreign_widget.hpp"
 #include "widgets/vlc_log_viewer.hpp"
 #include "widgets/options_dialog.hpp"
 
@@ -14,6 +17,7 @@
 #include <QStackedWidget>
 #include <QSettings>
 #include <QMessageBox>
+#include <QTimer>
 
 static void focus_pane(QWidget *pane) {
     pane->setFocus();
@@ -35,6 +39,13 @@ MainWindow::MainWindow(libvlc::Instance &video_context, QWidget *parent) :
 
     auto add_action = [this](auto action, auto slot) {
         QObject::connect(action, &QAction::triggered, slot);
+    };
+
+    auto add_stream_action = [=](auto action, auto slot) {
+        add_action(action, [=] {
+            if (auto active_pane = focused_pane(); active_pane)
+                slot(active_pane->stream());
+        });
     };
 
     auto active_position = [this] {
@@ -95,6 +106,32 @@ MainWindow::MainWindow(libvlc::Instance &video_context, QWidget *parent) :
         _ui->actionFocusDown,
         [=] { unzoom(); move_focus(active_position().down()); }
     );
+        //
+    add_stream_action(
+        _ui->actionToggleChatLeft,
+        [=](auto stream) { stream->reposition_chat(ChatPosition::Left); }
+    );
+    add_stream_action(
+        _ui->actionToggleChatRight,
+        [=](auto stream) { stream->reposition_chat(ChatPosition::Right); }
+    );
+    add_stream_action(
+        _ui->actionResizeChatLeft,
+        [=](auto stream) { stream->resize_chat(ChatPosition::Left); }
+    );
+    add_stream_action(
+        _ui->actionResizeChatRight,
+        [=](auto stream) { stream->resize_chat(ChatPosition::Right); }
+    );
+    // Playback
+    add_stream_action(
+        _ui->actionMute,
+        [=](auto stream) { stream->video()->set_muted(!stream->video()->muted()); }
+    );
+    add_stream_action(
+        _ui->actionFastForward,
+        [=](auto stream) { stream->video()->fast_forward(); }
+    );
     // Tools
     add_action(_ui->actionLogs, [this] {
         _vlc_log_viewer->show();
@@ -126,6 +163,13 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     for (auto pane: _panes)
         pane->repaint();
     QMainWindow::mousePressEvent(event);
+}
+
+void MainWindow::wheelEvent(QWheelEvent *event) {
+    // Focus might have updated
+    for (auto pane: _panes)
+        pane->repaint();
+    QMainWindow::wheelEvent(event);
 }
 
 StreamContainer * MainWindow::add_pane(Position pos) {
@@ -170,6 +214,8 @@ void MainWindow::move_focus(Position pos) {
     auto focus_target = _grid->closest_widget(pos);
     if (focus_target)
         focus_pane(focus_target);
+    for (auto pane: _panes)
+        pane->repaint();
 }
 
 bool MainWindow::is_zoomed() {
@@ -204,6 +250,12 @@ void MainWindow::unzoom() {
     _grid->insert_widget(_zoomed_position, zoomed_pane);
     zoomed_pane->show();
     focus_pane(zoomed_pane);
+
+    // Windows workaround for weird display issues
+    QTimer::singleShot(0, [=] {
+        if (auto active_pane = focused_pane(); active_pane)
+            active_pane->stream()->chat()->redraw();
+    });
 
     _ui->actionStreamZoom->setChecked(false);
 }

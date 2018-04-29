@@ -17,6 +17,9 @@ public:
 
     void play(QString);
 
+    StreamWidget *stream() const;
+
+protected:
     void paintEvent(QPaintEvent *) override;
     void focusOutEvent(QFocusEvent *) override;
     void focusInEvent(QFocusEvent *) override;

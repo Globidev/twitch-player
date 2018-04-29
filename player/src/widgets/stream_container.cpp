@@ -36,20 +36,28 @@ StreamContainer::StreamContainer(libvlc::Instance &video_ctx, QWidget *parent):
 
 void StreamContainer::play(QString channel) {
     _picker->hide();
+
     _layout->removeWidget(_picker);
-
-    repaint();
-
     _layout->addWidget(_stream);
+
+    _stream->setFocus();
     _stream->show();
     _stream->play(channel);
+
+    repaint();
+}
+
+StreamWidget *StreamContainer::stream() const {
+    return _stream;
 }
 
 void StreamContainer::paintEvent(QPaintEvent *event) {
     if (isAncestorOf(qApp->focusWidget())) {
         QPainter painter(this);
 
-        painter.setPen(QPen(QColor(0x39, 0x2e, 0x5c)));
+        QPen pen(QColor(0x39, 0x2e, 0x5c));
+        pen.setWidth(border_width);
+        painter.setPen(pen);
         painter.drawRect(
             border_width, border_width,
             width() - border_width * 2,

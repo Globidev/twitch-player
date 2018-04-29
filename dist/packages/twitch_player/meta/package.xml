@@ -2,8 +2,9 @@
 <Package>
     <DisplayName>Twitch Player</DisplayName>
     <Description>Install the end user interface</Description>
-    <Version>0.2.6</Version>
-    <ReleaseDate>2018-04-26</ReleaseDate>
+    <Version>0.3.0</Version>
+    <ReleaseDate>2018-04-29</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
+    <UpdateText>Miscellaneous UI improvements</UpdateText>
 </Package>

@@ -31,6 +31,7 @@ protected:
     void changeEvent(QEvent *) override;
     void keyPressEvent(QKeyEvent *) override;
     void mousePressEvent(QMouseEvent *) override;
+    void wheelEvent(QWheelEvent *) override;
 
 private:
     libvlc::Instance &_video_context;

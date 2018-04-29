@@ -38,8 +38,14 @@ public:
     VideoWidget(libvlc::Instance &, QWidget * = nullptr);
 
     void play(QString);
+
+    int volume() const;
     void set_volume(int);
+
+    bool muted() const;
     void set_muted(bool);
+
+    void fast_forward();
 
 protected:
     void wheelEvent(QWheelEvent *) override;

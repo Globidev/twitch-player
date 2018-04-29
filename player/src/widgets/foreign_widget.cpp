@@ -41,11 +41,9 @@ void ForeignWidget::release_window() {
     }
 }
 
-void ForeignWidget::showEvent(QShowEvent * event)  {
+void ForeignWidget::redraw()  {
     // On Windows, there are sometimes issues where the window won't redraw
     // itself when the container or its parents are reparented
     if (_container)
-        redraw((HWND)(*_container)->winId());
-
-    QWidget::showEvent(event);
+        ::redraw((HWND)(*_container)->winId());
 }

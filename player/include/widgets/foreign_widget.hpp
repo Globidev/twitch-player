@@ -15,9 +15,7 @@ public:
     ~ForeignWidget();
 
     void grab(WindowHandle);
-
-protected:
-    void showEvent(QShowEvent *) override;
+    void redraw();
 
 private:
     std::optional<QWindow *> _foreign_win_ptr;
