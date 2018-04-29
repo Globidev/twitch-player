@@ -1,5 +1,6 @@
 #include "widgets/video_widget.hpp"
 
+#include <QApplication>
 #include <QWheelEvent>
 #include <QMouseEvent>
 #include <QPainter>
@@ -56,12 +57,13 @@ void VideoWidget::update_overlay_position() {
 }
 
 void VideoWidget::wheelEvent(QWheelEvent *event) {
-    this->window()->activateWindow();
     int new_volume;
+    auto delta = qApp->keyboardModifiers().testFlag(Qt::ShiftModifier)
+               ? 1 : 5;
     if (event->angleDelta().y() > 0)
-        new_volume = std::min(_vol + 5, 100);
+        new_volume = std::min(_vol + delta, 100);
     else
-        new_volume = std::max(0, _vol - 5);
+        new_volume = std::max(0, _vol - delta);
     set_volume(new_volume);
     QWidget::wheelEvent(event);
 }
@@ -85,8 +87,10 @@ void VideoWidget::mousePressEvent(QMouseEvent *event) {
 void VideoWidget::mouseMoveEvent(QMouseEvent *event) {
     if (event->buttons().testFlag(Qt::MouseButton::LeftButton)) {
         auto delta = event->globalPos() - _last_drag_position;
-        window()->move(window()->pos() + delta);
-        _last_drag_position = event->globalPos();
+        if (delta.manhattanLength() > 10) {
+            window()->move(window()->pos() + delta);
+            _last_drag_position = event->globalPos();
+        }
     }
     else
         QWidget::mouseMoveEvent(event);
