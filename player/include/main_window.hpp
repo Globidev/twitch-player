@@ -5,6 +5,8 @@
 
 #include <vector>
 
+#include "widgets/resizable_grid.hpp"
+
 namespace Ui {
 class MainWindow;
 }
@@ -13,21 +15,17 @@ namespace libvlc {
 struct Instance;
 }
 
-class ResizableGrid;
 class StreamContainer;
 class VLCLogViewer;
-
-struct PlacedStream {
-    StreamContainer *container;
-    int row, column;
-};
+class QStackedWidget;
 
 class MainWindow : public QMainWindow {
 public:
     MainWindow(libvlc::Instance &, QWidget * = nullptr);
     ~MainWindow();
 
-    StreamContainer * add_container(int, int);
+    StreamContainer * add_pane(Position);
+    void remove_pane(StreamContainer *);
 
 protected:
     void changeEvent(QEvent *) override;
@@ -39,13 +37,21 @@ private:
 
     VLCLogViewer *_vlc_log_viewer;
 
-    std::vector<PlacedStream> _streams;
+    std::vector<StreamContainer *> _panes;
     ResizableGrid *_grid;
+    QStackedWidget *_central_widget;
 
     Ui::MainWindow *_ui;
 
-    std::pair<int, int> find_focused_stream();
-    void remove_stream(int, int);
+    Position _zoomed_position;
+
+    StreamContainer * focused_pane();
+
+    void move_focus(Position);
+
+    bool is_zoomed();
+    void zoom();
+    void unzoom();
 };
 
 #endif // MAIN_WINDOW_HPP

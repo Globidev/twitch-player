@@ -107,10 +107,19 @@
     <addaction name="actionFullScreen"/>
     <addaction name="actionToggleWindowBorders"/>
     <addaction name="actionAlwaysOnTop"/>
+    <addaction name="actionStreamZoom"/>
     <addaction name="separator"/>
-    <addaction name="actionAddStreamVertically"/>
-    <addaction name="actionAddStreamHorizontally"/>
+    <addaction name="actionAddStreamLeft"/>
+    <addaction name="actionAddStreamRight"/>
+    <addaction name="actionAddStreamUp"/>
+    <addaction name="actionAddStreamDown"/>
     <addaction name="actionRemoveStream"/>
+    <addaction name="separator"/>
+    <addaction name="actionFocusLeft"/>
+    <addaction name="actionFocusRight"/>
+    <addaction name="actionFocusUp"/>
+    <addaction name="actionFocusDown"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuPreferences">
     <property name="title">
@@ -151,20 +160,20 @@
     <string>Toggle Chat Right</string>
    </property>
   </action>
-  <action name="actionAddStreamVertically">
+  <action name="actionAddStreamLeft">
    <property name="text">
-    <string>Add Stream Vertically</string>
+    <string>Add Stream Left</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Alt+Down</string>
+    <string>Ctrl+Left</string>
    </property>
   </action>
-  <action name="actionAddStreamHorizontally">
+  <action name="actionAddStreamRight">
    <property name="text">
-    <string>Add Stream Horizontally</string>
+    <string>Add Stream Right</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Alt+Right</string>
+    <string>Ctrl+Right</string>
    </property>
   </action>
   <action name="actionOptions">
@@ -207,10 +216,123 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Always On Top</string>
+    <string>Toggle Always On Top</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+A</string>
+   </property>
+  </action>
+  <action name="actionMute">
+   <property name="text">
+    <string>Mute</string>
+   </property>
+   <property name="shortcut">
+    <string>M</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::WidgetWithChildrenShortcut</enum>
+   </property>
+  </action>
+  <action name="actionFast_Forward">
+   <property name="text">
+    <string>Fast Forward</string>
+   </property>
+   <property name="shortcut">
+    <string>F</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::WidgetWithChildrenShortcut</enum>
+   </property>
+  </action>
+  <action name="actionVol">
+   <property name="text">
+    <string>Vol +</string>
+   </property>
+  </action>
+  <action name="actionVol_2">
+   <property name="text">
+    <string>Vol -</string>
+   </property>
+  </action>
+  <action name="actionToggle_Chat_Right_2">
+   <property name="text">
+    <string>Toggle Chat Right</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Right</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::WidgetWithChildrenShortcut</enum>
+   </property>
+  </action>
+  <action name="actionToggle_Chat_Left_2">
+   <property name="text">
+    <string>Toggle Chat Left</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Left</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::WidgetWithChildrenShortcut</enum>
+   </property>
+  </action>
+  <action name="actionFocusLeft">
+   <property name="text">
+    <string>Move Focus Left</string>
+   </property>
+   <property name="shortcut">
+    <string>Left</string>
+   </property>
+  </action>
+  <action name="actionFocusRight">
+   <property name="text">
+    <string>Move Focus Right</string>
+   </property>
+   <property name="shortcut">
+    <string>Right</string>
+   </property>
+  </action>
+  <action name="actionFocusUp">
+   <property name="text">
+    <string>Move Focus Up</string>
+   </property>
+   <property name="shortcut">
+    <string>Up</string>
+   </property>
+  </action>
+  <action name="actionFocusDown">
+   <property name="text">
+    <string>Move Focus Down</string>
+   </property>
+   <property name="shortcut">
+    <string>Down</string>
+   </property>
+  </action>
+  <action name="actionAddStreamUp">
+   <property name="text">
+    <string>Add Stream Up</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Up</string>
+   </property>
+  </action>
+  <action name="actionAddStreamDown">
+   <property name="text">
+    <string>Add Stream Down</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Down</string>
+   </property>
+  </action>
+  <action name="actionStreamZoom">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toogle Stream Zoom</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Z</string>
    </property>
   </action>
  </widget>
