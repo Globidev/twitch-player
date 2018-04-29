@@ -34,6 +34,7 @@ private:
     ChatPosition _chat_position = ChatPosition::Right;
 
     void reposition(ChatPosition);
+    void resize_chat(ChatPosition);
 };
 
 #endif // STREAM_WIDGET_HPP

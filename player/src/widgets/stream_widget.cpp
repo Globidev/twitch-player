@@ -91,14 +91,26 @@ void StreamWidget::play(QString channel) {
 }
 
 void StreamWidget::keyPressEvent(QKeyEvent * event) {
-    if (event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier)) {
-        switch (event->key()) {
-            case Qt::Key_Left:
-                reposition(ChatPosition::Left);
-                break;
-            case Qt::Key_Right:
-                reposition(ChatPosition::Right);
-                break;
+    if (event->modifiers().testFlag(Qt::ControlModifier)) {
+        if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+            switch (event->key()) {
+                case Qt::Key_Left:
+                    resize_chat(ChatPosition::Left);
+                    break;
+                case Qt::Key_Right:
+                    resize_chat(ChatPosition::Right);
+                    break;
+            }
+        }
+        else if (event->modifiers().testFlag(Qt::AltModifier)) {
+            switch (event->key()) {
+                case Qt::Key_Left:
+                    reposition(ChatPosition::Left);
+                    break;
+                case Qt::Key_Right:
+                    reposition(ChatPosition::Right);
+                    break;
+            }
         }
     }
     QWidget::keyPressEvent(event);
@@ -128,4 +140,23 @@ void StreamWidget::reposition(ChatPosition position) {
     _chat->setVisible(!_chat->isVisible() || _chat_position != position);
 
     _chat_position = position;
+}
+
+void StreamWidget::resize_chat(ChatPosition position) {
+    _chat_size = _splitter->sizes()[_splitter->indexOf(_chat)];
+    _video_size = _splitter->sizes()[_splitter->indexOf(_video)];
+
+    auto delta = (_chat_size + _video_size) * 2 / 100;
+
+    if (position == _chat_position) {
+        _chat_size -= delta; _video_size += delta;
+    }
+    else {
+        _chat_size += delta; _video_size -= delta;
+    }
+
+    QList<int> new_sizes;
+    new_sizes.insert(_splitter->indexOf(_chat), _chat_size);
+    new_sizes.insert(_splitter->indexOf(_video), _video_size);
+    _splitter->setSizes(new_sizes);
 }
