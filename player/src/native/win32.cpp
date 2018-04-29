@@ -88,7 +88,7 @@ void toggle_window_borders(HWND handle, bool on) {
                    : current_style & ~BORDER_FLAGS;
     SetWindowLong(handle, GWL_STYLE, new_style);
     SetWindowPos(handle, nullptr, 0, 0, 0, 0, REPOSITION_FLAGS);
-    InvalidateRect(handle, nullptr, TRUE);
+    redraw(handle);
 }
 
 void toggle_always_on_top(HWND handle, bool on) {
@@ -98,4 +98,8 @@ void toggle_always_on_top(HWND handle, bool on) {
 
 void sysclose_window(HWND handle) {
     SendMessage(handle, WM_SYSCOMMAND, SC_CLOSE, 0);
+}
+
+void redraw(HWND handle) {
+    InvalidateRect(handle, nullptr, TRUE);
 }

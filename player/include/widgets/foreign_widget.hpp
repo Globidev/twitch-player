@@ -16,8 +16,12 @@ public:
 
     void grab(WindowHandle);
 
+protected:
+    void showEvent(QShowEvent *) override;
+
 private:
     std::optional<QWindow *> _foreign_win_ptr;
+    std::optional<QWidget *> _container;
     QHBoxLayout *_layout;
 
     void release_window();

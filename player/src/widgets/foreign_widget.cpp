@@ -1,4 +1,5 @@
 #include "widgets/foreign_widget.hpp"
+#include "native/capabilities.hpp"
 
 #include <QHBoxLayout>
 #include <QWindow>
@@ -19,8 +20,10 @@ void ForeignWidget::grab(WindowHandle handle) {
     auto abstract_handle = reinterpret_cast<WId>(handle);
     if (auto win_ptr = QWindow::fromWinId(abstract_handle); win_ptr) {
         _foreign_win_ptr = win_ptr;
-        if (auto container = QWidget::createWindowContainer(win_ptr); container)
+        if (auto container = QWidget::createWindowContainer(win_ptr); container) {
+            _container = container;
             _layout->addWidget(container);
+        }
     }
 }
 
@@ -36,4 +39,13 @@ void ForeignWidget::release_window() {
         win_ptr->setParent(nullptr);
         sysclose_window(handle);
     }
+}
+
+void ForeignWidget::showEvent(QShowEvent * event)  {
+    // On Windows, there are sometimes issues where the window won't redraw
+    // itself when the container or its parents are reparented
+    if (_container)
+        redraw((HWND)(*_container)->winId());
+
+    QWidget::showEvent(event);
 }
