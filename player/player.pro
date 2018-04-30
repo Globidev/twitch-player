@@ -1,7 +1,7 @@
 TARGET          =   twitch-player
 TEMPLATE        =   app
 
-QT              +=  core gui widgets
+QT              +=  core gui widgets network
 
 win32:QMAKE_CXXFLAGS    +=  /std:c++latest
 
@@ -19,6 +19,8 @@ SOURCES         +=  src/main.cpp \
                     src/widgets/vlc_log_viewer.cpp \
                     src/widgets/options_dialog.cpp \
                     src/widgets/resizable_grid.cpp \
+                    src/api/twitch.cpp \
+                    src/api/twitchd.cpp \
 
 win32:SOURCES   +=  src/native/win32.cpp
 
@@ -34,6 +36,8 @@ HEADERS         +=  include/main_window.hpp \
                     include/widgets/vlc_log_viewer.hpp \
                     include/widgets/options_dialog.hpp \
                     include/widgets/resizable_grid.hpp \
+                    include/api/twitch.hpp \
+                    include/api/twitchd.hpp \
                     include/native/capabilities.hpp \
 
 win32:HEADERS   +=  include/native/win32.hpp
