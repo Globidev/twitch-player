@@ -37,7 +37,7 @@ class VideoWidget: public QWidget {
 public:
     VideoWidget(libvlc::Instance &, QWidget * = nullptr);
 
-    void play(QString);
+    void play(QString, QString);
 
     int volume() const;
     void set_volume(int);

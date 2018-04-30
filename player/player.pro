@@ -19,6 +19,9 @@ SOURCES         +=  src/main.cpp \
                     src/widgets/vlc_log_viewer.cpp \
                     src/widgets/options_dialog.cpp \
                     src/widgets/resizable_grid.cpp \
+                    src/widgets/flow_layout.cpp \
+                    src/widgets/stream_card.cpp \
+                    src/widgets/quality_picker_dialog.cpp \
                     src/api/twitch.cpp \
                     src/api/twitchd.cpp \
 
@@ -36,6 +39,9 @@ HEADERS         +=  include/main_window.hpp \
                     include/widgets/vlc_log_viewer.hpp \
                     include/widgets/options_dialog.hpp \
                     include/widgets/resizable_grid.hpp \
+                    include/widgets/flow_layout.hpp \
+                    include/widgets/stream_card.hpp \
+                    include/widgets/quality_picker_dialog.hpp \
                     include/api/twitch.hpp \
                     include/api/twitchd.hpp \
                     include/native/capabilities.hpp \
@@ -45,7 +51,9 @@ win32:HEADERS   +=  include/native/win32.hpp
 FORMS           +=  forms/main_window.ui \
                     forms/stream_picker.ui \
                     forms/vlc_log_viewer.ui \
-                    forms/options_dialog.ui
+                    forms/options_dialog.ui \
+                    forms/stream_card.ui \
+                    forms/quality_picker_dialog.ui \
 
 RESOURCES       =   resources/player.qrc
 

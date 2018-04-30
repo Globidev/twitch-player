@@ -7,6 +7,11 @@ namespace Ui {
     class StreamPicker;
 }
 
+class QNetworkAccessManager;
+class QNetworkReply;
+class TwitchAPI;
+class StreamPromise;
+
 class StreamPicker: public QWidget {
     Q_OBJECT
 
@@ -15,10 +20,15 @@ public:
     ~StreamPicker();
 
 signals:
-    void stream_picked(QString);
+    void stream_picked(QString, QString);
 
 private:
     Ui::StreamPicker *_ui;
+    QWidget *_stream_presenter;
+
+    TwitchAPI *_api;
+
+    void fetch_streams(StreamPromise *);
 };
 
 

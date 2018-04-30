@@ -19,7 +19,7 @@ class StreamWidget: public QWidget {
 public:
     StreamWidget(libvlc::Instance &, QWidget * = nullptr);
 
-    void play(QString);
+    void play(QString, QString);
 
     void reposition_chat(ChatPosition);
     void resize_chat(ChatPosition);

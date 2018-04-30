@@ -2,4 +2,7 @@
   <qresource prefix="icons">
     <file>icon.ico</file>
   </qresource>
+  <qresource prefix="gifs">
+    <file>spinner.gif</file>
+  </qresource>
 </RCC>

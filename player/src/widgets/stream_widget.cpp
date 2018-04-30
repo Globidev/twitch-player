@@ -49,10 +49,10 @@ StreamWidget::StreamWidget(libvlc::Instance &inst, QWidget *parent):
     _splitter->setSizes(QList<int>() << _video_size << _chat_size);
 }
 
-void StreamWidget::play(QString channel) {
+void StreamWidget::play(QString channel, QString quality) {
     using namespace constants::settings::chat_renderer;
 
-    _video->play(channel);
+    _video->play(channel, quality);
 
     QSettings settings;
     auto renderer_path = settings

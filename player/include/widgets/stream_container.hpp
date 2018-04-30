@@ -15,7 +15,7 @@ class StreamContainer: public QWidget {
 public:
     StreamContainer(libvlc::Instance &, QWidget * = nullptr);
 
-    void play(QString);
+    void play(QString, QString = QString());
 
     StreamWidget *stream() const;
 

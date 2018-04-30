@@ -1,5 +1,7 @@
 #include "widgets/video_widget.hpp"
 
+#include "api/twitchd.hpp"
+
 #include <QApplication>
 #include <QWheelEvent>
 #include <QMouseEvent>
@@ -32,8 +34,8 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     setMinimumSize(160, 90);
 }
 
-void VideoWidget::play(QString channel) {
-    QString location = "http://localhost:7777/play?channel=" + channel;
+void VideoWidget::play(QString channel, QString quality) {
+    auto location = TwitchdAPI::playback_url(channel, quality);
     _media.emplace(_instance, location.toStdString().c_str());
     _media_player.set_media(*_media);
     _media_player.play();

@@ -19,7 +19,7 @@ StreamContainer::StreamContainer(libvlc::Instance &video_ctx, QWidget *parent):
     QObject::connect(
         _picker,
         &StreamPicker::stream_picked,
-        [this](QString channel) { play(channel); }
+        [this](QString channel, QString quality) { play(channel, quality); }
     );
 
     _stream->hide();
@@ -34,7 +34,7 @@ StreamContainer::StreamContainer(libvlc::Instance &video_ctx, QWidget *parent):
     setAutoFillBackground(true);
 }
 
-void StreamContainer::play(QString channel) {
+void StreamContainer::play(QString channel, QString quality) {
     _picker->hide();
 
     _layout->removeWidget(_picker);
@@ -42,7 +42,7 @@ void StreamContainer::play(QString channel) {
 
     _stream->setFocus();
     _stream->show();
-    _stream->play(channel);
+    _stream->play(channel, quality);
 
     repaint();
 }
