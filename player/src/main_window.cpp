@@ -79,7 +79,7 @@ MainWindow::MainWindow(libvlc::Instance &video_context, QWidget *parent) :
     );
     add_action(
         _ui->actionAddStreamUp,
-        [=] { unzoom(); add_pane(active_position()); }
+        [=] { unzoom(); add_pane(active_position().up()); }
     );
     add_action(
         _ui->actionAddStreamDown,

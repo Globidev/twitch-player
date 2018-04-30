@@ -36,8 +36,6 @@ StreamPicker::~StreamPicker() {
 }
 
 void StreamPicker::fetch_streams(StreamPromise * query) {
-    static StreamPromise *current_query = nullptr;
-
     if (current_query)
         current_query->abort();
 

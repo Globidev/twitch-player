@@ -27,6 +27,7 @@ private:
     QWidget *_stream_presenter;
 
     TwitchAPI *_api;
+    StreamPromise *current_query = nullptr;
 
     void fetch_streams(StreamPromise *);
 };

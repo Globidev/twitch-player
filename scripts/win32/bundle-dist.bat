@@ -1,7 +1,9 @@
 REM Copy packages data
-xcopy twitchd\target\release\twitchd.exe        dist\packages\twitchd\data\         /y
-xcopy player\target\release\twitch-player.exe   dist\packages\twitch_player\data\   /y
-xcopy %LIBVLC_DIST%\*                           dist\packages\libvlc\data\          /y /e
+xcopy twitchd\target\release\twitchd.exe            dist\packages\twitchd\data\         /y
+xcopy player\target\release\twitch-player.exe       dist\packages\twitch_player\data\   /y
+xcopy player\target\release\libcrypto-1_1-x64.dll   dist\packages\twitch_player\data\   /y
+xcopy player\target\release\libssl-1_1-x64.dll      dist\packages\twitch_player\data\   /y
+xcopy %LIBVLC_DIST%\*                               dist\packages\libvlc\data\          /y /e
 
 cd dist
 
