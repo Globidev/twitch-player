@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitch Player</DisplayName>
     <Description>Install the end user interface</Description>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <ReleaseDate>2018-04-29</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Miscellaneous UI improvements</UpdateText>
+    <UpdateText>Added panel movements and a lidl stream browser</UpdateText>
 </Package>
