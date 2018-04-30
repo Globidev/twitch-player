@@ -23,6 +23,8 @@ void ForeignWidget::grab(WindowHandle handle) {
         if (auto container = QWidget::createWindowContainer(win_ptr); container) {
             _container = container;
             _layout->addWidget(container);
+            // Forcing an initial redraw seems to help fixing reparenting issues
+            redraw();
         }
     }
 }

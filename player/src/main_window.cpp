@@ -123,6 +123,23 @@ MainWindow::MainWindow(libvlc::Instance &video_context, QWidget *parent) :
         _ui->actionResizeChatRight,
         [=](auto stream) { stream->resize_chat(ChatPosition::Right); }
     );
+        //
+    add_action(
+        _ui->actionMoveStreamLeft,
+        [=] { unzoom(); auto pos = active_position(); move_pane(pos, pos.left()); }
+    );
+    add_action(
+        _ui->actionMoveStreamRight,
+        [=] { unzoom(); auto pos = active_position(); move_pane(pos, pos.right()); }
+    );
+    add_action(
+        _ui->actionMoveStreamUp,
+        [=] { unzoom(); auto pos = active_position(); move_pane(pos, pos.up()); }
+    );
+    add_action(
+        _ui->actionMoveStreamDown,
+        [=] { unzoom(); auto pos = active_position(); move_pane(pos, pos.down()); }
+    );
     // Playback
     add_stream_action(
         _ui->actionMute,
@@ -218,6 +235,12 @@ void MainWindow::move_focus(Position pos) {
         pane->repaint();
 }
 
+void MainWindow::move_pane(Position from, Position to) {
+    auto focused = focused_pane();
+    _grid->swap(from, to);
+    focus_pane(focused);
+}
+
 bool MainWindow::is_zoomed() {
     return _central_widget->currentWidget() != _grid;
 }
@@ -252,10 +275,8 @@ void MainWindow::unzoom() {
     focus_pane(zoomed_pane);
 
     // Windows workaround for weird display issues
-    QTimer::singleShot(0, [=] {
-        if (auto active_pane = focused_pane(); active_pane)
-            active_pane->stream()->chat()->redraw();
-    });
+    if (auto active_pane = focused_pane(); active_pane)
+        active_pane->stream()->chat()->redraw();
 
     _ui->actionStreamZoom->setChecked(false);
 }

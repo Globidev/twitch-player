@@ -61,6 +61,17 @@ QWidget * ResizableGrid::closest_widget(Position pos) {
     return inner_splitter->widget(col);
 }
 
+void ResizableGrid::swap(Position from, Position to) {
+    auto from_w = closest_widget(from);
+    auto to_w = closest_widget(to);
+    if (from_w && from_w != to_w) {
+        auto actual_from = widget_position(from_w);
+        auto actual_to = widget_position(to_w);
+        _inner_splitters[actual_from.row]->replaceWidget(actual_from.column, to_w);
+        _inner_splitters[actual_to.row]->insertWidget(actual_to.column, from_w);
+    }
+}
+
 QSplitter * ResizableGrid::get_inner(int row) {
     if (row >= _inner_splitters.size()) {
         auto splitter = new QSplitter(this);

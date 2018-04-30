@@ -124,6 +124,11 @@
     <addaction name="actionToggleChatRight"/>
     <addaction name="actionResizeChatLeft"/>
     <addaction name="actionResizeChatRight"/>
+    <addaction name="separator"/>
+    <addaction name="actionMoveStreamLeft"/>
+    <addaction name="actionMoveStreamRight"/>
+    <addaction name="actionMoveStreamUp"/>
+    <addaction name="actionMoveStreamDown"/>
    </widget>
    <widget class="QMenu" name="menuPreferences">
     <property name="title">
@@ -342,6 +347,38 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+Right</string>
+   </property>
+  </action>
+  <action name="actionMoveStreamLeft">
+   <property name="text">
+    <string>Move Stream Left</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+Shift+Left</string>
+   </property>
+  </action>
+  <action name="actionMoveStreamRight">
+   <property name="text">
+    <string>Move Stream Right</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+Shift+Right</string>
+   </property>
+  </action>
+  <action name="actionMoveStreamUp">
+   <property name="text">
+    <string>Move Stream Up</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+Shift+Up</string>
+   </property>
+  </action>
+  <action name="actionMoveStreamDown">
+   <property name="text">
+    <string>Move Stream Down</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+Shift+Down</string>
    </property>
   </action>
  </widget>

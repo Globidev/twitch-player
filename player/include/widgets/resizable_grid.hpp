@@ -24,6 +24,7 @@ public:
     void remove_widget(QWidget *);
     Position widget_position(QWidget *);
     QWidget * closest_widget(Position);
+    void swap(Position, Position);
 
 private:
     enum class MainDirection { Vertical, Horizontal };

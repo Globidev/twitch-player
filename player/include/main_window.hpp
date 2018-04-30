@@ -49,6 +49,7 @@ private:
     StreamContainer * focused_pane();
 
     void move_focus(Position);
+    void move_pane(Position, Position);
 
     bool is_zoomed();
     void zoom();
