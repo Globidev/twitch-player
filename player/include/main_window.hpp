@@ -2,8 +2,10 @@
 #define MAIN_WINDOW_HPP
 
 #include <QMainWindow>
+#include <QMap>
 
 #include <vector>
+#include <tuple>
 
 #include "widgets/resizable_grid.hpp"
 
@@ -54,6 +56,11 @@ private:
     bool is_zoomed();
     void zoom();
     void unzoom();
+
+    std::vector<std::pair<QString, std::pair<QShortcut *, QAction*>>> _shortcuts;
+
+    void setup_shortcuts();
+    void remap_shortcuts();
 };
 
 #endif // MAIN_WINDOW_HPP

@@ -4,6 +4,7 @@
 #include "constants.hpp"
 
 #include <QFileDialog>
+#include <QKeySequenceEdit>
 #include <QSettings>
 
 constexpr auto LIST_WIDGET_ITEM_FLAGS = Qt::ItemIsEnabled
@@ -22,7 +23,7 @@ OptionsDialog::OptionsDialog(QWidget *parent):
     QObject::connect(
         _ui->buttonBox,
         &QDialogButtonBox::accepted,
-        [this] { save_settings(); }
+        [this] { save_settings(); emit settings_changed(); }
     );
 
     QObject::connect(_ui->browseChatRendererPath, &QPushButton::clicked, [this] {
@@ -48,10 +49,14 @@ OptionsDialog::~OptionsDialog() {
     delete _ui;
 }
 
+// class KeybindEditWidget: QWidget {
+
+// }
 
 void OptionsDialog::load_settings() {
     using namespace constants::settings::chat_renderer;
     using namespace constants::settings::vlc;
+    using namespace constants::settings::shortcuts;
 
     QSettings settings;
 
@@ -72,11 +77,29 @@ void OptionsDialog::load_settings() {
         auto item = new QListWidgetItem(option, _ui->libvlcOptionsList);
         item->setFlags(LIST_WIDGET_ITEM_FLAGS);
     }
+
+    auto keybinds_layout = new QVBoxLayout(_ui->tabKeybinds);
+    for (auto sh_desc: ALL_SHORTCUTS) {
+        auto sequence_str = settings
+            .value(sh_desc.setting_key, sh_desc.default_key_sequence)
+            .toString();
+        auto sequence = QKeySequence(sequence_str);
+        auto shortcut_layout = new QHBoxLayout;
+        auto label = new QLabel(QString("%1:").arg(sh_desc.action_text));
+        label->setMinimumWidth(130);
+        shortcut_layout->addWidget(label);
+        auto keybind_edit = new QKeySequenceEdit(sequence);
+        shortcut_layout->addWidget(keybind_edit);
+        _keybind_edits.push_back({ sh_desc.setting_key, keybind_edit });
+        keybinds_layout->addLayout(shortcut_layout);
+    }
+    _ui->tabKeybinds->setLayout(keybinds_layout);
 }
 
 void OptionsDialog::save_settings() {
     using namespace constants::settings::chat_renderer;
     using namespace constants::settings::vlc;
+    using namespace constants::settings::shortcuts;
 
     QSettings settings;
 
@@ -87,4 +110,7 @@ void OptionsDialog::save_settings() {
     for (auto i = 0; i < _ui->libvlcOptionsList->count(); ++i)
         libvlc_options << _ui->libvlcOptionsList->item(i)->text();
     settings.setValue(KEY_VLC_ARGS, libvlc_options);
+
+    for (auto [setting_key, sequence_edit]: _keybind_edits)
+        settings.setValue(setting_key, sequence_edit->keySequence().toString());
 }

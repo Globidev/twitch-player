@@ -18,6 +18,7 @@
 #include <QSettings>
 #include <QMessageBox>
 #include <QTimer>
+#include <QShortcut>
 
 static void focus_pane(QWidget *pane) {
     pane->setFocus();
@@ -37,128 +38,7 @@ MainWindow::MainWindow(libvlc::Instance &video_context, QWidget *parent) :
     setCentralWidget(_central_widget);
     _central_widget->addWidget(_grid);
 
-    auto add_action = [this](auto action, auto slot) {
-        QObject::connect(action, &QAction::triggered, slot);
-    };
-
-    auto add_stream_action = [=](auto action, auto slot) {
-        add_action(action, [=] {
-            if (auto active_pane = focused_pane(); active_pane)
-                slot(active_pane->stream());
-        });
-    };
-
-    auto active_position = [this] {
-        return _grid->widget_position(focused_pane());
-    };
-
-    // View
-    add_action(_ui->actionFullScreen, [this](bool on) {
-        setWindowState(windowState().setFlag(Qt::WindowFullScreen, on));
-    });
-    add_action(_ui->actionToggleWindowBorders, [this](bool on) {
-        auto win_handle = reinterpret_cast<WindowHandle>(window()->winId());
-        toggle_window_borders(win_handle, on);
-    });
-    add_action(_ui->actionAlwaysOnTop, [this](bool on) {
-        auto win_handle = reinterpret_cast<WindowHandle>(window()->winId());
-        toggle_always_on_top(win_handle, on);
-    });
-    add_action(
-        _ui->actionStreamZoom,
-        [this](bool on) { on ? zoom() : unzoom(); }
-    );
-        //
-    add_action(
-        _ui->actionAddStreamLeft,
-        [=] { unzoom(); add_pane(active_position()); }
-    );
-    add_action(
-        _ui->actionAddStreamRight,
-        [=] { unzoom(); add_pane(active_position().right()); }
-    );
-    add_action(
-        _ui->actionAddStreamUp,
-        [=] { unzoom(); add_pane(active_position().up()); }
-    );
-    add_action(
-        _ui->actionAddStreamDown,
-        [=] { unzoom(); add_pane(active_position().down()); }
-    );
-    add_action(
-        _ui->actionRemoveStream,
-        [=] { unzoom(); remove_pane(focused_pane()); }
-    );
-        //
-    add_action(
-        _ui->actionFocusLeft,
-        [=] { unzoom(); move_focus(active_position().left()); }
-    );
-    add_action(
-        _ui->actionFocusRight,
-        [=] { unzoom(); move_focus(active_position().right()); }
-    );
-    add_action(
-        _ui->actionFocusUp,
-        [=] { unzoom(); move_focus(active_position().up()); }
-    );
-    add_action(
-        _ui->actionFocusDown,
-        [=] { unzoom(); move_focus(active_position().down()); }
-    );
-        //
-    add_stream_action(
-        _ui->actionToggleChatLeft,
-        [=](auto stream) { stream->reposition_chat(ChatPosition::Left); }
-    );
-    add_stream_action(
-        _ui->actionToggleChatRight,
-        [=](auto stream) { stream->reposition_chat(ChatPosition::Right); }
-    );
-    add_stream_action(
-        _ui->actionResizeChatLeft,
-        [=](auto stream) { stream->resize_chat(ChatPosition::Left); }
-    );
-    add_stream_action(
-        _ui->actionResizeChatRight,
-        [=](auto stream) { stream->resize_chat(ChatPosition::Right); }
-    );
-        //
-    add_action(
-        _ui->actionMoveStreamLeft,
-        [=] { unzoom(); auto pos = active_position(); move_pane(pos, pos.left()); }
-    );
-    add_action(
-        _ui->actionMoveStreamRight,
-        [=] { unzoom(); auto pos = active_position(); move_pane(pos, pos.right()); }
-    );
-    add_action(
-        _ui->actionMoveStreamUp,
-        [=] { unzoom(); auto pos = active_position(); move_pane(pos, pos.up()); }
-    );
-    add_action(
-        _ui->actionMoveStreamDown,
-        [=] { unzoom(); auto pos = active_position(); move_pane(pos, pos.down()); }
-    );
-    // Playback
-    add_stream_action(
-        _ui->actionMute,
-        [=](auto stream) { stream->video()->set_muted(!stream->video()->muted()); }
-    );
-    add_stream_action(
-        _ui->actionFastForward,
-        [=](auto stream) { stream->video()->fast_forward(); }
-    );
-    // Tools
-    add_action(_ui->actionLogs, [this] {
-        _vlc_log_viewer->show();
-        _vlc_log_viewer->raise();
-    });
-    // Preferences
-    add_action(_ui->actionOptions, [this] {
-        auto options_dialog = new OptionsDialog(this);
-        options_dialog->show();
-    });
+    setup_shortcuts();
 }
 
 MainWindow::~MainWindow() {
@@ -166,12 +46,18 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::changeEvent(QEvent *event) {
-    if (event->type() == QEvent::ActivationChange)
-        _ui->menuBar->setVisible(isActiveWindow());
     QMainWindow::changeEvent(event);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
+    if (event->modifiers() == Qt::ALT && event->key() == Qt::Key_Alt) {
+        auto menu_visible = !_ui->menuBar->isVisible();
+        _ui->menuBar->setVisible(menu_visible);
+        for (auto [_, pair]: _shortcuts) {
+            auto [shortcut, _] = pair;
+            shortcut->setEnabled(!menu_visible);
+        }
+    }
     QMainWindow::keyPressEvent(event);
 }
 

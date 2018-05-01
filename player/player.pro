@@ -9,6 +9,7 @@ release:CONFIG  +=  static
 
 SOURCES         +=  src/main.cpp \
                     src/main_window.cpp \
+                    src/main_window_shortcuts.cpp \
                     src/libvlc.cpp \
                     src/vlc_logger.cpp \
                     src/widgets/video_widget.cpp \
