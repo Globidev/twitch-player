@@ -19,6 +19,7 @@ StreamCard::StreamCard(StreamData data, QWidget *parent):
     _ui->viewerCount->setText(QString("%1 viewers").arg(data.viewcount));
 
     auto http_client = new QNetworkAccessManager(this);
+    http_client->setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
     auto preview_reply = http_client->get(QNetworkRequest(QUrl(data.preview)));
 
     QObject::connect(preview_reply, &QNetworkReply::finished, [=] {
