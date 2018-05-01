@@ -86,7 +86,8 @@ QString TwitchdAPI::playback_url(QString channel, QString quality) {
 
     QUrlQuery url_query;
     url_query.addQueryItem("channel", channel);
-    url_query.addQueryItem("quality", quality);
+    if (!quality.isEmpty())
+        url_query.addQueryItem("quality", quality);
     url.setQuery(url_query);
 
     return url.toString(QUrl::FullyEncoded);
