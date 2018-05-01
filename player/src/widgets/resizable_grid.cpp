@@ -10,10 +10,16 @@ static auto equal_sizes(int size) {
     return sizes;
 }
 
+static auto invert(Qt::Orientation orientation) {
+    return orientation == Qt::Vertical
+         ? Qt::Horizontal
+         : Qt::Vertical;
+}
+
 ResizableGrid::ResizableGrid(QWidget *parent):
     QWidget(parent),
     _layout(new QHBoxLayout(this)),
-    _main_splitter(new QSplitter(Qt::Vertical, this))
+    _main_splitter(new QSplitter(_main_orientation, this))
 {
     _layout->setContentsMargins(QMargins());
     _layout->addWidget(_main_splitter);
@@ -78,16 +84,27 @@ void ResizableGrid::swap(Position from, Position to) {
     }
 }
 
+void ResizableGrid::rotate() {
+    _main_orientation = invert(_main_orientation);
+    _main_splitter->setOrientation(_main_orientation);
+    for (auto inner_splitter: _inner_splitters)
+        inner_splitter->setOrientation(invert(_main_orientation));
+}
+
+Qt::Orientation ResizableGrid::orientation() const {
+    return _main_orientation;
+}
+
 QSplitter * ResizableGrid::get_inner(int row) {
     if (row < 0) {
-        auto splitter = new QSplitter(this);
+        auto splitter = new QSplitter(invert(_main_orientation), this);
         _main_splitter->insertWidget(0, splitter);
         _main_splitter->setSizes(equal_sizes(_main_splitter->count()));
         _inner_splitters.insert(_inner_splitters.begin(), splitter);
         return splitter;
     }
     else if (row >= _inner_splitters.size()) {
-        auto splitter = new QSplitter(this);
+        auto splitter = new QSplitter(invert(_main_orientation), this);
         _main_splitter->addWidget(splitter);
         _main_splitter->setSizes(equal_sizes(_main_splitter->count()));
         _inner_splitters.push_back(splitter);

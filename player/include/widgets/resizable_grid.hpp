@@ -10,10 +10,26 @@ class QHBoxLayout;
 struct Position {
     int row, column;
 
-    auto left()  { return Position { row, column - 1 }; }
-    auto right() { return Position { row, column + 1 }; }
-    auto up()    { return Position { row - 1, column }; }
-    auto down()  { return Position { row + 1, column }; }
+    Position left(Qt::Orientation orientation = Qt::Vertical) {
+        return orientation == Qt::Vertical
+             ? Position { row, column - 1 }
+             : up();
+    }
+    Position right(Qt::Orientation orientation = Qt::Vertical) {
+        return orientation == Qt::Vertical
+             ? Position { row, column + 1 }
+             : down();
+    }
+    Position up(Qt::Orientation orientation = Qt::Vertical) {
+        return orientation == Qt::Vertical
+             ? Position { row - 1, column }
+             : left();
+    }
+    Position down(Qt::Orientation orientation = Qt::Vertical) {
+        return orientation == Qt::Vertical
+             ? Position { row + 1, column }
+             : right();
+    }
 };
 
 class ResizableGrid: public QWidget {
@@ -25,15 +41,15 @@ public:
     Position widget_position(QWidget *);
     QWidget * closest_widget(Position);
     void swap(Position, Position);
+    void rotate();
+    Qt::Orientation orientation() const;
 
 private:
-    enum class MainDirection { Vertical, Horizontal };
-
     QHBoxLayout *_layout;
     QSplitter *_main_splitter;
     std::vector<QSplitter *> _inner_splitters;
 
-    MainDirection _main_direction = MainDirection::Vertical;
+    Qt::Orientation _main_orientation = Qt::Vertical;
 
     QSplitter * get_inner(int);
 };

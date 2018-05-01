@@ -59,6 +59,7 @@ namespace constants {
             Shortcut MOVE_PANE_RIGHT       { "Move Pane Right",       "Ctrl+Alt+Shift+Right", "shortcuts/move_pane_right" };
             Shortcut MOVE_PANE_UP          { "Move Pane Up",          "Ctrl+Alt+Shift+Up",    "shortcuts/move_pane_up" };
             Shortcut MOVE_PANE_DOWN        { "Move Pane Down",        "Ctrl+Alt+Shift+Down",  "shortcuts/move_pane_down" };
+            Shortcut ROTATE_LAYOUT         { "Rotate Layout",         "Ctrl+R",               "shortcuts/rotate_layout" };
             Shortcut TOGGLE_MUTE           { "Toggle Mute",           "M",                    "shortcuts/toggle_mute" };
             Shortcut FAST_FORWARD          { "Fast Forward",          "F",                    "shortcuts/fast_forward" };
 
@@ -70,7 +71,7 @@ namespace constants {
                 REMOVE_ACTIVE_PANE, MOVE_FOCUS_LEFT, MOVE_FOCUS_RIGHT, MOVE_FOCUS_UP,
                 MOVE_FOCUS_DOWN, TOGGLE_CHAT_LEFT, TOGGLE_CHAT_RIGHT, RESIZE_CHAT_LEFT,
                 RESIZE_CHAT_RIGHT, MOVE_PANE_LEFT, MOVE_PANE_RIGHT, MOVE_PANE_UP,
-                MOVE_PANE_DOWN, TOGGLE_MUTE, FAST_FORWARD,
+                MOVE_PANE_DOWN, ROTATE_LAYOUT, TOGGLE_MUTE, FAST_FORWARD,
             };
         }
     }

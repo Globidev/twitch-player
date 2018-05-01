@@ -125,6 +125,8 @@ void MainWindow::move_pane(Position from, Position to) {
     auto focused = focused_pane();
     _grid->swap(from, to);
     focus_pane(focused);
+    for (auto pane: _panes)
+        pane->repaint();
 }
 
 bool MainWindow::is_zoomed() {

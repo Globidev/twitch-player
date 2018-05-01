@@ -84,10 +84,10 @@ void MainWindow::setup_shortcuts() {
     };
 
     auto still = [](auto pos) { return pos; };
-    auto left  = [](auto pos) { return pos.left(); };
-    auto right = [](auto pos) { return pos.right(); };
-    auto up    = [](auto pos) { return pos.up(); };
-    auto down  = [](auto pos) { return pos.down(); };
+    auto left  = [=](auto pos) { return pos.left(_grid->orientation()); };
+    auto right = [=](auto pos) { return pos.right(_grid->orientation()); };
+    auto up    = [=](auto pos) { return pos.up(_grid->orientation()); };
+    auto down  = [=](auto pos) { return pos.down(_grid->orientation()); };
 
     auto with_active_stream = [=](auto action) {
         if (auto active_pane = focused_pane(); active_pane)
@@ -109,10 +109,10 @@ void MainWindow::setup_shortcuts() {
     };
 
     add_toggle(_ui->menuView, TOGGLE_FULL_SCREEN,    toggle_fullscreen);
-    add_toggle(_ui->menuView, TOGGLE_WINDOW_BORDERS,    toggle_window_borders)
+    add_toggle(_ui->menuView, TOGGLE_WINDOW_BORDERS, toggle_window_borders)
         ->setChecked(true);
     add_toggle(_ui->menuView, TOGGLE_ALWAYS_ON_TOP, toggle_always_on_top);
-    add_toggle(_ui->menuView, TOGGLE_STREAM_ZOOM,     toggle_stream_zoon);
+    add_toggle(_ui->menuView, TOGGLE_STREAM_ZOOM,   toggle_stream_zoon);
         //
     _ui->menuView->addSeparator();
     auto add_pane_at  = [=](auto dpos) {
@@ -155,6 +155,10 @@ void MainWindow::setup_shortcuts() {
     add_shortcut(_ui->menuView, MOVE_PANE_RIGHT, move_pane_at(right));
     add_shortcut(_ui->menuView, MOVE_PANE_UP,    move_pane_at(up));
     add_shortcut(_ui->menuView, MOVE_PANE_DOWN,  move_pane_at(down));
+        //
+    _ui->menuView->addSeparator();
+    auto rotate_layout = [=] { unzoom(); _grid->rotate(); };
+    add_shortcut(_ui->menuView, ROTATE_LAYOUT, rotate_layout);
     // Playback
     auto toggle_mute = [=] {
         with_active_stream([=](auto stream) { stream->video()->set_muted(!stream->video()->muted()); });
