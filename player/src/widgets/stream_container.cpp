@@ -68,10 +68,13 @@ void StreamContainer::paintEvent(QPaintEvent *event) {
     QWidget::paintEvent(event);
 }
 
-void StreamContainer::focusOutEvent(QFocusEvent *) {
+void StreamContainer::focusOutEvent(QFocusEvent *event) {
+    QWidget::focusOutEvent(event);
     repaint();
 }
 
-void StreamContainer::focusInEvent(QFocusEvent *) {
+void StreamContainer::focusInEvent(QFocusEvent *event) {
+    QWidget::focusInEvent(event);
+    _layout->itemAt(0)->widget()->setFocus();
     repaint();
 }

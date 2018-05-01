@@ -35,6 +35,11 @@ StreamPicker::~StreamPicker() {
     delete _ui;
 }
 
+void StreamPicker::focusInEvent(QFocusEvent *event) {
+    QWidget::focusInEvent(event);
+    _ui->searchBox->setFocus();
+}
+
 void StreamPicker::fetch_streams(StreamPromise * query) {
     if (current_query)
         current_query->abort();

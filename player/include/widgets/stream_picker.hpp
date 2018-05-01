@@ -19,6 +19,9 @@ public:
     StreamPicker(QWidget * = nullptr);
     ~StreamPicker();
 
+protected:
+    void focusInEvent(QFocusEvent *) override;
+
 signals:
     void stream_picked(QString, QString);
 
