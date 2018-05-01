@@ -94,6 +94,11 @@
      <height>21</height>
     </rect>
    </property>
+   <property name="styleSheet">
+    <string notr="true">background-color: rgb(0, 0, 0);
+selection-color: rgb(255, 255, 255);
+color: rgb(135, 109, 220);</string>
+   </property>
    <widget class="QMenu" name="menuTools">
     <property name="title">
      <string>Tools</string>

@@ -55,9 +55,11 @@ void StreamContainer::paintEvent(QPaintEvent *event) {
     if (isAncestorOf(qApp->focusWidget())) {
         QPainter painter(this);
 
-        QPen pen(QColor(0x39, 0x2e, 0x5c));
-        pen.setWidth(border_width);
-        painter.setPen(pen);
+        painter.setPen({
+            QColor(0x39, 0x2e, 0x5c),
+            static_cast<qreal>(border_width),
+            Qt::PenStyle::DotLine
+        });
         painter.drawRect(
             border_width, border_width,
             width() - border_width * 2,
