@@ -63,6 +63,10 @@ void Instance::unset_log_callback() {
     libvlc_log_unset(&*this);
 }
 
+Equalizer::Equalizer():
+    CWrapper(libvlc_audio_equalizer_new(), libvlc_audio_equalizer_release)
+{ }
+
 MediaPlayer::MediaPlayer(Instance &instance):
     CWrapper(libvlc_media_player_new(&instance), libvlc_media_player_release)
 {
@@ -83,7 +87,15 @@ void MediaPlayer::play() {
 }
 
 void MediaPlayer::set_volume(int volume) {
-    libvlc_audio_set_volume(&*this, volume);
+    libvlc_audio_set_volume(&*this, std::min(volume, 100));
+
+    // Really not sure about the default pre amp value, seems to be 10 on my
+    // machine...
+    auto pre_amp_value = (volume > 100)
+                       ? 10 + static_cast<float>(volume - 100) / 10.
+                       : 10;
+    libvlc_audio_equalizer_set_preamp(&_equalizer, pre_amp_value);
+    libvlc_media_player_set_equalizer(&*this, &_equalizer);
 }
 
 void MediaPlayer::set_position(float rate) {

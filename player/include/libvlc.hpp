@@ -9,6 +9,7 @@
 struct libvlc_instance_t;
 struct libvlc_media_player_t;
 struct libvlc_media_t;
+struct libvlc_equalizer_t;
 struct vlc_log_t;
 
 namespace libvlc {
@@ -63,6 +64,10 @@ private:
     log_cb_t _cb;
 };
 
+struct Equalizer: CWrapper<libvlc_equalizer_t> {
+    Equalizer();
+};
+
 struct MediaPlayer: CWrapper<libvlc_media_player_t> {
     MediaPlayer(Instance &);
 
@@ -71,6 +76,9 @@ struct MediaPlayer: CWrapper<libvlc_media_player_t> {
     void play();
     void set_volume(int);
     void set_position(float);
+
+private:
+    Equalizer _equalizer;
 };
 
 struct Media: CWrapper<libvlc_media_t> {

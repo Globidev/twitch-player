@@ -77,7 +77,7 @@ void VideoWidget::wheelEvent(QWheelEvent *event) {
                ? 1 : 5;
     int new_volume;
     if (event->angleDelta().y() > 0)
-        new_volume = std::min(_vol + delta, 100);
+        new_volume = std::min(_vol + delta, 200);
     else
         new_volume = std::max(0, _vol - delta);
     set_volume(new_volume);
