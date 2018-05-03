@@ -102,6 +102,35 @@ void MediaPlayer::set_position(float rate) {
     libvlc_media_player_set_position(&*this, rate);
 }
 
+std::vector<AudioDevice> MediaPlayer::audio_devices() {
+    std::vector<AudioDevice> devices;
+
+    auto device = libvlc_audio_output_device_enum(&*this);
+    while (device) {
+        devices.push_back({ device->psz_device, device->psz_description });
+        device = device->p_next;
+    }
+    libvlc_audio_output_device_list_release(device);
+
+    return devices;
+}
+
+std::string MediaPlayer::get_current_device_id() {
+    auto raw_device = libvlc_audio_output_device_get(&*this);
+    if (raw_device) {
+        std::string device { raw_device };
+        libvlc_free(raw_device);
+        return device;
+    }
+    else {
+        return { };
+    }
+}
+
+void MediaPlayer::set_audio_device(std::string device_id) {
+    libvlc_audio_output_device_set(&*this, nullptr, device_id.c_str());
+}
+
 Media::Media(Instance &instance, const char *location):
     CWrapper(libvlc_media_new_location(&instance, location), libvlc_media_release)
 { }

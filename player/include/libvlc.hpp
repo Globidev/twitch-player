@@ -48,6 +48,11 @@ struct LogEntry {
     std::string text;
 };
 
+struct AudioDevice {
+    std::string id;
+    std::string description;
+};
+
 struct Instance;
 struct MediaPlayer;
 struct Media;
@@ -76,6 +81,10 @@ struct MediaPlayer: CWrapper<libvlc_media_player_t> {
     void play();
     void set_volume(int);
     void set_position(float);
+
+    std::vector<AudioDevice> audio_devices();
+    std::string get_current_device_id();
+    void set_audio_device(std::string);
 
 private:
     Equalizer _equalizer;
