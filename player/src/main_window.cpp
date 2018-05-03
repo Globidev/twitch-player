@@ -39,6 +39,11 @@ MainWindow::MainWindow(libvlc::Instance &video_context, QWidget *parent) :
     _central_widget->addWidget(_grid);
 
     setup_shortcuts();
+
+    _audio_devices_menu = _ui->menuPlayback->addMenu("Audio Devices");
+    QObject::connect(_audio_devices_menu, &QMenu::aboutToShow, [=] {
+        setup_audio_devices();
+    });
 }
 
 MainWindow::~MainWindow() {
@@ -167,4 +172,29 @@ void MainWindow::unzoom() {
         active_pane->stream()->chat()->redraw();
 
     _ui->actionStreamZoom->setChecked(false);
+}
+
+void MainWindow::setup_audio_devices() {
+    auto active_pane = focused_pane();
+
+    if (!active_pane)
+        return ;
+
+    _audio_devices_menu->clear();
+    auto & mp = active_pane->stream()->video()->media_player();
+    auto current_device_id = mp.get_current_device_id();
+    for (auto device: mp.audio_devices()) {
+        auto description = QString::fromStdString(device.description);
+        auto action = _audio_devices_menu->addAction(description);
+        if (device.id == current_device_id) {
+            action->setCheckable(true);
+            action->setChecked(true);
+        }
+        QObject::connect(action, &QAction::triggered, [=] {
+            if (auto active_pane = focused_pane(); active_pane) {
+                active_pane->stream()->video()->media_player()
+                    .set_audio_device(device.id);
+            }
+        });
+    }
 }

@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitch Player</DisplayName>
     <Description>Install the end user interface</Description>
-    <Version>0.5.2</Version>
-    <ReleaseDate>2018-05-01</ReleaseDate>
+    <Version>0.5.4</Version>
+    <ReleaseDate>2018-05-03</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Added layout rotation</UpdateText>
+    <UpdateText>Audio devices and pre-amplification</UpdateText>
 </Package>

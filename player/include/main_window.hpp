@@ -61,6 +61,9 @@ private:
 
     void setup_shortcuts();
     void remap_shortcuts();
+
+    QMenu *_audio_devices_menu;
+    void setup_audio_devices();
 };
 
 #endif // MAIN_WINDOW_HPP

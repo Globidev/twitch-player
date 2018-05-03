@@ -66,6 +66,10 @@ void VideoWidget::fast_forward() {
     _overlay->show_text("Fast forward...");
 }
 
+libvlc::MediaPlayer & VideoWidget::media_player() {
+    return _media_player;
+}
+
 void VideoWidget::update_overlay_position() {
     _overlay->resize(size());
     _overlay->move(mapToGlobal(pos()) - pos());

@@ -47,6 +47,8 @@ public:
 
     void fast_forward();
 
+    libvlc::MediaPlayer & media_player();
+
 protected:
     void wheelEvent(QWheelEvent *) override;
     void resizeEvent(QResizeEvent *) override;

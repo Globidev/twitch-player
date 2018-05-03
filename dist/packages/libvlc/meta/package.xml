@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package>
     <DisplayName>libvlc</DisplayName>
-    <Description>Install the libvlc dependencies</Description>
-    <Version>3.0.2</Version>
+    <Description>Install the libvlc dependencies (RECOMMENDED)</Description>
+    <Version>3.0.2.1</Version>
     <ReleaseDate>2018-04-26</ReleaseDate>
     <Default>true</Default>
+    <UpdateText>Added libequalizer</UpdateText>
 </Package>
