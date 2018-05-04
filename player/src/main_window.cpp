@@ -39,11 +39,6 @@ MainWindow::MainWindow(libvlc::Instance &video_context, QWidget *parent) :
     _central_widget->addWidget(_grid);
 
     setup_shortcuts();
-
-    _audio_devices_menu = _ui->menuPlayback->addMenu("Audio Devices");
-    QObject::connect(_audio_devices_menu, &QMenu::aboutToShow, [=] {
-        setup_audio_devices();
-    });
 }
 
 MainWindow::~MainWindow() {

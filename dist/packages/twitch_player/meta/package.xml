@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitch Player</DisplayName>
     <Description>Install the end user interface</Description>
-    <Version>0.5.4</Version>
-    <ReleaseDate>2018-05-03</ReleaseDate>
+    <Version>0.5.5</Version>
+    <ReleaseDate>2018-05-04</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Audio devices and pre-amplification</UpdateText>
+    <UpdateText>Added some video filters</UpdateText>
 </Package>

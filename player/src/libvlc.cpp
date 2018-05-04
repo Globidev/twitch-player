@@ -102,6 +102,54 @@ void MediaPlayer::set_position(float rate) {
     libvlc_media_player_set_position(&*this, rate);
 }
 
+bool MediaPlayer::video_filters_enabled() {
+    return static_cast<bool>(libvlc_video_get_adjust_float(&*this, libvlc_adjust_Enable));
+}
+
+void MediaPlayer::enable_video_filters(bool on) {
+    libvlc_video_set_adjust_int(&*this, libvlc_adjust_Enable, static_cast<int>(on));
+}
+
+float MediaPlayer::get_contrast() {
+    return libvlc_video_get_adjust_float(&*this, libvlc_adjust_Contrast);
+}
+
+void MediaPlayer::set_contrast(float contrast) {
+    libvlc_video_set_adjust_float(&*this, libvlc_adjust_Contrast, contrast);
+}
+
+float MediaPlayer::get_brightness() {
+    return libvlc_video_get_adjust_float(&*this, libvlc_adjust_Brightness);
+}
+
+void MediaPlayer::set_brightness(float brightness) {
+    libvlc_video_set_adjust_float(&*this, libvlc_adjust_Brightness, brightness);
+}
+
+float MediaPlayer::get_hue() {
+    return libvlc_video_get_adjust_float(&*this, libvlc_adjust_Hue);
+}
+
+void MediaPlayer::set_hue(float hue) {
+    libvlc_video_set_adjust_float(&*this, libvlc_adjust_Hue, hue);
+}
+
+float MediaPlayer::get_saturation() {
+    return libvlc_video_get_adjust_float(&*this, libvlc_adjust_Saturation);
+}
+
+void MediaPlayer::set_saturation(float saturation) {
+    libvlc_video_set_adjust_float(&*this, libvlc_adjust_Saturation, saturation);
+}
+
+float MediaPlayer::get_gamma() {
+    return libvlc_video_get_adjust_float(&*this, libvlc_adjust_Gamma);
+}
+
+void MediaPlayer::set_gamma(float gamma) {
+    libvlc_video_set_adjust_float(&*this, libvlc_adjust_Gamma, gamma);
+}
+
 std::vector<AudioDevice> MediaPlayer::audio_devices() {
     std::vector<AudioDevice> devices;
 

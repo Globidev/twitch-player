@@ -18,6 +18,7 @@ SOURCES         +=  src/main.cpp \
                     src/widgets/stream_picker.cpp \
                     src/widgets/stream_container.cpp \
                     src/widgets/vlc_log_viewer.cpp \
+                    src/widgets/filters_tool.cpp \
                     src/widgets/options_dialog.cpp \
                     src/widgets/resizable_grid.cpp \
                     src/widgets/flow_layout.cpp \
@@ -38,6 +39,7 @@ HEADERS         +=  include/main_window.hpp \
                     include/widgets/stream_picker.hpp \
                     include/widgets/stream_container.hpp \
                     include/widgets/vlc_log_viewer.hpp \
+                    include/widgets/filters_tool.hpp \
                     include/widgets/options_dialog.hpp \
                     include/widgets/resizable_grid.hpp \
                     include/widgets/flow_layout.hpp \
@@ -56,6 +58,7 @@ FORMS           +=  forms/main_window.ui \
                     forms/options_dialog.ui \
                     forms/stream_card.ui \
                     forms/quality_picker_dialog.ui \
+                    forms/filters_tool.ui \
 
 RESOURCES       =   resources/player.qrc
 

@@ -82,6 +82,20 @@ struct MediaPlayer: CWrapper<libvlc_media_player_t> {
     void set_volume(int);
     void set_position(float);
 
+    bool video_filters_enabled();
+    void enable_video_filters(bool);
+
+    float get_contrast();
+    void set_contrast(float);
+    float get_brightness();
+    void set_brightness(float);
+    float get_hue();
+    void set_hue(float);
+    float get_saturation();
+    void set_saturation(float);
+    float get_gamma();
+    void set_gamma(float);
+
     std::vector<AudioDevice> audio_devices();
     std::string get_current_device_id();
     void set_audio_device(std::string);

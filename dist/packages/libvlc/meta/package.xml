@@ -2,8 +2,8 @@
 <Package>
     <DisplayName>libvlc</DisplayName>
     <Description>Install the libvlc dependencies (RECOMMENDED)</Description>
-    <Version>3.0.2.1</Version>
-    <ReleaseDate>2018-04-26</ReleaseDate>
+    <Version>3.0.2.2</Version>
+    <ReleaseDate>2018-05-04</ReleaseDate>
     <Default>true</Default>
-    <UpdateText>Added libequalizer</UpdateText>
+    <UpdateText>Added video filters</UpdateText>
 </Package>

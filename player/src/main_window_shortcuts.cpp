@@ -7,6 +7,7 @@
 #include "widgets/foreign_widget.hpp"
 #include "widgets/vlc_log_viewer.hpp"
 #include "widgets/options_dialog.hpp"
+#include "widgets/filters_tool.hpp"
 
 #include "native/capabilities.hpp"
 
@@ -168,6 +169,17 @@ void MainWindow::setup_shortcuts() {
         with_active_stream([=](auto stream) { stream->video()->fast_forward(); });
     };
     add_shortcut(_ui->menuPlayback, FAST_FORWARD, fast_forward);
+    _audio_devices_menu = _ui->menuPlayback->addMenu("Audio Devices");
+    QObject::connect(_audio_devices_menu, &QMenu::aboutToShow, [=] {
+        setup_audio_devices();
+    });
+    add_shortcut(_ui->menuPlayback, FILTERS_TOOL, [=] {
+        if (auto active_pane = focused_pane(); active_pane) {
+            auto & mp = active_pane->stream()->video()->media_player();
+            auto tool = new FiltersTool(mp, this);
+            tool->show();
+        }
+    });
     // Tools
     add_action(_ui->actionLogs, [this] {
         _vlc_log_viewer->show();
