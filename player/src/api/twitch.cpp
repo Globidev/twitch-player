@@ -2,8 +2,6 @@
 
 #include "constants.hpp"
 
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QUrlQuery>
 
 #include <QJsonDocument>
@@ -39,29 +37,7 @@ static QList<StreamData> parse_stream_data(const QByteArray & raw) {
     return parsed;
 }
 
-StreamPromise::StreamPromise(QNetworkReply *reply, QObject *parent):
-    QObject(parent),
-    _reply(reply)
-{
-    QObject::connect(_reply, &QNetworkReply::finished, [=] {
-        if (_reply->isOpen())
-            emit finished(parse_stream_data(_reply->readAll()));
-    });
-}
-
-StreamPromise::~StreamPromise() {
-    _reply->deleteLater();
-}
-
-void StreamPromise::abort() {
-    _reply->abort();
-}
-
-TwitchAPI::TwitchAPI(QObject *parent):
-    _http_client(new QNetworkAccessManager(parent))
-{ }
-
-StreamPromise *TwitchAPI::stream_search(QString query) {
+TwitchAPI::streams_response_t TwitchAPI::stream_search(QString query) {
     QUrl url { "https://api.twitch.tv/kraken/search/streams" };
 
     QUrlQuery url_query;
@@ -74,10 +50,10 @@ StreamPromise *TwitchAPI::stream_search(QString query) {
     // request.setRawHeader("Accept", "application/vnd.twitchtv.v5+json");
     request.setRawHeader("Client-ID", constants::TWITCHD_CLIENT_ID);
 
-    return new StreamPromise(_http_client->get(request), this);
+    return get(request, parse_stream_data);
 }
 
-StreamPromise *TwitchAPI::top_streams() {
+TwitchAPI::streams_response_t TwitchAPI::top_streams() {
     QUrl url { "https://api.twitch.tv/kraken/streams" };
 
     QUrlQuery url_query;
@@ -89,5 +65,5 @@ StreamPromise *TwitchAPI::top_streams() {
     request.setRawHeader("Accept", "application/vnd.twitchtv.v5+json");
     request.setRawHeader("Client-ID", constants::TWITCHD_CLIENT_ID);
 
-    return new StreamPromise(_http_client->get(request), this);
+    return get(request, parse_stream_data);
 }

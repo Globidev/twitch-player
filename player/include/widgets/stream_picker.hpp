@@ -3,14 +3,11 @@
 
 #include <QWidget>
 
+#include "api/twitch.hpp"
+
 namespace Ui {
     class StreamPicker;
 }
-
-class QNetworkAccessManager;
-class QNetworkReply;
-class TwitchAPI;
-class StreamPromise;
 
 class StreamPicker: public QWidget {
     Q_OBJECT
@@ -29,10 +26,10 @@ private:
     Ui::StreamPicker *_ui;
     QWidget *_stream_presenter;
 
-    TwitchAPI *_api;
-    StreamPromise *current_query = nullptr;
+    TwitchAPI _api;
+    TwitchAPI::streams_response_t current_query;
 
-    void fetch_streams(StreamPromise *);
+    void fetch_streams(TwitchAPI::streams_response_t);
 };
 
 

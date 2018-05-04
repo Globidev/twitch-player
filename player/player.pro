@@ -46,6 +46,7 @@ HEADERS         +=  include/main_window.hpp \
                     include/api/twitch.hpp \
                     include/api/twitchd.hpp \
                     include/native/capabilities.hpp \
+                    include/prelude/http.hpp \
 
 win32:HEADERS   +=  include/native/win32.hpp
 

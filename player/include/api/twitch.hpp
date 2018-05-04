@@ -1,10 +1,7 @@
 #ifndef TWITCH_HPP
 #define TWITCH_HPP
 
-#include <QObject>
-
-class QNetworkAccessManager;
-class QNetworkReply;
+#include "prelude/http.hpp"
 
 struct ChannelData {
     QString name, display_name;
@@ -18,29 +15,11 @@ struct StreamData {
     uint32_t viewcount;
 };
 
-class StreamPromise: public QObject {
-    Q_OBJECT
-public:
-    StreamPromise(QNetworkReply *, QObject * = nullptr);
-    ~StreamPromise();
+struct TwitchAPI: APIClient {
+    using streams_response_t = response_t<QList<StreamData>>;
 
-    void abort();
-
-signals:
-    void finished(const QList<StreamData> &);
-
-private:
-    QNetworkReply *_reply;
-};
-
-class TwitchAPI: public QObject {
-public:
-    TwitchAPI(QObject * = nullptr);
-    StreamPromise *stream_search(QString);
-    StreamPromise *top_streams();
-
-private:
-    QNetworkAccessManager *_http_client;
+    streams_response_t stream_search(QString);
+    streams_response_t top_streams();
 };
 
 #endif // TWITCH_HPP

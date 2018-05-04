@@ -1,7 +1,5 @@
 #include "api/twitchd.hpp"
 
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
 #include <QUrlQuery>
 
 #include <QJsonDocument>
@@ -47,29 +45,7 @@ static StreamIndex parse_stream_index_data(const QByteArray &raw) {
     return StreamIndex { playlist_infos };
 }
 
-StreamIndexPromise::StreamIndexPromise(QNetworkReply *reply, QObject *parent):
-    QObject(parent),
-    _reply(reply)
-{
-    QObject::connect(_reply, &QNetworkReply::finished, [=] {
-        if (_reply->isOpen())
-            emit finished(parse_stream_index_data(_reply->readAll()));
-    });
-}
-
-StreamIndexPromise::~StreamIndexPromise() {
-    _reply->deleteLater();
-}
-
-void StreamIndexPromise::abort() {
-    _reply->abort();
-}
-
-TwitchdAPI::TwitchdAPI(QObject *parent):
-    _http_client(new QNetworkAccessManager(parent))
-{ }
-
-StreamIndexPromise *TwitchdAPI::stream_index(QString channel) {
+TwitchdAPI::stream_index_response_t TwitchdAPI::stream_index(QString channel) {
     QUrl url { "http://localhost:7777/stream_index" };
 
     QUrlQuery url_query;
@@ -78,7 +54,7 @@ StreamIndexPromise *TwitchdAPI::stream_index(QString channel) {
 
     QNetworkRequest request { url };
 
-    return new StreamIndexPromise(_http_client->get(request), this);
+    return get(request, parse_stream_index_data);
 }
 
 QString TwitchdAPI::playback_url(QString channel, QString quality) {

@@ -5,25 +5,22 @@
 #include "widgets/stream_card.hpp"
 #include "widgets/quality_picker_dialog.hpp"
 
-#include "api/twitch.hpp"
-
 #include "constants.hpp"
 
 StreamPicker::StreamPicker(QWidget *parent):
     QWidget(parent),
     _ui(new Ui::StreamPicker),
-    _stream_presenter(new QWidget(this)),
-    _api(new TwitchAPI(this))
+    _stream_presenter(new QWidget(this))
 {
     _ui->setupUi(this);
 
     new FlowLayout(_stream_presenter);
     _ui->streamArea->setWidget(_stream_presenter);
 
-    fetch_streams(_api->top_streams());
+    fetch_streams(_api.top_streams());
 
     QObject::connect(_ui->searchBox, &QLineEdit::textChanged, [this](auto query) {
-        fetch_streams(_api->stream_search(query));
+        fetch_streams(_api.stream_search(query));
     });
 
     QObject::connect(_ui->searchBox, &QLineEdit::returnPressed, [this] {
@@ -40,13 +37,8 @@ void StreamPicker::focusInEvent(QFocusEvent *event) {
     _ui->searchBox->setFocus();
 }
 
-void StreamPicker::fetch_streams(StreamPromise * query) {
-    if (current_query)
-        current_query->abort();
-
-    current_query = query;
-
-    QObject::connect(current_query, &StreamPromise::finished, [=](auto stream_data) {
+void StreamPicker::fetch_streams(TwitchAPI::streams_response_t query) {
+    query->then([=](auto stream_data) {
         auto layout = _stream_presenter->layout();
 
         QLayoutItem *item;
@@ -66,7 +58,11 @@ void StreamPicker::fetch_streams(StreamPromise * query) {
             });
         }
 
-        current_query->deleteLater();
-        current_query = nullptr;
+        current_query.reset();
     });
+
+    if (current_query)
+        current_query->cancel();
+
+    current_query = std::move(query);
 }

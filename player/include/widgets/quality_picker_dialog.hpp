@@ -3,12 +3,13 @@
 
 #include <QDialog>
 
+#include "api/twitchd.hpp"
+
 namespace Ui {
     class QualityPickerDialog;
 }
 
 class QMovie;
-class TwitchdAPI;
 
 class QualityPickerDialog: public QDialog {
 public:
@@ -20,7 +21,8 @@ private:
     Ui::QualityPickerDialog *_ui;
     QMovie *_spinner_movie;
 
-    TwitchdAPI *_api;
+    TwitchdAPI _api;
+    TwitchdAPI::stream_index_response_t _stream_index_query;
 };
 
 #endif // QUALITY_PICKER_DIALOG_HPP

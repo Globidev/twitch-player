@@ -1,8 +1,6 @@
 #include "widgets/quality_picker_dialog.hpp"
 #include "ui_quality_picker_dialog.h"
 
-#include "api/twitchd.hpp"
-
 #include <QEventLoop>
 #include <QMovie>
 
@@ -11,23 +9,21 @@
 QualityPickerDialog::QualityPickerDialog(QString channel, QWidget *parent):
     QDialog(parent),
     _ui(new Ui::QualityPickerDialog),
-    _spinner_movie(new QMovie(":/gifs/spinner.gif")),
-    _api(new TwitchdAPI(this))
+    _spinner_movie(new QMovie(":/gifs/spinner.gif"))
 {
     _ui->setupUi(this);
     _ui->spinner->setMovie(_spinner_movie);
     _spinner_movie->start();
     _spinner_movie->setScaledSize(_ui->spinner->size());
 
-    auto query = _api->stream_index(channel);
-    QObject::connect(query, &StreamIndexPromise::finished, [=](StreamIndex data) {
+    _stream_index_query = _api.stream_index(channel);
+    _stream_index_query->then([this](auto data) {
         QStringList qualities;
         for (auto playlist_info: data.playlist_infos)
             qualities << playlist_info.media_info.name;
         _ui->qualityCombo->addItems(qualities);
         _ui->qualityCombo->setEnabled(true);
         _ui->spinner->hide();
-        query->deleteLater();
     });
 }
 
