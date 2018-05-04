@@ -46,7 +46,7 @@ static StreamIndex parse_stream_index_data(const QByteArray &raw) {
 }
 
 TwitchdAPI::stream_index_response_t TwitchdAPI::stream_index(QString channel) {
-    QUrl url { "http://localhost:7777/stream_index" };
+    QUrl url { "http://127.0.0.1:7777/stream_index" };
 
     QUrlQuery url_query;
     url_query.addQueryItem("channel", channel);
@@ -58,7 +58,7 @@ TwitchdAPI::stream_index_response_t TwitchdAPI::stream_index(QString channel) {
 }
 
 QString TwitchdAPI::playback_url(QString channel, QString quality) {
-    QUrl url { "http://localhost:7777/play" };
+    QUrl url { "http://127.0.0.1:7777/play" };
 
     QUrlQuery url_query;
     url_query.addQueryItem("channel", channel);
