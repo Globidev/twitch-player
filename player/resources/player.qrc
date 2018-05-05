@@ -1,6 +1,9 @@
 <RCC>
   <qresource prefix="icons">
+    <file>fast_forward.png</file>
     <file>icon.ico</file>
+    <file>volume_off.png</file>
+    <file>volume_on.png</file>
   </qresource>
   <qresource prefix="gifs">
     <file>spinner.gif</file>

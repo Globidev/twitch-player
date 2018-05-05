@@ -23,6 +23,7 @@ private:
 };
 
 class VideoWidget;
+class VideoControls;
 
 class MovementFilter: public QObject {
 public:
@@ -63,6 +64,7 @@ private:
     std::optional<libvlc::Media> _media;
 
     VideoOverlay *_overlay;
+    VideoControls *_controls;
 
     friend class MovementFilter;
     MovementFilter *_move_filter;

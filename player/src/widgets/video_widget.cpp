@@ -1,5 +1,7 @@
 #include "widgets/video_widget.hpp"
 
+#include "widgets/video_controls.hpp"
+
 #include "api/twitchd.hpp"
 
 #include <QApplication>
@@ -22,6 +24,7 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     _instance(instance),
     _media_player(libvlc::MediaPlayer(instance)),
     _overlay(new VideoOverlay(this)),
+    _controls(new VideoControls(this)),
     _move_filter(new MovementFilter(*this))
 {
     window()->installEventFilter(_move_filter);
@@ -29,9 +32,23 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     setFocusPolicy(Qt::WheelFocus);
     _media_player.set_renderer((void *)winId());
     _media_player.set_volume(_vol);
-    _overlay->show();
     update_overlay_position();
     setMinimumSize(160, 90);
+    setMouseTracking(true);
+
+    _controls->set_volume(_vol);
+    QObject::connect(_controls, &VideoControls::activated, [=] {
+        activateWindow();
+    });
+    QObject::connect(_controls, &VideoControls::volume_changed, [=](int vol) {
+        set_volume(vol);
+    });
+    QObject::connect(_controls, &VideoControls::muted_changed, [=](bool muted) {
+        set_muted(muted);
+    });
+    QObject::connect(_controls, &VideoControls::fast_forward, [=] {
+        fast_forward();
+    });
 }
 
 void VideoWidget::play(QString channel, QString quality) {
@@ -39,6 +56,8 @@ void VideoWidget::play(QString channel, QString quality) {
     _media.emplace(_instance, location.toStdString().c_str());
     _media_player.set_media(*_media);
     _media_player.play();
+
+    _overlay->show();
 }
 
 int VideoWidget::volume() const {
@@ -48,6 +67,7 @@ int VideoWidget::volume() const {
 void VideoWidget::set_volume(int volume) {
     _vol = volume;
     _media_player.set_volume(_muted ? 0 : _vol);
+    _controls->set_volume(_vol);
     _overlay->show_text(QString::number(_vol) + " %");
 }
 
@@ -58,6 +78,7 @@ bool VideoWidget::muted() const {
 void VideoWidget::set_muted(bool muted) {
     _muted = muted;
     set_volume(_vol);
+    _controls->set_muted(_muted);
     _overlay->show_text(muted ? "Muted" : "Unmuted");
 }
 
@@ -71,8 +92,13 @@ libvlc::MediaPlayer & VideoWidget::media_player() {
 }
 
 void VideoWidget::update_overlay_position() {
+    auto top_left = mapToGlobal(pos()) - pos();
+    auto bottom_left = top_left + QPoint(0, height());
+
     _overlay->resize(size());
-    _overlay->move(mapToGlobal(pos()) - pos());
+    _overlay->move(top_left);
+    _controls->resize(width(), _controls->height());
+    _controls->move(bottom_left - QPoint(0, _controls->height()));
 }
 
 void VideoWidget::wheelEvent(QWheelEvent *event) {
@@ -98,6 +124,8 @@ void VideoWidget::showEvent(QShowEvent *event) {
 }
 
 void VideoWidget::mousePressEvent(QMouseEvent *event) {
+    _controls->appear();
+
     if (event->buttons().testFlag(Qt::MouseButton::LeftButton))
         _last_drag_position = event->globalPos();
 
@@ -105,6 +133,8 @@ void VideoWidget::mousePressEvent(QMouseEvent *event) {
 }
 
 void VideoWidget::mouseMoveEvent(QMouseEvent *event) {
+    _controls->appear();
+
     if (event->buttons().testFlag(Qt::MouseButton::LeftButton)) {
         auto delta = event->globalPos() - _last_drag_position;
         if (delta.manhattanLength() > 10) {
@@ -165,6 +195,14 @@ void VideoOverlay::paintEvent(QPaintEvent *event) {
         painter.setFont(_text_font);
         painter.setPen(Qt::white);
 
+        QRect br;
+        painter.drawText(rect(), Qt::AlignTop | Qt::AlignRight, *_text, &br);
+
+        QLinearGradient gradient(br.topLeft(), br.bottomLeft());
+        gradient.setColorAt(0, QColor(0, 0, 0, 0xB0));
+        gradient.setColorAt(1, QColor(0, 0, 0, 0x00));
+
+        painter.fillRect(br, QBrush(gradient));
         painter.drawText(rect(), Qt::AlignTop | Qt::AlignRight, *_text);
     }
 }
