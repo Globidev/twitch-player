@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitchd</DisplayName>
     <Description>Install the Twitch API daemon</Description>
-    <Version>0.9.2</Version>
-    <ReleaseDate>2018-05-04</ReleaseDate>
+    <Version>0.9.4</Version>
+    <ReleaseDate>2018-05-05</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Remove MS runtime dependencies</UpdateText>
+    <UpdateText>Improve latency to broadcaster</UpdateText>
 </Package>

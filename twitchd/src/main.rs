@@ -1,4 +1,5 @@
 #![feature(drain_filter)]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 #[macro_use] extern crate nom;
 #[macro_use] extern crate serde_derive;
