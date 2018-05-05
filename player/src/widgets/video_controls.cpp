@@ -4,6 +4,7 @@
 #include <QTimer>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QWindow>
 
 VideoControls::VideoControls(QWidget *parent):
     QWidget(parent),
@@ -15,6 +16,7 @@ VideoControls::VideoControls(QWidget *parent):
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 
     setAttribute(Qt::WA_TranslucentBackground);
+    setFocusPolicy(Qt::FocusPolicy::NoFocus);
     // setAttribute(Qt::WA_TransparentForMouseEvents);
 
     _appearTimer->setInterval(2500);
@@ -93,8 +95,14 @@ void VideoControls::mousePressEvent(QMouseEvent *event) {
 }
 
 void VideoControls::changeEvent(QEvent *event) {
-    if (event->type() == QEvent::ActivationChange && isActiveWindow())
+    if (event->type() == QEvent::ActivationChange
+        && isActiveWindow()
+        && window()->windowHandle()->isActive()
+        && parentWidget()->hasFocus())
+    {
         emit activated();
+    }
+
     QWidget::changeEvent(event);
 }
 
