@@ -7,7 +7,7 @@ use self::tokio_timer::Timer;
 use prelude::futures::*;
 use twitch::types::{PlaylistInfo, Playlist};
 use twitch::api::ApiError;
-use prelude::http::{HttpsClient, HttpError, fetch, ResponseSink};
+use prelude::http::{HttpsClient, HttpError, fetch_streamed, ResponseSink};
 use options::Options;
 
 use std::rc::Rc;
@@ -67,8 +67,6 @@ impl StreamPlayer {
     }
 }
 
-type PlayerFuture<T> = Box<Future<Item = T, Error = StreamPlayerError>>;
-
 fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interval: Duration)
     -> impl Stream<Item = hyper::Chunk, Error = StreamPlayerError>
 {
@@ -91,7 +89,7 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
     let fetch_latest_segment = {
         let mut last_segment = None;
 
-        move |mut playlist: Playlist| -> PlayerFuture<_> {
+        move |mut playlist: Playlist| -> Box<Stream<Item = _, Error = _>> {
             let to_download = match last_segment {
                 None => playlist.pop(),
                 Some(ref segment) => {
@@ -109,13 +107,13 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
                     format!("{}/{}", origin, segment)
                 };
                 let request = Request::new(Get, segment_url.parse().unwrap());
-                let future = fetch(&client, request)
+                let future = fetch_streamed(&client, request)
                     .map(Option::from)
                     .map_err(StreamPlayerError::FetchSegmentFail);
                 last_segment = Some(segment);
                 Box::new(future)
             } else {
-                Box::new(future::ok(None))
+                Box::new(future::ok(None).into_stream())
             }
         }
     };
@@ -126,7 +124,8 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
         .and_then(fetch_playlist);
 
     playlist_stream
-        .and_then(fetch_latest_segment)
+        .map(fetch_latest_segment)
+        .flatten()
         .filter_map(|opt_segment| opt_segment)
 }
 

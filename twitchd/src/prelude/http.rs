@@ -43,6 +43,16 @@ pub fn fetch(client: &HttpsClient, request: hyper::Request)
         .and_then(read_response)
 }
 
+pub fn fetch_streamed(client: &HttpsClient, request: hyper::Request)
+    -> impl Stream<Item = hyper::Chunk, Error = HttpError>
+{
+    client.request(request)
+        .into_stream()
+        .map_err(HttpError::NetworkError)
+        .map(stream_response)
+        .flatten()
+}
+
 pub fn streaming_response() -> (ResponseSink, hyper::Response) {
     let (sink, body) = hyper::Body::pair();
     let response = hyper::Response::new()
@@ -64,6 +74,20 @@ fn read_response(response: hyper::Response)
         status => {
             let error = future::err(HttpError::BadStatus(status));
             Box::new(error)
+        }
+    }
+}
+
+fn stream_response(response: hyper::Response)
+    -> Box<Stream<Item = hyper::Chunk, Error = HttpError>>
+{
+    match response.status() {
+        hyper::StatusCode::Ok => {
+            Box::new(response.body().map_err(HttpError::NetworkError))
+        },
+        status => {
+            let error = future::err(HttpError::BadStatus(status));
+            Box::new(error.into_stream())
         }
     }
 }
