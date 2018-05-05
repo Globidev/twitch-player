@@ -23,7 +23,6 @@ SOURCES         +=  src/main.cpp \
                     src/widgets/resizable_grid.cpp \
                     src/widgets/flow_layout.cpp \
                     src/widgets/stream_card.cpp \
-                    src/widgets/quality_picker_dialog.cpp \
                     src/widgets/video_controls.cpp \
                     src/api/twitch.cpp \
                     src/api/twitchd.cpp \
@@ -45,7 +44,6 @@ HEADERS         +=  include/main_window.hpp \
                     include/widgets/resizable_grid.hpp \
                     include/widgets/flow_layout.hpp \
                     include/widgets/stream_card.hpp \
-                    include/widgets/quality_picker_dialog.hpp \
                     include/widgets/video_controls.hpp \
                     include/api/twitch.hpp \
                     include/api/twitchd.hpp \
@@ -59,7 +57,6 @@ FORMS           +=  forms/main_window.ui \
                     forms/vlc_log_viewer.ui \
                     forms/options_dialog.ui \
                     forms/stream_card.ui \
-                    forms/quality_picker_dialog.ui \
                     forms/filters_tool.ui \
                     forms/video_controls.ui \
 

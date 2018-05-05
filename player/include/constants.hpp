@@ -23,6 +23,12 @@ namespace constants {
                 << "--app=https://www.twitch.tv/popout/${channel}/chat?popout=";
         }
 
+        namespace streams {
+            Constant KEY_LAST_QUALITY_FOR = [](auto channel) {
+                return QString("streams/last_quality/%1").arg(channel);
+            };
+        }
+
         namespace vlc {
             Constant KEY_VLC_ARGS = "vlc/args";
             Constant DEFAULT_VLC_ARGS = QStringList()

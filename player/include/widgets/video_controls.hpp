@@ -20,6 +20,9 @@ public:
 
     void appear();
 
+    void clear_qualities();
+    void set_qualities(QString, QStringList);
+
 protected:
     void mousePressEvent(QMouseEvent *) override;
     void changeEvent(QEvent *) override;
@@ -31,6 +34,7 @@ signals:
     void volume_changed(int);
     void muted_changed(bool);
     void fast_forward();
+    void quality_changed(QString);
 
 private:
     void set_volume_icon();

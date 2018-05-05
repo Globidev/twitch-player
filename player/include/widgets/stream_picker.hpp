@@ -30,6 +30,7 @@ private:
     TwitchAPI::streams_response_t current_query;
 
     void fetch_streams(TwitchAPI::streams_response_t);
+    void channel_picked(QString);
 };
 
 

@@ -3,9 +3,10 @@
 
 #include "widgets/flow_layout.hpp"
 #include "widgets/stream_card.hpp"
-#include "widgets/quality_picker_dialog.hpp"
 
 #include "constants.hpp"
+
+#include <QSettings>
 
 StreamPicker::StreamPicker(QWidget *parent):
     QWidget(parent),
@@ -24,7 +25,7 @@ StreamPicker::StreamPicker(QWidget *parent):
     });
 
     QObject::connect(_ui->searchBox, &QLineEdit::returnPressed, [this] {
-        emit stream_picked(_ui->searchBox->text(), QString());
+        channel_picked(_ui->searchBox->text());
     });
 }
 
@@ -35,6 +36,17 @@ StreamPicker::~StreamPicker() {
 void StreamPicker::focusInEvent(QFocusEvent *event) {
     QWidget::focusInEvent(event);
     _ui->searchBox->setFocus();
+}
+
+void StreamPicker::channel_picked(QString channel) {
+    using namespace constants::settings::streams;
+
+    QSettings settings;
+    auto quality = settings
+        .value(KEY_LAST_QUALITY_FOR(channel))
+        .toString();
+
+    emit stream_picked(channel, quality);
 }
 
 void StreamPicker::fetch_streams(TwitchAPI::streams_response_t query) {
@@ -51,10 +63,7 @@ void StreamPicker::fetch_streams(TwitchAPI::streams_response_t query) {
             auto stream_card = new StreamCard(data, _stream_presenter);
             layout->addWidget(stream_card);
             QObject::connect(stream_card, &StreamCard::clicked, [this](auto channel) {
-                bool picked;
-                auto quality = QualityPickerDialog::pick(channel, this, &picked);
-                if (picked)
-                    emit stream_picked(channel, quality);
+                channel_picked(channel);
             });
         }
 

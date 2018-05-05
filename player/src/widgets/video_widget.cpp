@@ -2,13 +2,14 @@
 
 #include "widgets/video_controls.hpp"
 
-#include "api/twitchd.hpp"
+#include "constants.hpp"
 
 #include <QApplication>
 #include <QWheelEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QShortcut>
+#include <QSettings>
 #include <QTimer>
 
 template <class Slot>
@@ -17,6 +18,15 @@ static void delayed(VideoWidget *parent, int ms, Slot slot) {
     QObject::connect(timer, &QTimer::timeout, slot);
     timer->setSingleShot(true);
     timer->start(ms);
+}
+
+static auto quality_names(const StreamIndex & index) {
+    QStringList qualities;
+
+    for (auto pl_info: index.playlist_infos)
+        qualities << pl_info.media_info.name;
+
+    return qualities;
 }
 
 VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
@@ -49,15 +59,34 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     QObject::connect(_controls, &VideoControls::fast_forward, [=] {
         fast_forward();
     });
+    QObject::connect(_controls, &VideoControls::quality_changed, [=](auto quality) {
+        play(_current_channel, quality);
+    });
 }
 
 void VideoWidget::play(QString channel, QString quality) {
+    _current_channel = channel;
+
     auto location = TwitchdAPI::playback_url(channel, quality);
+
     _media.emplace(_instance, location.toStdString().c_str());
     _media_player.set_media(*_media);
     _media_player.play();
 
+    _controls->clear_qualities();
+    stream_index_reponse = _api.stream_index(channel);
+    stream_index_reponse->then([=](auto index) {
+        auto qualities = quality_names(index);
+        _controls->set_qualities(quality, qualities);
+    });
+
     _overlay->show();
+
+    if (!quality.isEmpty()) {
+        using namespace constants::settings::streams;
+        QSettings settings;
+        settings.setValue(KEY_LAST_QUALITY_FOR(channel), quality);
+    }
 }
 
 int VideoWidget::volume() const {

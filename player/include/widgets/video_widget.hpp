@@ -3,6 +3,8 @@
 
 #include "libvlc.hpp"
 
+#include "api/twitchd.hpp"
+
 #include <QWidget>
 
 #include <optional>
@@ -73,6 +75,11 @@ private:
     bool _muted = false;
 
     QPoint _last_drag_position;
+
+    TwitchdAPI _api;
+    TwitchdAPI::stream_index_response_t stream_index_reponse;
+
+    QString _current_channel;
 
     void update_overlay_position();
 };

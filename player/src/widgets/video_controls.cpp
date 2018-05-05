@@ -27,6 +27,18 @@ VideoControls::VideoControls(QWidget *parent):
         _appearTimer->start();
         emit volume_changed(vol);
     });
+
+    using IndexChanged = void (QComboBox::*)(const QString &);
+    auto index_changed = static_cast<IndexChanged>(&QComboBox::currentIndexChanged);
+    QObject::connect(_ui->qualityCombo, index_changed, [=](auto pick) {
+        emit quality_changed(pick);
+    });
+
+    using Highlighted = void (QComboBox::*)(int);
+    auto highlighted = static_cast<Highlighted>(&QComboBox::highlighted);
+    QObject::connect(_ui->qualityCombo, highlighted, [=](auto) {
+        _appearTimer->start();
+    });
 }
 
 VideoControls::~VideoControls() {
@@ -45,6 +57,19 @@ void VideoControls::set_muted(bool muted) {
 void VideoControls::appear() {
     show();
     _appearTimer->start();
+}
+
+void VideoControls::clear_qualities() {
+    QSignalBlocker blocker(this);
+
+    _ui->qualityCombo->clear();
+}
+
+void VideoControls::set_qualities(QString quality, QStringList qualities) {
+    QSignalBlocker blocker(this);
+
+    _ui->qualityCombo->addItems(qualities);
+    _ui->qualityCombo->setCurrentText(quality);
 }
 
 void VideoControls::set_volume_icon() {
