@@ -49,7 +49,7 @@ where
 
 fn access_token_uri(channel: &str) -> hyper::Uri {
     let url = format!(
-        "http://api.twitch.tv/api/channels/{}/access_token",
+        "https://api.twitch.tv/api/channels/{}/access_token",
         channel.to_lowercase()
     );
     url.parse().unwrap()
