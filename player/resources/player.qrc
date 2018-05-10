@@ -5,7 +5,7 @@
     <file>volume_off.png</file>
     <file>volume_on.png</file>
   </qresource>
-  <qresource prefix="gifs">
-    <file>spinner.gif</file>
+  <qresource prefix="images">
+    <file>kappa.png</file>
   </qresource>
 </RCC>
