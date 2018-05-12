@@ -12,6 +12,7 @@ SOURCES         +=  src/main.cpp \
                     src/main_window_shortcuts.cpp \
                     src/libvlc.cpp \
                     src/vlc_logger.cpp \
+                    src/vlc_event_watcher.cpp \
                     src/widgets/video_widget.cpp \
                     src/widgets/foreign_widget.cpp \
                     src/widgets/stream_widget.cpp \
@@ -33,6 +34,7 @@ HEADERS         +=  include/main_window.hpp \
                     include/constants.hpp \
                     include/libvlc.hpp \
                     include/vlc_logger.hpp \
+                    include/vlc_event_watcher.hpp \
                     include/widgets/video_widget.hpp \
                     include/widgets/foreign_widget.hpp \
                     include/widgets/stream_widget.hpp \

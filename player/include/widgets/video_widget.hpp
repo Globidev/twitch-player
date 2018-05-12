@@ -26,6 +26,7 @@ private:
 
 class VideoWidget;
 class VideoControls;
+class VLCEventWatcher;
 
 class MovementFilter: public QObject {
 public:
@@ -70,6 +71,8 @@ private:
 
     friend class MovementFilter;
     MovementFilter *_move_filter;
+
+    VLCEventWatcher *_event_watcher;
 
     int _vol = 35;
     bool _muted = false;

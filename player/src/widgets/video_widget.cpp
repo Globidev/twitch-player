@@ -2,6 +2,8 @@
 
 #include "widgets/video_controls.hpp"
 
+#include "vlc_event_watcher.hpp"
+
 #include "constants.hpp"
 
 #include <QApplication>
@@ -35,7 +37,8 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     _media_player(libvlc::MediaPlayer(instance)),
     _overlay(new VideoOverlay(this)),
     _controls(new VideoControls(this)),
-    _move_filter(new MovementFilter(*this))
+    _move_filter(new MovementFilter(*this)),
+    _event_watcher(new VLCEventWatcher(_media_player, this))
 {
     window()->installEventFilter(_move_filter);
     setAttribute(Qt::WA_OpaquePaintEvent);
@@ -52,6 +55,7 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     });
     QObject::connect(_controls, &VideoControls::volume_changed, [=](int vol) {
         set_volume(vol);
+        activateWindow();
     });
     QObject::connect(_controls, &VideoControls::muted_changed, [=](bool muted) {
         set_muted(muted);
@@ -61,6 +65,48 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     });
     QObject::connect(_controls, &VideoControls::quality_changed, [=](auto quality) {
         play(_current_channel, quality);
+        activateWindow();
+    });
+
+    QObject::connect(_event_watcher, &VLCEventWatcher::new_event, [=](auto event, float f) {
+        using namespace libvlc;
+        constexpr auto event_name = [](auto ev) {
+            switch (ev) {
+            case MediaPlayer::Event::MediaChanged: return "MediaChanged";
+            case MediaPlayer::Event::Opening: return "Opening";
+            case MediaPlayer::Event::Buffering: return "Buffering";
+            case MediaPlayer::Event::Playing: return "Playing";
+            case MediaPlayer::Event::Paused: return "Paused";
+            case MediaPlayer::Event::Stopped: return "Stopped";
+            case MediaPlayer::Event::Forward: return "Forward";
+            case MediaPlayer::Event::Backward: return "Backward";
+            case MediaPlayer::Event::EndReached: return "EndReached";
+            case MediaPlayer::Event::EncounteredError: return "EncounteredError";
+            case MediaPlayer::Event::Muted: return "Muted";
+            case MediaPlayer::Event::Unmuted: return "Unmuted";
+            case MediaPlayer::Event::AudioVolume: return "AudioVolume";
+            case MediaPlayer::Event::AudioDevice: return "AudioDevice";
+            case MediaPlayer::Event::ScrambledChanged: return "ScrambledChanged";
+            case MediaPlayer::Event::Corked: return "Corked";
+            case MediaPlayer::Event::Uncorked: return "Uncorked";
+            case MediaPlayer::Event::Unknown: return "Unknown";
+            }
+        };
+
+        qDebug() << "EVENT:" << event_name(event) << f;
+        switch (event) {
+            case MediaPlayer::Event::Opening:
+                _overlay->set_buffering(true);
+                break;
+            case MediaPlayer::Event::Buffering:
+                _overlay->set_buffering(f != 100.f);
+                break;
+            case MediaPlayer::Event::EndReached:
+            case MediaPlayer::Event::Stopped:
+            case MediaPlayer::Event::EncounteredError:
+                play(_current_channel, _current_quality);
+                break;
+        }
     });
 }
 
