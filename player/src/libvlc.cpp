@@ -8,6 +8,7 @@
 #include <vlc/vlc.h>
 
 #include <algorithm>
+#include <array>
 
 namespace libvlc {
 
@@ -22,7 +23,7 @@ libvlc::LogLevel reify_log_level(int level) {
 }
 
 static void on_log(void *data, int level, const vlc_log_t *, const char *fmt, va_list args) {
-    auto callback = reinterpret_cast<libvlc::Instance::log_cb_t *>(data);
+    auto callback = reinterpret_cast<Instance::log_cb_t *>(data);
     char buff[4096];
 
     auto size = vsnprintf(buff, sizeof buff, fmt, args);
@@ -177,6 +178,66 @@ std::string MediaPlayer::get_current_device_id() {
 
 void MediaPlayer::set_audio_device(std::string device_id) {
     libvlc_audio_output_device_set(&*this, nullptr, device_id.c_str());
+}
+
+static constexpr std::array<libvlc_event_e, 17> media_player_events = {
+    libvlc_MediaPlayerMediaChanged,
+    libvlc_MediaPlayerOpening,
+    libvlc_MediaPlayerBuffering,
+    libvlc_MediaPlayerPlaying,
+    libvlc_MediaPlayerPaused,
+    libvlc_MediaPlayerStopped,
+    libvlc_MediaPlayerForward,
+    libvlc_MediaPlayerBackward,
+    libvlc_MediaPlayerEndReached,
+    libvlc_MediaPlayerEncounteredError,
+    libvlc_MediaPlayerMuted,
+    libvlc_MediaPlayerUnmuted,
+    libvlc_MediaPlayerAudioVolume,
+    libvlc_MediaPlayerAudioDevice,
+    libvlc_MediaPlayerScrambledChanged,
+    libvlc_MediaPlayerCorked,
+    libvlc_MediaPlayerUncorked,
+};
+
+static auto reify_event(const libvlc_event_t *p_event) {
+    switch (p_event->type) {
+        case libvlc_MediaPlayerMediaChanged:     return MediaPlayer::Event::MediaChanged;
+        case libvlc_MediaPlayerOpening:          return MediaPlayer::Event::Opening;
+        case libvlc_MediaPlayerBuffering:        return MediaPlayer::Event::Buffering;
+        case libvlc_MediaPlayerPlaying:          return MediaPlayer::Event::Playing;
+        case libvlc_MediaPlayerPaused:           return MediaPlayer::Event::Paused;
+        case libvlc_MediaPlayerStopped:          return MediaPlayer::Event::Stopped;
+        case libvlc_MediaPlayerForward:          return MediaPlayer::Event::Forward;
+        case libvlc_MediaPlayerBackward:         return MediaPlayer::Event::Backward;
+        case libvlc_MediaPlayerEndReached:       return MediaPlayer::Event::EndReached;
+        case libvlc_MediaPlayerEncounteredError: return MediaPlayer::Event::EncounteredError;
+        case libvlc_MediaPlayerMuted:            return MediaPlayer::Event::Muted;
+        case libvlc_MediaPlayerUnmuted:          return MediaPlayer::Event::Unmuted;
+        case libvlc_MediaPlayerAudioVolume:      return MediaPlayer::Event::AudioVolume;
+        case libvlc_MediaPlayerAudioDevice:      return MediaPlayer::Event::AudioDevice;
+
+        case libvlc_MediaPlayerScrambledChanged: return MediaPlayer::Event::ScrambledChanged;
+        case libvlc_MediaPlayerCorked:           return MediaPlayer::Event::Corked;
+        case libvlc_MediaPlayerUncorked:         return MediaPlayer::Event::Uncorked;
+
+        default:                                 return MediaPlayer::Event::Unknown;
+    }
+}
+
+static auto on_event(const libvlc_event_t *p_event, void *data) {
+    auto callback = reinterpret_cast<MediaPlayer::event_cb_t *>(data);
+
+    auto reified_event = reify_event(p_event);
+    (*callback)(reified_event, p_event->u.media_player_buffering.new_cache);
+}
+
+void MediaPlayer::set_event_callback(event_cb_t cb) {
+    _cb = cb;
+    if (auto event_manager = libvlc_media_player_event_manager(&*this); event_manager) {
+        for (auto event: media_player_events)
+            libvlc_event_attach(event_manager, event, &on_event, (void*)&_cb);
+    }
 }
 
 Media::Media(Instance &instance, const char *location):

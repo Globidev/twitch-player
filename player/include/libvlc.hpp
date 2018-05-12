@@ -10,6 +10,7 @@ struct libvlc_instance_t;
 struct libvlc_media_player_t;
 struct libvlc_media_t;
 struct libvlc_equalizer_t;
+struct libvlc_event_manager_t;
 struct vlc_log_t;
 
 namespace libvlc {
@@ -100,8 +101,36 @@ struct MediaPlayer: CWrapper<libvlc_media_player_t> {
     std::string get_current_device_id();
     void set_audio_device(std::string);
 
+    enum class Event {
+        MediaChanged,
+        Opening,
+        Buffering,
+        Playing,
+        Paused,
+        Stopped,
+        Forward,
+        Backward,
+        EndReached,
+        EncounteredError,
+        Muted,
+        Unmuted,
+        AudioVolume,
+        AudioDevice,
+
+        ScrambledChanged,
+        Corked,
+        Uncorked,
+
+        Unknown,
+    };
+
+    using event_cb_t = std::function<void (Event, float)>;
+
+    void set_event_callback(event_cb_t);
+
 private:
     Equalizer _equalizer;
+    event_cb_t _cb;
 };
 
 struct Media: CWrapper<libvlc_media_t> {
