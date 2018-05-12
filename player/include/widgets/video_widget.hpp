@@ -6,6 +6,7 @@
 #include "api/twitchd.hpp"
 
 #include <QWidget>
+#include <QImage>
 
 #include <optional>
 
@@ -14,14 +15,19 @@ public:
     VideoOverlay(QWidget * = nullptr);
 
     void show_text(QString);
+    void set_buffering(bool);
 
 protected:
     void paintEvent(QPaintEvent *) override;
+    void mouseReleaseEvent(QMouseEvent *) override;
 
 private:
     std::optional<QString> _text;
-    QTimer *_timer;
+    QTimer *_timer, *_spinner_timer;
     QFont _text_font;
+    QImage _spinner;
+    bool _show_spinner = false;
+    int _spinner_angle = 0;
 };
 
 class VideoWidget;
@@ -82,7 +88,7 @@ private:
     TwitchdAPI _api;
     TwitchdAPI::stream_index_response_t stream_index_reponse;
 
-    QString _current_channel;
+    QString _current_channel, _current_quality;
 
     void update_overlay_position();
 };

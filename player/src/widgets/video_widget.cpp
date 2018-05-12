@@ -5,6 +5,7 @@
 #include "vlc_event_watcher.hpp"
 
 #include "constants.hpp"
+#include "native/capabilities.hpp"
 
 #include <QApplication>
 #include <QWheelEvent>
@@ -50,9 +51,6 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     setMouseTracking(true);
 
     _controls->set_volume(_vol);
-    QObject::connect(_controls, &VideoControls::activated, [=] {
-        activateWindow();
-    });
     QObject::connect(_controls, &VideoControls::volume_changed, [=](int vol) {
         set_volume(vol);
         activateWindow();
@@ -112,6 +110,7 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
 
 void VideoWidget::play(QString channel, QString quality) {
     _current_channel = channel;
+    _current_quality = quality;
 
     auto location = TwitchdAPI::playback_url(channel, quality);
 
@@ -120,10 +119,13 @@ void VideoWidget::play(QString channel, QString quality) {
     _media_player.play();
 
     _controls->clear_qualities();
+    if (stream_index_reponse)
+        stream_index_reponse->cancel();
     stream_index_reponse = _api.stream_index(channel);
     stream_index_reponse->then([=](auto index) {
         auto qualities = quality_names(index);
         _controls->set_qualities(quality, qualities);
+        stream_index_reponse.reset();
     });
 
     _overlay->show();
@@ -243,7 +245,9 @@ bool MovementFilter::eventFilter(QObject *watched, QEvent *event) {
 
 VideoOverlay::VideoOverlay(QWidget *parent):
     QWidget(parent),
-    _timer(new QTimer(this))
+    _timer(new QTimer(this)),
+    _spinner_timer(new QTimer(this)),
+    _spinner(":/images/kappa.png")
 {
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 
@@ -261,15 +265,26 @@ VideoOverlay::VideoOverlay(QWidget *parent):
         _text.reset();
         repaint();
     });
+
+    _spinner_timer->setInterval(20);
+    QObject::connect(_spinner_timer, &QTimer::timeout, [this] {
+        _spinner_angle = (_spinner_angle + 6) % 360;
+        repaint();
+    });
 }
 
+void VideoOverlay::mouseReleaseEvent(QMouseEvent *event) {
+    event->ignore();
+    parentWidget()->activateWindow();
+};
+
 void VideoOverlay::paintEvent(QPaintEvent *event) {
+    QPainter painter { this };
+
+    painter.setFont(_text_font);
+    painter.setPen(Qt::white);
+
     if (_text) {
-        QPainter painter { this };
-
-        painter.setFont(_text_font);
-        painter.setPen(Qt::white);
-
         QRect br;
         painter.drawText(rect(), Qt::AlignTop | Qt::AlignRight, *_text, &br);
 
@@ -280,10 +295,42 @@ void VideoOverlay::paintEvent(QPaintEvent *event) {
         painter.fillRect(br, QBrush(gradient));
         painter.drawText(rect(), Qt::AlignTop | Qt::AlignRight, *_text);
     }
+
+    if (_show_spinner) {
+        auto centered_rect = _spinner.rect();
+        auto aspect_ratio = (float)centered_rect.height() / centered_rect.width();
+        if (rect().width() < centered_rect.width()) {
+            auto new_width = rect().width();
+            centered_rect.setWidth(new_width);
+            centered_rect.setHeight(new_width * aspect_ratio);
+        }
+        if (rect().height() < centered_rect.height()) {
+            auto new_height = rect().height();
+            centered_rect.setHeight(new_height);
+            centered_rect.setWidth(new_height / aspect_ratio);
+        }
+        centered_rect.moveCenter(rect().center());
+        painter.translate(rect().center());
+        painter.rotate(_spinner_angle);
+        painter.drawImage(
+            centered_rect.translated(-rect().center()),
+            _spinner
+        );
+    }
 }
 
 void VideoOverlay::show_text(QString new_text) {
     _text.emplace(new_text);
     _timer->start();
+    repaint();
+}
+
+void VideoOverlay::set_buffering(bool enabled) {
+    if (enabled == _show_spinner)
+        return ;
+    _show_spinner = enabled;
+    _spinner_angle = 0;
+    if (enabled) _spinner_timer->start();
+    else         _spinner_timer->stop();
     repaint();
 }

@@ -25,12 +25,9 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *) override;
-    void changeEvent(QEvent *) override;
     void paintEvent(QPaintEvent *) override;
 
 signals:
-    void activated();
-
     void volume_changed(int);
     void muted_changed(bool);
     void fast_forward();
