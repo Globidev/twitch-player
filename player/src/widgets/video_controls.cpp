@@ -1,6 +1,8 @@
 #include "widgets/video_controls.hpp"
 #include "ui_video_controls.h"
 
+#include "native/capabilities.hpp"
+
 #include <QTimer>
 #include <QMouseEvent>
 #include <QPainter>
@@ -13,11 +15,12 @@ VideoControls::VideoControls(QWidget *parent):
 {
     _ui->setupUi(this);
 
-    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
+    setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
 
     setAttribute(Qt::WA_TranslucentBackground);
-    setFocusPolicy(Qt::FocusPolicy::NoFocus);
-    // setAttribute(Qt::WA_TransparentForMouseEvents);
+    setAttribute(Qt::WA_TransparentForMouseEvents);
+    setAttribute(Qt::WA_ShowWithoutActivating);
+    setAttribute(Qt::WA_NoSystemBackground);
 
     _appearTimer->setInterval(2500);
     _appearTimer->setSingleShot(true);
@@ -36,6 +39,12 @@ VideoControls::VideoControls(QWidget *parent):
         emit quality_changed(pick);
     });
 
+    using Activated = void (QComboBox::*)(int);
+    auto activated = static_cast<Activated>(&QComboBox::activated);
+    QObject::connect(_ui->qualityCombo, activated, [=](auto pick) {
+        parentWidget()->activateWindow();
+    });
+
     using Highlighted = void (QComboBox::*)(int);
     auto highlighted = static_cast<Highlighted>(&QComboBox::highlighted);
     QObject::connect(_ui->qualityCombo, highlighted, [=](auto) {
@@ -48,6 +57,8 @@ VideoControls::~VideoControls() {
 }
 
 void VideoControls::set_volume(int volume) {
+    QSignalBlocker blocker(this);
+
     _ui->volumeSlider->setValue(volume);
 }
 
@@ -92,18 +103,7 @@ void VideoControls::mousePressEvent(QMouseEvent *event) {
         emit fast_forward();
     }
     QWidget::mousePressEvent(event);
-}
-
-void VideoControls::changeEvent(QEvent *event) {
-    if (event->type() == QEvent::ActivationChange
-        && isActiveWindow()
-        && window()->windowHandle()->isActive()
-        && parentWidget()->hasFocus())
-    {
-        emit activated();
-    }
-
-    QWidget::changeEvent(event);
+    parentWidget()->activateWindow();
 }
 
 void VideoControls::paintEvent(QPaintEvent *event) {
