@@ -4,6 +4,8 @@
 #include "widgets/flow_layout.hpp"
 #include "widgets/stream_card.hpp"
 
+#include "api/oauth.hpp"
+
 #include "constants.hpp"
 
 #include <QSettings>
@@ -11,17 +13,32 @@
 StreamPicker::StreamPicker(QWidget *parent):
     QWidget(parent),
     _ui(new Ui::StreamPicker),
-    _stream_presenter(new QWidget(this))
+    _channels_stream_presenter(new QWidget(this)),
+    _followed_stream_presenter(new QWidget(this))
 {
     _ui->setupUi(this);
 
-    new FlowLayout(_stream_presenter);
-    _ui->streamArea->setWidget(_stream_presenter);
+    new FlowLayout(_channels_stream_presenter);
+    _ui->channelsStreamArea->setWidget(_channels_stream_presenter);
+    new FlowLayout(_followed_stream_presenter);
+    _ui->followedStreamArea->setWidget(_followed_stream_presenter);
 
-    fetch_streams(_api.top_streams());
+    QSettings settings;
+
+    auto access_token = settings
+        .value(constants::oauth::ACCESS_TOKEN_KEY)
+        .toString();
+
+    fetch_streams(_api.top_streams(), _channels_stream_presenter);
+
+    if (!access_token.isEmpty())
+        fetch_streams(_api.followed_streams(access_token), _followed_stream_presenter);
 
     QObject::connect(_ui->searchBox, &QLineEdit::textChanged, [this](auto query) {
-        fetch_streams(_api.stream_search(query));
+        if (query.isEmpty())
+            fetch_streams(_api.top_streams(), _channels_stream_presenter);
+        else
+            fetch_streams(_api.stream_search(query), _channels_stream_presenter);
     });
 
     QObject::connect(_ui->searchBox, &QLineEdit::returnPressed, [this] {
@@ -49,9 +66,11 @@ void StreamPicker::channel_picked(QString channel) {
     emit stream_picked(channel, quality);
 }
 
-void StreamPicker::fetch_streams(TwitchAPI::streams_response_t query) {
+void StreamPicker::fetch_streams(TwitchAPI::streams_response_t query, QWidget *container) {
+    auto & current_query = current_queries[container];
+
     query->then([=](auto stream_data) {
-        auto layout = _stream_presenter->layout();
+        auto layout = container->layout();
 
         QLayoutItem *item;
         while ((item = layout->takeAt(0)) != nullptr) {
@@ -60,18 +79,28 @@ void StreamPicker::fetch_streams(TwitchAPI::streams_response_t query) {
         }
 
         for (auto data: stream_data) {
-            auto stream_card = new StreamCard(data, _stream_presenter);
+            auto stream_card = new StreamCard(data, container);
             layout->addWidget(stream_card);
             QObject::connect(stream_card, &StreamCard::clicked, [this](auto channel) {
                 channel_picked(channel);
             });
         }
 
-        current_query.reset();
+        current_queries[container].reset();
+    });
+
+    query->bad_status([=](int status) {
+        if (status == 401) {
+            auto oauth = new OAuth(this);
+            QObject::connect(oauth, &OAuth::token_ready, [=](auto access_token) {
+                fetch_streams(_api.followed_streams(access_token), _followed_stream_presenter);
+            });
+            oauth->query_token();
+        }
     });
 
     if (current_query)
         current_query->cancel();
 
-    current_query = std::move(query);
+    current_queries[container] = std::move(query);
 }

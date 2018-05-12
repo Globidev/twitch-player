@@ -3,6 +3,8 @@
 
 #include <QWidget>
 
+#include <unordered_map>
+
 #include "api/twitch.hpp"
 
 namespace Ui {
@@ -24,12 +26,13 @@ signals:
 
 private:
     Ui::StreamPicker *_ui;
-    QWidget *_stream_presenter;
+    QWidget *_channels_stream_presenter;
+    QWidget *_followed_stream_presenter;
 
     TwitchAPI _api;
-    TwitchAPI::streams_response_t current_query;
+    std::unordered_map<QWidget *, TwitchAPI::streams_response_t> current_queries;
 
-    void fetch_streams(TwitchAPI::streams_response_t);
+    void fetch_streams(TwitchAPI::streams_response_t, QWidget *);
     void channel_picked(QString);
 };
 

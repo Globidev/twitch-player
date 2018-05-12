@@ -20,6 +20,7 @@ struct TwitchAPI: APIClient {
 
     streams_response_t stream_search(QString);
     streams_response_t top_streams();
+    streams_response_t followed_streams(const QString & token);
 };
 
 #endif // TWITCH_HPP

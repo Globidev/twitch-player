@@ -27,6 +27,7 @@ SOURCES         +=  src/main.cpp \
                     src/widgets/video_controls.cpp \
                     src/api/twitch.cpp \
                     src/api/twitchd.cpp \
+                    src/api/oauth.cpp \
 
 win32:SOURCES   +=  src/native/win32.cpp
 
@@ -49,8 +50,10 @@ HEADERS         +=  include/main_window.hpp \
                     include/widgets/video_controls.hpp \
                     include/api/twitch.hpp \
                     include/api/twitchd.hpp \
+                    include/api/oauth.hpp \
                     include/native/capabilities.hpp \
                     include/prelude/http.hpp \
+                    include/prelude/sync.hpp \
 
 win32:HEADERS   +=  include/native/win32.hpp
 

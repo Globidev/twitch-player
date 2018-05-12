@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>445</width>
+    <width>441</width>
     <height>44</height>
    </rect>
   </property>
@@ -120,11 +120,28 @@ background-color: rgb(169, 145, 212);
          <height>0</height>
         </size>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
        <property name="styleSheet">
-        <string notr="true">background-color: black; 
-color: rgb(169, 145, 212);
-selection-color: rgb(169, 145, 212);
-selection-background-color: transparent;</string>
+        <string notr="true">QComboBox QAbstractItemView {
+	outline: 0px;
+	background-color: transparent; 
+	color: rgb(169, 145, 212);
+	selection-color: back;
+	selection-background-color: white;
+}
+
+QComboBox {
+	background-color: transparent; 
+	color: rgb(169, 145, 212);
+	selection-color: rgb(169, 145, 212);
+	selection-background-color: transparent;
+};</string>
        </property>
        <property name="sizeAdjustPolicy">
         <enum>QComboBox::AdjustToContents</enum>
@@ -132,6 +149,16 @@ selection-background-color: transparent;</string>
        <property name="frame">
         <bool>true</bool>
        </property>
+       <item>
+        <property name="text">
+         <string>fdsfsdfds</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>gfdgfd</string>
+        </property>
+       </item>
       </widget>
      </item>
     </layout>

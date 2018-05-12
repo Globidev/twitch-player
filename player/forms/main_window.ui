@@ -104,6 +104,7 @@ color: rgb(135, 109, 220);</string>
      <string>Tools</string>
     </property>
     <addaction name="actionLogs"/>
+    <addaction name="actionLoginWithTwitch"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -357,6 +358,11 @@ color: rgb(135, 109, 220);</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Alt+Shift+Down</string>
+   </property>
+  </action>
+  <action name="actionLoginWithTwitch">
+   <property name="text">
+    <string>Login with Twitch</string>
    </property>
   </action>
  </widget>

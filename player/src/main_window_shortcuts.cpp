@@ -13,6 +13,8 @@
 
 #include "constants.hpp"
 
+#include "api/oauth.hpp"
+
 #include <QKeyEvent>
 #include <QSplitter>
 #include <QStackedWidget>
@@ -184,6 +186,17 @@ void MainWindow::setup_shortcuts() {
     add_action(_ui->actionLogs, [this] {
         _vlc_log_viewer->show();
         _vlc_log_viewer->raise();
+    });
+    add_action(_ui->actionLoginWithTwitch, [this] {
+        {
+            QSettings settings;
+
+            settings.remove(constants::oauth::ACCESS_TOKEN_KEY);
+            settings.remove(constants::oauth::REFRESH_TOKEN_KEY);
+        }
+
+        auto oauth = new OAuth(this);
+        oauth->query_token();
     });
     // Preferences
     add_action(_ui->actionOptions, [this] {

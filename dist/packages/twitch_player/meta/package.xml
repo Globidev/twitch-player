@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitch Player</DisplayName>
     <Description>Install the end user interface</Description>
-    <Version>0.6.1</Version>
-    <ReleaseDate>2018-05-05</ReleaseDate>
+    <Version>0.7.2</Version>
+    <ReleaseDate>2018-05-10</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Improved quality selection</UpdateText>
+    <UpdateText>Fix taskbar flashes on Windows</UpdateText>
 </Package>

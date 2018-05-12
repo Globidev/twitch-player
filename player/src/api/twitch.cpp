@@ -67,3 +67,19 @@ TwitchAPI::streams_response_t TwitchAPI::top_streams() {
 
     return get(request, parse_stream_data);
 }
+
+TwitchAPI::streams_response_t TwitchAPI::followed_streams(const QString & token) {
+    QUrl url { "https://api.twitch.tv/kraken/streams/followed" };
+
+    QUrlQuery url_query;
+    url_query.addQueryItem("offset", "0");
+    url_query.addQueryItem("limit", "32");
+    url.setQuery(url_query);
+
+    QNetworkRequest request { url };
+    request.setRawHeader("Accept", "application/vnd.twitchtv.v5+json");
+    request.setRawHeader("Client-ID", constants::TWITCHD_CLIENT_ID);
+    request.setRawHeader("Authorization", QString("OAuth %1").arg(token).toLocal8Bit());
+
+    return get(request, parse_stream_data);
+}

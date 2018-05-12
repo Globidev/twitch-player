@@ -16,8 +16,15 @@ public:
         _reply->ignoreSslErrors();
 
         QObject::connect(_reply, &QNetworkReply::finished, [=] {
-            if (_reply->isOpen() && _on_complete)
-                _on_complete(_parse(_reply->readAll()));
+            if (_reply->isOpen() && _on_complete) {
+                auto status = _reply
+                    ->attribute(QNetworkRequest::HttpStatusCodeAttribute)
+                    .toInt();
+                if (status == 200)
+                    _on_complete(_parse(_reply->readAll()));
+                else if (_on_bad_status)
+                    _on_bad_status(status);
+            }
         });
 
         using reply_error_t = void (QNetworkReply::*)(QNetworkReply::NetworkError);
@@ -36,19 +43,22 @@ public:
         _reply->abort();
     }
 
-    template <class F> auto then(F f)  { _on_complete = f;  return this; }
-    template <class F> auto error(F f) { _on_error = f;     return this; }
+    template <class F> auto then(F f)       { _on_complete = f;   return this; }
+    template <class F> auto error(F f)      { _on_error = f;      return this; }
+    template <class F> auto bad_status(F f) { _on_bad_status = f; return this; }
 
 private:
     using parser_t = std::function<T (const QByteArray &)>;
     using on_completion_t = std::function<void (T)>;
     using on_error_t = std::function<void (QNetworkReply::NetworkError)>;
+    using on_bad_status_t = std::function<void (int)>;
 
     QNetworkReply *_reply;
     parser_t _parse;
 
     on_completion_t _on_complete;
     on_error_t _on_error;
+    on_bad_status_t _on_bad_status;
 };
 
 class APIClient {

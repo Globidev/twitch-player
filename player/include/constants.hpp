@@ -10,6 +10,13 @@ namespace constants {
     Constant TWITCHD_PATH = "twitchd.exe";
     Constant TWITCHD_CLIENT_ID = "alcht5gave31yctuzv48v2i1hlwq53";
 
+    Constant OAUTH_REDIRECT_URI_PORT = 4242;
+
+    namespace oauth {
+        Constant ACCESS_TOKEN_KEY = "oauth/access-token";
+        Constant REFRESH_TOKEN_KEY = "oauth/refresh-token";
+    }
+
     namespace settings {
         namespace chat_renderer {
             Constant KEY_CHAT_RENDERER_PATH = "chat-renderer/paths";
