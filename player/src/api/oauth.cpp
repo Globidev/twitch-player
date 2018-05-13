@@ -27,7 +27,7 @@ static auto access_code_url(const QByteArray & code) {
     url_query.addQueryItem("client_secret", "8mpn5c01v3k5fdi094x6275cn18du7");
     url_query.addQueryItem("code", code);
     url_query.addQueryItem("grant_type", "authorization_code");
-    url_query.addQueryItem("redirect_uri", "http://localhost:4242");
+    url_query.addQueryItem("redirect_uri", constants::OAUTH_REDIRECT_URI);
     url.setQuery(url_query);
 
     return url;
@@ -51,9 +51,9 @@ static auto authorize_url() {
 
     QUrlQuery url_query;
     url_query.addQueryItem("client_id", constants::TWITCHD_CLIENT_ID);
-    url_query.addQueryItem("redirect_uri", "http://localhost:4242");
+    url_query.addQueryItem("redirect_uri", constants::OAUTH_REDIRECT_URI);
     url_query.addQueryItem("response_type", "code");
-    url_query.addQueryItem("scope", "user_follows_edit user_subscriptions chat_login user_read");
+    url_query.addQueryItem("scope", constants::OAUTH_SCOPES);
     url.setQuery(url_query);
 
     return url;
@@ -89,7 +89,7 @@ OAuth::OAuth(QObject *parent):
     );
 }
 
-void OAuth::query_token() {
+QtPromise::QPromise<QString> OAuth::query_token() {
     QSettings settings;
 
     auto refresh_token = settings
@@ -100,6 +100,12 @@ void OAuth::query_token() {
         fetch_token(refresh_token_url(refresh_token));
     else
         QDesktopServices::openUrl(authorize_url());
+
+    return QtPromise::QPromise<QString>([=](const auto & resolve, auto) {
+        QObject::connect(this, &OAuth::token_ready, [=](auto token) {
+            resolve(token);
+        });
+    });
 }
 
 void OAuth::save_token_data(const QByteArray &raw_data) {

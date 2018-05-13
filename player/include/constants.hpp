@@ -11,6 +11,10 @@ namespace constants {
     Constant TWITCHD_CLIENT_ID = "alcht5gave31yctuzv48v2i1hlwq53";
 
     Constant OAUTH_REDIRECT_URI_PORT = 4242;
+    Constant OAUTH_REDIRECT_URI = QString("http://localhost:%1")
+        .arg(OAUTH_REDIRECT_URI_PORT);
+    Constant OAUTH_SCOPES =
+        "user_follows_edit user_subscriptions chat_login user_read";
 
     namespace oauth {
         Constant ACCESS_TOKEN_KEY = "oauth/access-token";

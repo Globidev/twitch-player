@@ -7,6 +7,8 @@
 
 #include "api/twitch.hpp"
 
+#include "prelude/promise.hpp"
+
 namespace Ui {
     class StreamPicker;
 }
@@ -30,9 +32,11 @@ private:
     QWidget *_followed_stream_presenter;
 
     TwitchAPI _api;
-    std::unordered_map<QWidget *, TwitchAPI::streams_response_t> current_queries;
+    std::unordered_map<QWidget *, CancelToken> current_queries;
 
     void fetch_streams(TwitchAPI::streams_response_t, QWidget *);
+    void present_streams(QWidget *, QList<StreamData>);
+
     void channel_picked(QString);
 };
 

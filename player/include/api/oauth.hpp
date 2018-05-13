@@ -2,6 +2,7 @@
 #define OAUTH_HPP
 
 #include <QObject>
+#include <QtPromise>
 
 class QTcpServer;
 class QNetworkRequest;
@@ -11,7 +12,7 @@ class OAuth: public QObject {
 public:
     OAuth(QObject * = nullptr);
 
-    void query_token();
+    QtPromise::QPromise<QString> query_token();
 
 signals:
     void token_ready(QString);

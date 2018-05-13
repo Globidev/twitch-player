@@ -68,30 +68,7 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
 
     QObject::connect(_event_watcher, &VLCEventWatcher::new_event, [=](auto event, float f) {
         using namespace libvlc;
-        constexpr auto event_name = [](auto ev) {
-            switch (ev) {
-            case MediaPlayer::Event::MediaChanged: return "MediaChanged";
-            case MediaPlayer::Event::Opening: return "Opening";
-            case MediaPlayer::Event::Buffering: return "Buffering";
-            case MediaPlayer::Event::Playing: return "Playing";
-            case MediaPlayer::Event::Paused: return "Paused";
-            case MediaPlayer::Event::Stopped: return "Stopped";
-            case MediaPlayer::Event::Forward: return "Forward";
-            case MediaPlayer::Event::Backward: return "Backward";
-            case MediaPlayer::Event::EndReached: return "EndReached";
-            case MediaPlayer::Event::EncounteredError: return "EncounteredError";
-            case MediaPlayer::Event::Muted: return "Muted";
-            case MediaPlayer::Event::Unmuted: return "Unmuted";
-            case MediaPlayer::Event::AudioVolume: return "AudioVolume";
-            case MediaPlayer::Event::AudioDevice: return "AudioDevice";
-            case MediaPlayer::Event::ScrambledChanged: return "ScrambledChanged";
-            case MediaPlayer::Event::Corked: return "Corked";
-            case MediaPlayer::Event::Uncorked: return "Uncorked";
-            case MediaPlayer::Event::Unknown: return "Unknown";
-            }
-        };
 
-        qDebug() << "EVENT:" << event_name(event) << f;
         switch (event) {
             case MediaPlayer::Event::Opening:
                 _overlay->set_buffering(true);
@@ -119,13 +96,10 @@ void VideoWidget::play(QString channel, QString quality) {
     _media_player.play();
 
     _controls->clear_qualities();
-    if (stream_index_reponse)
-        stream_index_reponse->cancel();
-    stream_index_reponse = _api.stream_index(channel);
-    stream_index_reponse->then([=](auto index) {
+
+    _api.stream_index(channel).then([=](StreamIndex index) {
         auto qualities = quality_names(index);
         _controls->set_qualities(quality, qualities);
-        stream_index_reponse.reset();
     });
 
     _overlay->show();

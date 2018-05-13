@@ -195,8 +195,10 @@ void MainWindow::setup_shortcuts() {
             settings.remove(constants::oauth::REFRESH_TOKEN_KEY);
         }
 
-        auto oauth = new OAuth(this);
-        oauth->query_token();
+        auto oauth = std::make_shared<OAuth>();
+        oauth->query_token().then([=](QString) mutable {
+            oauth.reset();
+        });
     });
     // Preferences
     add_action(_ui->actionOptions, [this] {

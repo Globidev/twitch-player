@@ -56,6 +56,7 @@ HEADERS         +=  include/main_window.hpp \
                     include/native/capabilities.hpp \
                     include/prelude/http.hpp \
                     include/prelude/sync.hpp \
+                    include/prelude/promise.hpp \
 
 win32:HEADERS   +=  include/native/win32.hpp
 

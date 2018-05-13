@@ -8,6 +8,8 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
+#include "api/oauth.hpp"
+
 static QList<StreamData> parse_stream_data(const QByteArray & raw) {
     QList<StreamData> parsed;
     auto json_data = QJsonDocument::fromJson(raw).object();
@@ -50,7 +52,7 @@ TwitchAPI::streams_response_t TwitchAPI::stream_search(QString query) {
     // request.setRawHeader("Accept", "application/vnd.twitchtv.v5+json");
     request.setRawHeader("Client-ID", constants::TWITCHD_CLIENT_ID);
 
-    return get(request, parse_stream_data);
+    return get(request).then(&parse_stream_data);
 }
 
 TwitchAPI::streams_response_t TwitchAPI::top_streams() {
@@ -65,7 +67,7 @@ TwitchAPI::streams_response_t TwitchAPI::top_streams() {
     request.setRawHeader("Accept", "application/vnd.twitchtv.v5+json");
     request.setRawHeader("Client-ID", constants::TWITCHD_CLIENT_ID);
 
-    return get(request, parse_stream_data);
+    return get(request).then(&parse_stream_data);
 }
 
 TwitchAPI::streams_response_t TwitchAPI::followed_streams(const QString & token) {
@@ -81,5 +83,19 @@ TwitchAPI::streams_response_t TwitchAPI::followed_streams(const QString & token)
     request.setRawHeader("Client-ID", constants::TWITCHD_CLIENT_ID);
     request.setRawHeader("Authorization", QString("OAuth %1").arg(token).toLocal8Bit());
 
-    return get(request, parse_stream_data);
+    auto retry_if_unauthorized = [=](BadStatus error) {
+        if (error.status == 401) {
+            auto oauth = std::make_shared<OAuth>();
+            return oauth->query_token().then([=](QString token) mutable {
+                oauth.reset();
+                return followed_streams(token);
+            });
+        }
+        else
+            return streams_response_t::reject(error);
+    };
+
+    return get(request)
+        .then(&parse_stream_data)
+        .fail(retry_if_unauthorized);
 }

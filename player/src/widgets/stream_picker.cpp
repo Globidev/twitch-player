@@ -69,38 +69,34 @@ void StreamPicker::channel_picked(QString channel) {
 void StreamPicker::fetch_streams(TwitchAPI::streams_response_t query, QWidget *container) {
     auto & current_query = current_queries[container];
 
-    query->then([=](auto stream_data) {
-        auto layout = container->layout();
-
-        QLayoutItem *item;
-        while ((item = layout->takeAt(0)) != nullptr) {
-            item->widget()->deleteLater();
-            delete item;
-        }
-
-        for (auto data: stream_data) {
-            auto stream_card = new StreamCard(data, container);
-            layout->addWidget(stream_card);
-            QObject::connect(stream_card, &StreamCard::clicked, [this](auto channel) {
-                channel_picked(channel);
-            });
-        }
-
-        current_queries[container].reset();
-    });
-
-    query->bad_status([=](int status) {
-        if (status == 401) {
-            auto oauth = new OAuth(this);
-            QObject::connect(oauth, &OAuth::token_ready, [=](auto access_token) {
-                fetch_streams(_api.followed_streams(access_token), _followed_stream_presenter);
-            });
-            oauth->query_token();
-        }
-    });
-
     if (current_query)
         current_query->cancel();
 
-    current_queries[container] = std::move(query);
+    auto [token, cquery] = make_cancellable(query);
+
+    auto present_streams_on_container = [=](QList<StreamData> stream_data) {
+        present_streams(container, stream_data);
+    };
+
+    cquery.then(present_streams_on_container);
+
+    current_query = token;
+}
+
+void StreamPicker::present_streams(QWidget *container, QList<StreamData> stream_data) {
+    auto layout = container->layout();
+
+    QLayoutItem *item;
+    while ((item = layout->takeAt(0)) != nullptr) {
+        item->widget()->deleteLater();
+        delete item;
+    }
+
+    for (auto data: stream_data) {
+        auto stream_card = new StreamCard(data, container);
+        layout->addWidget(stream_card);
+        QObject::connect(stream_card, &StreamCard::clicked, [this](auto channel) {
+            channel_picked(channel);
+        });
+    }
 }

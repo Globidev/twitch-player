@@ -86,7 +86,6 @@ private:
     QPoint _last_drag_position;
 
     TwitchdAPI _api;
-    TwitchdAPI::stream_index_response_t stream_index_reponse;
 
     QString _current_channel, _current_quality;
 

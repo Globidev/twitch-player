@@ -54,7 +54,7 @@ TwitchdAPI::stream_index_response_t TwitchdAPI::stream_index(QString channel) {
 
     QNetworkRequest request { url };
 
-    return get(request, parse_stream_index_data);
+    return get(request).then(&parse_stream_index_data);
 }
 
 QString TwitchdAPI::playback_url(QString channel, QString quality) {
