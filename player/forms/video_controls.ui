@@ -86,7 +86,7 @@ background-color: rgb(169, 145, 212);
 }</string>
        </property>
        <property name="maximum">
-        <number>200</number>
+        <number>100</number>
        </property>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
