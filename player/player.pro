@@ -3,6 +3,8 @@ TEMPLATE        =   app
 
 QT              +=  core gui widgets network
 
+include(vendor/qtpromise-0.3.0/qtpromise.pri)
+
 win32:QMAKE_CXXFLAGS    +=  /std:c++latest
 
 release:CONFIG  +=  static
