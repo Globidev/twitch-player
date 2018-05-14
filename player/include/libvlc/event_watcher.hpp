@@ -2,7 +2,7 @@
 
 #include <QObject>
 
-#include "libvlc/bindings.hpp"
+#include "libvlc/types.hpp"
 
 #include "prelude/sync.hpp"
 
@@ -11,7 +11,7 @@ class VLCEventWatcher: public QObject {
 public:
     VLCEventWatcher(libvlc::MediaPlayer &, QObject * = nullptr);
 signals:
-    void new_event(libvlc::MediaPlayer::Event, float);
+    void new_event(libvlc::Event);
 private:
-    sync::Queue<std::pair<libvlc::MediaPlayer::Event, float>> _queue;
+    sync::Queue<libvlc::Event> _queue;
 };

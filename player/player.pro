@@ -47,7 +47,9 @@ HEADERS         +=  include/constants.hpp \
                     include/libvlc/bindings.hpp \
                     include/libvlc/event_watcher.hpp \
                     include/libvlc/logger.hpp \
+                    include/libvlc/types.hpp \
                     \
+                    include/prelude/c_wrapper.hpp \
                     include/prelude/http.hpp \
                     include/prelude/promise.hpp \
                     include/prelude/sync.hpp \

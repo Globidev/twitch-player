@@ -32,6 +32,12 @@ static auto quality_names(const StreamIndex & index) {
     return qualities;
 }
 
+template<class... Ts>
+struct overloaded : Ts... {
+    using Ts::operator()...;
+};
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
 VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     QWidget(parent),
     _instance(instance),
@@ -66,22 +72,17 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
         activateWindow();
     });
 
-    QObject::connect(_event_watcher, &VLCEventWatcher::new_event, [=](auto event, float f) {
-        using namespace libvlc;
+    QObject::connect(_event_watcher, &VLCEventWatcher::new_event, [=](auto event) {
+        using namespace libvlc::events;
 
-        switch (event) {
-            case MediaPlayer::Event::Opening:
-                _overlay->set_buffering(true);
-                break;
-            case MediaPlayer::Event::Buffering:
-                _overlay->set_buffering(f != 100.f);
-                break;
-            case MediaPlayer::Event::EndReached:
-            case MediaPlayer::Event::Stopped:
-            case MediaPlayer::Event::EncounteredError:
-                play(_current_channel, _current_quality);
-                break;
-        }
+        std::visit(overloaded {
+            [=](Opening) { _overlay->set_buffering(true); },
+            [=](Buffering buff) { _overlay->set_buffering(buff.cache_percent != 100.f); },
+            [=](EndReached) { play(_current_channel, _current_quality); },
+            [=](Stopped) { play(_current_channel, _current_quality); },
+            [=](EncounteredError) { play(_current_channel, _current_quality); },
+            [=](auto) { },
+        }, event);
     });
 }
 
