@@ -15,12 +15,12 @@ namespace constants {
     Constant OAUTH_SCOPES =
         "user_follows_edit user_subscriptions chat_login user_read";
 
-    namespace oauth {
-        Constant ACCESS_TOKEN_KEY = "oauth/access-token";
-        Constant REFRESH_TOKEN_KEY = "oauth/refresh-token";
-    }
-
     namespace settings {
+        namespace oauth {
+            Constant ACCESS_TOKEN_KEY = "oauth/access-token";
+            Constant REFRESH_TOKEN_KEY = "oauth/refresh-token";
+        }
+
         namespace chat_renderer {
             Constant KEY_CHAT_RENDERER_PATH = "chat-renderer/paths";
             // TODO: Improve default chat renderer path logic

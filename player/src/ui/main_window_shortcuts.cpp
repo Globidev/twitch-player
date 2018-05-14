@@ -186,8 +186,8 @@ void MainWindow::setup_shortcuts() {
         {
             QSettings settings;
 
-            settings.remove(constants::oauth::ACCESS_TOKEN_KEY);
-            settings.remove(constants::oauth::REFRESH_TOKEN_KEY);
+            settings.remove(constants::settings::oauth::ACCESS_TOKEN_KEY);
+            settings.remove(constants::settings::oauth::REFRESH_TOKEN_KEY);
         }
 
         auto oauth = std::make_shared<OAuth>();

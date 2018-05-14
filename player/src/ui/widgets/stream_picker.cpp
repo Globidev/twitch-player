@@ -26,7 +26,7 @@ StreamPicker::StreamPicker(QWidget *parent):
     QSettings settings;
 
     auto access_token = settings
-        .value(constants::oauth::ACCESS_TOKEN_KEY)
+        .value(constants::settings::oauth::ACCESS_TOKEN_KEY)
         .toString();
 
     fetch_streams(_api.top_streams(), _channels_stream_presenter);

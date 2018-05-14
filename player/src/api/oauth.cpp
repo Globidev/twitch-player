@@ -93,7 +93,7 @@ QtPromise::QPromise<QString> OAuth::query_token() {
     QSettings settings;
 
     auto refresh_token = settings
-        .value(constants::oauth::REFRESH_TOKEN_KEY)
+        .value(constants::settings::oauth::REFRESH_TOKEN_KEY)
         .toString();
 
     if (!refresh_token.isEmpty())
@@ -109,6 +109,8 @@ QtPromise::QPromise<QString> OAuth::query_token() {
 }
 
 void OAuth::save_token_data(const QByteArray &raw_data) {
+    using namespace constants::settings::oauth;
+
     auto json_data = QJsonDocument::fromJson(raw_data).object();
 
     auto access_token = json_data["access_token"].toString();
@@ -116,8 +118,8 @@ void OAuth::save_token_data(const QByteArray &raw_data) {
 
     QSettings settings;
 
-    settings.setValue(constants::oauth::ACCESS_TOKEN_KEY, access_token);
-    settings.setValue(constants::oauth::REFRESH_TOKEN_KEY, refresh_token);
+    settings.setValue(ACCESS_TOKEN_KEY, access_token);
+    settings.setValue(REFRESH_TOKEN_KEY, refresh_token);
 
     emit token_ready(access_token);
 }
