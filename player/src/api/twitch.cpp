@@ -1,5 +1,7 @@
 #include "api/twitch.hpp"
 
+#include "api/oauth.hpp"
+
 #include "constants.hpp"
 
 #include <QUrlQuery>
@@ -7,8 +9,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-
-#include "api/oauth.hpp"
 
 static QList<StreamData> parse_stream_data(const QByteArray & raw) {
     QList<StreamData> parsed;

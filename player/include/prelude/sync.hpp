@@ -1,5 +1,4 @@
-#ifndef SYNC_HPP
-#define SYNC_HPP
+#pragma once
 
 #include <queue>
 #include <mutex>
@@ -40,5 +39,3 @@ private:
 };
 
 }
-
-#endif // SYNC_HPP

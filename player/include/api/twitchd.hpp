@@ -1,5 +1,4 @@
-#ifndef TWITCHD_HPP
-#define TWITCHD_HPP
+#pragma once
 
 #include "prelude/http.hpp"
 
@@ -33,5 +32,3 @@ struct TwitchdAPI: APIClient {
     stream_index_response_t stream_index(QString);
     static QString playback_url(QString, QString);
 };
-
-#endif // TWITCHD_HPP

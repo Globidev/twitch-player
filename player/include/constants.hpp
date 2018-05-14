@@ -1,5 +1,4 @@
-#ifndef CONSTANTS_HPP
-#define CONSTANTS_HPP
+#pragma once
 
 #include <QStringList>
 #include <vector>
@@ -96,5 +95,3 @@ namespace constants {
 }
 
 #undef Constant
-
-#endif // CONSTANTS_HPP

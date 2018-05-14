@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>FiltersTool</class>
- <widget class="QWidget" name="FiltersTool">
+ <class>VideoFilters</class>
+ <widget class="QWidget" name="VideoFilters">
   <property name="windowModality">
    <enum>Qt::WindowModal</enum>
   </property>

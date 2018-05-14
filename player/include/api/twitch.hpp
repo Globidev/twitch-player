@@ -1,5 +1,4 @@
-#ifndef TWITCH_HPP
-#define TWITCH_HPP
+#pragma once
 
 #include "prelude/http.hpp"
 
@@ -22,5 +21,3 @@ struct TwitchAPI: APIClient {
     streams_response_t top_streams();
     streams_response_t followed_streams(const QString & token);
 };
-
-#endif // TWITCH_HPP

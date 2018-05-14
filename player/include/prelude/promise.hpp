@@ -1,5 +1,4 @@
-#ifndef PROMISE_HPP
-#define PROMISE_HPP
+#pragma once
 
 #include <memory>
 #include <future>
@@ -35,5 +34,3 @@ auto make_cancellable(QtPromise::QPromise<T> promise) {
 }
 
 using CancelToken = std::shared_ptr<Cancellable>;
-
-#endif // PROMISE_HPP

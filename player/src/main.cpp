@@ -1,8 +1,9 @@
-#include "main_window.hpp"
 #include "constants.hpp"
-#include "libvlc.hpp"
 
-#include "widgets/stream_container.hpp"
+#include "libvlc/bindings.hpp"
+
+#include "ui/main_window.hpp"
+#include "ui/widgets/pane.hpp"
 
 #include <QApplication>
 #include <QProcess>

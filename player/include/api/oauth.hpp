@@ -1,5 +1,4 @@
-#ifndef OAUTH_HPP
-#define OAUTH_HPP
+#pragma once
 
 #include <QObject>
 #include <QtPromise>
@@ -23,5 +22,3 @@ private:
     void fetch_token(const QUrl &);
     void save_token_data(const QByteArray &);
 };
-
-#endif // OAUTH_HPP

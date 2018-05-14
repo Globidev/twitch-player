@@ -1,5 +1,4 @@
-#ifndef HTTP_HPP
-#define HTTP_HPP
+#pragma once
 
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -16,7 +15,7 @@ public:
     auto get(const QNetworkRequest &request) {
         using QtPromise::QPromise;
 
-        return QPromise<QByteArray>([=](const auto& resolve, const auto& reject) {
+        return QPromise<QByteArray>([=](auto& resolve, auto& reject) {
             auto reply = _http_client.get(request);
 
             QObject::connect(reply, &QNetworkReply::finished, [=]() {
@@ -47,5 +46,3 @@ protected:
 private:
     QNetworkAccessManager _http_client;
 };
-
-#endif // HTTP_HPP

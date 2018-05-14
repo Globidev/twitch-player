@@ -10,55 +10,70 @@ win32:QMAKE_CXXFLAGS    +=  /std:c++latest
 release:CONFIG  +=  static
 
 SOURCES         +=  src/main.cpp \
-                    src/main_window.cpp \
-                    src/main_window_shortcuts.cpp \
-                    src/libvlc.cpp \
-                    src/vlc_logger.cpp \
-                    src/vlc_event_watcher.cpp \
-                    src/widgets/video_widget.cpp \
-                    src/widgets/foreign_widget.cpp \
-                    src/widgets/stream_widget.cpp \
-                    src/widgets/stream_picker.cpp \
-                    src/widgets/stream_container.cpp \
-                    src/widgets/vlc_log_viewer.cpp \
-                    src/widgets/filters_tool.cpp \
-                    src/widgets/options_dialog.cpp \
-                    src/widgets/resizable_grid.cpp \
-                    src/widgets/flow_layout.cpp \
-                    src/widgets/stream_card.cpp \
-                    src/widgets/video_controls.cpp \
+                    \
                     src/api/twitch.cpp \
                     src/api/twitchd.cpp \
                     src/api/oauth.cpp \
+                    \
+                    src/libvlc/bindings.cpp \
+                    src/libvlc/event_watcher.cpp \
+                    src/libvlc/logger.cpp \
+                    \
+                    src/ui/main_window.cpp \
+                    src/ui/main_window_shortcuts.cpp \
+                    \
+                    src/ui/layouts/flow.cpp \
+                    src/ui/layouts/splitter_grid.cpp \
+                    \
+                    src/ui/overlays/video_controls.cpp \
+                    \
+                    src/ui/tools/options_dialog.cpp \
+                    src/ui/tools/video_filters.cpp \
+                    src/ui/tools/vlc_log_viewer.cpp \
+                    \
+                    src/ui/widgets/foreign_widget.cpp \
+                    src/ui/widgets/pane.cpp \
+                    src/ui/widgets/stream_card.cpp \
+                    src/ui/widgets/stream_picker.cpp \
+                    src/ui/widgets/stream_widget.cpp \
+                    src/ui/widgets/video_widget.cpp \
 
-win32:SOURCES   +=  src/native/win32.cpp
-
-HEADERS         +=  include/main_window.hpp \
-                    include/constants.hpp \
-                    include/libvlc.hpp \
-                    include/vlc_logger.hpp \
-                    include/vlc_event_watcher.hpp \
-                    include/widgets/video_widget.hpp \
-                    include/widgets/foreign_widget.hpp \
-                    include/widgets/stream_widget.hpp \
-                    include/widgets/stream_picker.hpp \
-                    include/widgets/stream_container.hpp \
-                    include/widgets/vlc_log_viewer.hpp \
-                    include/widgets/filters_tool.hpp \
-                    include/widgets/options_dialog.hpp \
-                    include/widgets/resizable_grid.hpp \
-                    include/widgets/flow_layout.hpp \
-                    include/widgets/stream_card.hpp \
-                    include/widgets/video_controls.hpp \
+HEADERS         +=  include/constants.hpp \
+                    \
                     include/api/twitch.hpp \
                     include/api/twitchd.hpp \
                     include/api/oauth.hpp \
-                    include/native/capabilities.hpp \
+                    \
+                    include/libvlc/bindings.hpp \
+                    include/libvlc/event_watcher.hpp \
+                    include/libvlc/logger.hpp \
+                    \
                     include/prelude/http.hpp \
-                    include/prelude/sync.hpp \
                     include/prelude/promise.hpp \
+                    include/prelude/sync.hpp \
+                    \
+                    include/ui/main_window.hpp \
+                    \
+                    include/ui/layouts/flow.hpp \
+                    include/ui/layouts/splitter_grid.hpp \
+                    \
+                    include/ui/native/capabilities.hpp \
+                    \
+                    include/ui/overlays/video_controls.hpp \
+                    \
+                    include/ui/tools/options_dialog.hpp \
+                    include/ui/tools/video_filters.hpp \
+                    include/ui/tools/vlc_log_viewer.hpp \
+                    \
+                    include/ui/widgets/foreign_widget.hpp \
+                    include/ui/widgets/pane.hpp \
+                    include/ui/widgets/stream_card.hpp \
+                    include/ui/widgets/stream_picker.hpp \
+                    include/ui/widgets/stream_widget.hpp \
+                    include/ui/widgets/video_widget.hpp \
 
-win32:HEADERS   +=  include/native/win32.hpp
+win32:SOURCES   +=  src/ui/native/win32.cpp
+win32:HEADERS   +=  include/ui/native/win32.hpp
 
 FORMS           +=  forms/main_window.ui \
                     forms/stream_picker.ui \
