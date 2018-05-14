@@ -89,7 +89,7 @@ OAuth::OAuth(QObject *parent):
     );
 }
 
-QtPromise::QPromise<QString> OAuth::query_token() {
+QPromise<QString> OAuth::query_token() {
     QSettings settings;
 
     auto refresh_token = settings
@@ -101,7 +101,7 @@ QtPromise::QPromise<QString> OAuth::query_token() {
     else
         QDesktopServices::openUrl(authorize_url());
 
-    return QtPromise::QPromise<QString>([=](const auto & resolve, auto) {
+    return QPromise<QString>([=](const auto & resolve, auto) {
         QObject::connect(this, &OAuth::token_ready, [=](auto token) {
             resolve(token);
         });

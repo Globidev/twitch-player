@@ -83,8 +83,8 @@ TwitchAPI::streams_response_t TwitchAPI::followed_streams(const QString & token)
     request.setRawHeader("Client-ID", constants::TWITCHD_CLIENT_ID);
     request.setRawHeader("Authorization", QString("OAuth %1").arg(token).toLocal8Bit());
 
-    auto retry_if_unauthorized = [=](BadStatus error) {
-        if (error.status == 401) {
+    auto retry_if_unauthorized = [=](QNetworkReply::NetworkError error) {
+        if (error == QNetworkReply::AuthenticationRequiredError) {
             auto oauth = std::make_shared<OAuth>();
             return oauth->query_token().then([=](QString token) mutable {
                 oauth.reset();

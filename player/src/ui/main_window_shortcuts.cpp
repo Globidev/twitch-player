@@ -191,9 +191,7 @@ void MainWindow::setup_shortcuts() {
         }
 
         auto oauth = std::make_shared<OAuth>();
-        oauth->query_token().then([=](QString) mutable {
-            oauth.reset();
-        });
+        oauth->query_token().then([_retain = std::move(oauth)](QString) { });
     });
     // Preferences
     add_action(_ui->actionOptions, [this] {

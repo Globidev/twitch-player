@@ -6,12 +6,14 @@
 class QTcpServer;
 class QNetworkRequest;
 
+using QtPromise::QPromise;
+
 class OAuth: public QObject {
     Q_OBJECT
 public:
     OAuth(QObject * = nullptr);
 
-    QtPromise::QPromise<QString> query_token();
+    QPromise<QString> query_token();
 
 signals:
     void token_ready(QString);

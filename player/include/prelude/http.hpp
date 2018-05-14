@@ -5,11 +5,6 @@
 
 #include <QtPromise>
 
-struct BadStatus {
-    int status;
-    QByteArray reply;
-};
-
 class APIClient {
 public:
     auto get(const QNetworkRequest &request) {
@@ -19,19 +14,12 @@ public:
             auto reply = _http_client.get(request);
 
             QObject::connect(reply, &QNetworkReply::finished, [=]() {
-                if (reply->error() == QNetworkReply::NoError) {
-                    auto status = reply
-                        ->attribute(QNetworkRequest::HttpStatusCodeAttribute)
-                        .toInt();
-                    auto data = reply->readAll();
+                auto error = reply->error();
 
-                    if (status == 200)
-                        resolve(data);
-                    else
-                        reject(BadStatus { status, data });
-                }
+                if (error == QNetworkReply::NoError)
+                    resolve(reply->readAll());
                 else
-                    reject(reply->error());
+                    reject(error);
 
                 reply->deleteLater();
             });
