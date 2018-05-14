@@ -2,6 +2,7 @@
 
 #include <queue>
 #include <mutex>
+#include <optional>
 
 namespace sync {
 
@@ -16,14 +17,11 @@ public:
         _queue.push(std::move(item));
     }
 
-    bool empty() {
+    std::optional<T> try_pop() {
         lock_t lock { _mutex };
 
-        return _queue.empty();
-    }
-
-    T pop() {
-        lock_t lock { _mutex };
+        if (_queue.empty())
+            return std::nullopt;
 
         auto item = std::move(_queue.front());
         _queue.pop();

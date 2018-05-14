@@ -12,8 +12,11 @@ VLCLogger::VLCLogger(libvlc::Instance &video_context, QObject *parent):
 
     auto poll_timer = new QTimer(this);
     QObject::connect(poll_timer, &QTimer::timeout, [this] {
-        while (!_queue.empty())
-            emit newLogEntry(std::move(_queue.pop()));
+        auto opt_entry = _queue.try_pop();
+        while (opt_entry) {
+            emit newLogEntry(std::move(*opt_entry));
+            opt_entry = _queue.try_pop();
+        }
     });
     poll_timer->start(250);
 }
