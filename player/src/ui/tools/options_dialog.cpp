@@ -44,10 +44,6 @@ OptionsDialog::OptionsDialog(QWidget *parent):
     });
 }
 
-// class KeybindEditWidget: QWidget {
-
-// }
-
 void OptionsDialog::load_settings() {
     using namespace constants::settings::chat_renderer;
     using namespace constants::settings::vlc;

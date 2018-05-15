@@ -10,31 +10,21 @@ VideoFilters::VideoFilters(libvlc::MediaPlayer &mp, QWidget *parent):
     _ui->setupUi(this);
     setWindowFlags(Qt::Tool);
 
+    auto setup_slider = [&](auto factor, auto slider, auto get, auto set) {
+        slider->setValue((mp.*get)() * factor);
+        auto update = [=, &mp](int value) { (mp.*set)(value / factor); };
+        QObject::connect(slider, &QSlider::valueChanged, update);
+    };
+
     _ui->videoFiltersGroupBox->setChecked(mp.video_filters_enabled());
-
-    _ui->sliderContrast->setValue(mp.get_contrast() * 100);
-    _ui->sliderBrightness->setValue(mp.get_brightness() * 100);
-    _ui->sliderHue->setValue(mp.get_hue());
-    _ui->sliderSaturation->setValue(mp.get_saturation() * 100);
-    _ui->sliderGamma->setValue(mp.get_gamma() * 100);
-
     QObject::connect(_ui->videoFiltersGroupBox, &QGroupBox::toggled, [&](bool on) {
         mp.enable_video_filters(on);
     });
 
-    QObject::connect(_ui->sliderContrast, &QSlider::valueChanged, [&](int value) {
-        mp.set_contrast(static_cast<float>(value) / 100.f);
-    });
-    QObject::connect(_ui->sliderBrightness, &QSlider::valueChanged, [&](int value) {
-        mp.set_brightness(static_cast<float>(value) / 100.f);
-    });
-    QObject::connect(_ui->sliderHue, &QSlider::valueChanged, [&](int value) {
-        mp.set_hue(value);
-    });
-    QObject::connect(_ui->sliderSaturation, &QSlider::valueChanged, [&](int value) {
-        mp.set_saturation(static_cast<float>(value) / 100.f);
-    });
-    QObject::connect(_ui->sliderGamma, &QSlider::valueChanged, [&](int value) {
-        mp.set_gamma(static_cast<float>(value) / 100.f);
-    });
+    using MP = libvlc::MediaPlayer;
+    setup_slider(100.f, _ui->sliderContrast,   &MP::get_contrast,   &MP::set_contrast);
+    setup_slider(100.f, _ui->sliderBrightness, &MP::get_brightness, &MP::set_brightness);
+    setup_slider(1,     _ui->sliderHue,        &MP::get_hue,        &MP::set_hue);
+    setup_slider(100.f, _ui->sliderSaturation, &MP::get_saturation, &MP::set_saturation);
+    setup_slider(100.f, _ui->sliderGamma,      &MP::get_gamma,      &MP::set_gamma);
 }

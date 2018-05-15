@@ -41,11 +41,11 @@ int main(int argc, char *argv[]) {
     }
 
     MainWindow main_window { video_context };
-    auto stream_container = main_window.add_pane(Position { 0, 0 });
+    auto pane = main_window.add_pane(Position { 0, 0 });
 
     auto options = parse_options(app.arguments());
     if (options.initial_channel)
-        stream_container->play(*options.initial_channel);
+        pane->play(*options.initial_channel);
 
     main_window.show();
 
