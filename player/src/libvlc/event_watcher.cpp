@@ -2,7 +2,7 @@
 
 #include "libvlc/bindings.hpp"
 
-#include <QTimer>
+#include "prelude/timer.hpp"
 
 VLCEventWatcher::VLCEventWatcher(libvlc::MediaPlayer & mp, QObject *parent):
     QObject(parent)
@@ -11,13 +11,13 @@ VLCEventWatcher::VLCEventWatcher(libvlc::MediaPlayer & mp, QObject *parent):
         _queue.push(std::move(event));
     });
 
-    auto poll_timer = new QTimer(this);
-    QObject::connect(poll_timer, &QTimer::timeout, [this] {
+    auto poll_events = [this] {
         auto opt_event = _queue.try_pop();
         while (opt_event) {
             emit new_event(std::move(*opt_event));
             opt_event = _queue.try_pop();
         }
-    });
-    poll_timer->start(250);
+    };
+
+    interval(this, 250, poll_events);
 }

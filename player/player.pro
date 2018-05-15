@@ -53,6 +53,8 @@ HEADERS         +=  include/constants.hpp \
                     include/prelude/http.hpp \
                     include/prelude/promise.hpp \
                     include/prelude/sync.hpp \
+                    include/prelude/timer.hpp \
+                    include/prelude/variant.hpp \
                     \
                     include/ui/main_window.hpp \
                     \

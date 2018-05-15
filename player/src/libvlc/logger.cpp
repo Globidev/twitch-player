@@ -1,6 +1,8 @@
 #include "libvlc/logger.hpp"
 
-#include <QTimer>
+#include "libvlc/bindings.hpp"
+
+#include "prelude/timer.hpp"
 
 VLCLogger::VLCLogger(libvlc::Instance &video_context, QObject *parent):
     QObject(parent),
@@ -10,15 +12,15 @@ VLCLogger::VLCLogger(libvlc::Instance &video_context, QObject *parent):
         _queue.push(std::move(entry));
     });
 
-    auto poll_timer = new QTimer(this);
-    QObject::connect(poll_timer, &QTimer::timeout, [this] {
+    auto poll_entries = [this] {
         auto opt_entry = _queue.try_pop();
         while (opt_entry) {
-            emit newLogEntry(std::move(*opt_entry));
+            emit new_log_entry(std::move(*opt_entry));
             opt_entry = _queue.try_pop();
         }
-    });
-    poll_timer->start(250);
+    };
+
+    interval(this, 250, poll_entries);
 }
 
 VLCLogger::~VLCLogger() {

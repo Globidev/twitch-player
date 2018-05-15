@@ -40,7 +40,7 @@ VLCLogViewer::VLCLogViewer(libvlc::Instance &video_context, QWidget *parent):
 
     QObject::connect(
         _logger,
-        &VLCLogger::newLogEntry,
+        &VLCLogger::new_log_entry,
         [this](auto entry) {
             _item_model->add_log_entry(entry);
             auto as_text = QString("[%1] %2")

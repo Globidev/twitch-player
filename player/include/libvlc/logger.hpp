@@ -2,7 +2,7 @@
 
 #include <QObject>
 
-#include "libvlc/bindings.hpp"
+#include "libvlc/types.hpp"
 
 #include "prelude/sync.hpp"
 
@@ -14,10 +14,11 @@ public:
     ~VLCLogger();
 
 signals:
-    void newLogEntry(libvlc::LogEntry);
+    void new_log_entry(libvlc::LogEntry);
 
 private:
     libvlc::Instance &_video_context;
 
-    sync::Queue<libvlc::LogEntry> _queue;
+    using LogEntryQueue = sync::Queue<libvlc::LogEntry>;
+    LogEntryQueue _queue;
 };

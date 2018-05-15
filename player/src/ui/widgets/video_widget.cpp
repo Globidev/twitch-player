@@ -5,6 +5,9 @@
 
 #include "libvlc/event_watcher.hpp"
 
+#include "prelude/variant.hpp"
+#include "prelude/timer.hpp"
+
 #include "constants.hpp"
 
 #include <QApplication>
@@ -13,15 +16,6 @@
 #include <QPainter>
 #include <QShortcut>
 #include <QSettings>
-#include <QTimer>
-
-template <class Slot>
-static void delayed(VideoWidget *parent, int ms, Slot slot) {
-    auto timer = new QTimer(parent);
-    QObject::connect(timer, &QTimer::timeout, slot);
-    timer->setSingleShot(true);
-    timer->start(ms);
-}
 
 static auto quality_names(const StreamIndex & index) {
     QStringList qualities;
@@ -31,12 +25,6 @@ static auto quality_names(const StreamIndex & index) {
 
     return qualities;
 }
-
-template<class... Ts>
-struct overloaded : Ts... {
-    using Ts::operator()...;
-};
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     QWidget(parent),
@@ -75,14 +63,17 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     QObject::connect(_event_watcher, &VLCEventWatcher::new_event, [=](auto event) {
         using namespace libvlc::events;
 
-        std::visit(overloaded {
-            [=](Opening) { _overlay->set_buffering(true); },
-            [=](Buffering buff) { _overlay->set_buffering(buff.cache_percent != 100.f); },
-            [=](EndReached) { play(_current_channel, _current_quality); },
-            [=](Stopped) { play(_current_channel, _current_quality); },
-            [=](EncounteredError) { play(_current_channel, _current_quality); },
-            [=](auto) { },
-        }, event);
+        auto set_buffering = [=](bool on) { _overlay->set_buffering(on); };
+        auto refresh_stream = [=] { play(_current_channel, _current_quality); };
+
+        match(event,
+            [=](Opening)          { set_buffering(true); },
+            [=](Buffering b)      { set_buffering(b.cache_percent != 100.f); },
+            [=](EndReached)       { refresh_stream(); },
+            [=](Stopped)          { refresh_stream(); },
+            [=](EncounteredError) { refresh_stream(); },
+            [=](auto)             { }
+        );
     });
 }
 

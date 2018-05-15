@@ -16,5 +16,6 @@ signals:
     void new_event(libvlc::Event);
 
 private:
-    sync::Queue<libvlc::Event> _queue;
+    using EventQueue = sync::Queue<libvlc::Event>;
+    EventQueue _queue;
 };

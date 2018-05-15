@@ -6,7 +6,6 @@
 #include "ui/widgets/video_widget.hpp"
 #include "ui/widgets/foreign_widget.hpp"
 #include "ui/tools/vlc_log_viewer.hpp"
-#include "ui/tools/options_dialog.hpp"
 
 #include <QStackedWidget>
 #include <QKeyEvent>
