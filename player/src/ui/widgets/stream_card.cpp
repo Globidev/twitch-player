@@ -8,7 +8,7 @@
 
 StreamCard::StreamCard(StreamData data, QWidget *parent):
     QWidget(parent),
-    _ui(new Ui::StreamCard),
+    _ui(std::make_unique<Ui::StreamCard>()),
     _data(data)
 {
     _ui->setupUi(this);
@@ -27,10 +27,6 @@ StreamCard::StreamCard(StreamData data, QWidget *parent):
         _ui->preview->setPixmap(QPixmap::fromImage(QImage::fromData(data)));
         preview_reply->deleteLater();
     });
-}
-
-StreamCard::~StreamCard() {
-    delete _ui;
 }
 
 void StreamCard::mousePressEvent(QMouseEvent *) {

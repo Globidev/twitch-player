@@ -35,15 +35,15 @@ protected:
     void wheelEvent(QWheelEvent *) override;
 
 private:
+    std::unique_ptr<Ui::MainWindow> _ui;
+
     libvlc::Instance &_video_context;
 
-    VLCLogViewer *_vlc_log_viewer;
+    std::unique_ptr<VLCLogViewer> _vlc_log_viewer;
 
     std::vector<Pane *> _panes;
     SplitterGrid *_grid;
     QStackedWidget *_central_widget;
-
-    Ui::MainWindow *_ui;
 
     Position _zoomed_position;
 

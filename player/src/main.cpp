@@ -61,7 +61,7 @@ static Options parse_options(QStringList args) {
         // Check if the program was called using the registered protocol
         // The format is "protocol-name://channel/"
         if (channel_arg.startsWith(protocol_prefix))
-            return channel_arg.mid(strlen(protocol_prefix))
+            return channel_arg.mid(static_cast<int>(strlen(protocol_prefix)))
                               .chopped(1); // Trailing slash
         else
             return channel_arg;

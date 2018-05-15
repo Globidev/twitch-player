@@ -11,15 +11,17 @@ class QKeySequenceEdit;
 
 class OptionsDialog: public QDialog {
     Q_OBJECT
+
 public:
     OptionsDialog(QWidget * = nullptr);
-    ~OptionsDialog();
+
 signals:
     void settings_changed();
+
 private:
     void load_settings();
     void save_settings();
 
-    Ui::OptionsDialog *_ui;
+    std::unique_ptr<Ui::OptionsDialog> _ui;
     std::vector<std::pair<QString, QKeySequenceEdit *>> _keybind_edits;
 };

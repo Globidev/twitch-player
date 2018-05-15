@@ -13,7 +13,6 @@ class StreamCard: public QWidget {
 
 public:
     StreamCard(StreamData, QWidget * = nullptr);
-    StreamCard::~StreamCard();
 
 protected:
     void mousePressEvent(QMouseEvent *) override;
@@ -22,6 +21,7 @@ signals:
     void clicked(QString);
 
 private:
-    Ui::StreamCard *_ui;
+    std::unique_ptr<Ui::StreamCard> _ui;
+
     StreamData _data;
 };

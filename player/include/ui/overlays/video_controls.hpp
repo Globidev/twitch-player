@@ -12,7 +12,6 @@ class VideoControls: public QWidget {
     Q_OBJECT
 public:
     VideoControls(QWidget * = nullptr);
-    ~VideoControls();
 
     void set_volume(int);
     void set_muted(bool);
@@ -35,7 +34,7 @@ signals:
 private:
     void set_volume_icon();
 
-    Ui::VideoControls *_ui;
+    std::unique_ptr<Ui::VideoControls> _ui;
 
     QTimer *_appearTimer;
 

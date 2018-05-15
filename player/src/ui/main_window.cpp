@@ -19,11 +19,11 @@ static void focus_pane(QWidget *pane) {
 
 MainWindow::MainWindow(libvlc::Instance &video_context, QWidget *parent) :
     QMainWindow(parent),
+    _ui(std::make_unique<Ui::MainWindow>()),
     _video_context(video_context),
-    _vlc_log_viewer(new VLCLogViewer(video_context)),
+    _vlc_log_viewer(std::make_unique<VLCLogViewer>(video_context)),
     _grid(new SplitterGrid(this)),
-    _central_widget(new QStackedWidget(this)),
-    _ui(new Ui::MainWindow)
+    _central_widget(new QStackedWidget(this))
 {
     _ui->setupUi(this);
 
@@ -33,9 +33,7 @@ MainWindow::MainWindow(libvlc::Instance &video_context, QWidget *parent) :
     setup_shortcuts();
 }
 
-MainWindow::~MainWindow() {
-    delete _vlc_log_viewer;
-}
+MainWindow::~MainWindow() = default;
 
 void MainWindow::changeEvent(QEvent *event) {
     QMainWindow::changeEvent(event);

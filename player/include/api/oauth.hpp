@@ -10,6 +10,7 @@ using QtPromise::QPromise;
 
 class OAuth: public QObject {
     Q_OBJECT
+
 public:
     OAuth(QObject * = nullptr);
 

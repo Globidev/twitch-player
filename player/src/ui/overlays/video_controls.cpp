@@ -10,7 +10,7 @@
 
 VideoControls::VideoControls(QWidget *parent):
     QWidget(parent),
-    _ui(new Ui::VideoControls),
+    _ui(std::make_unique<Ui::VideoControls>()),
     _appearTimer(new QTimer(this))
 {
     _ui->setupUi(this);
@@ -41,7 +41,7 @@ VideoControls::VideoControls(QWidget *parent):
 
     using Activated = void (QComboBox::*)(int);
     auto activated = static_cast<Activated>(&QComboBox::activated);
-    QObject::connect(_ui->qualityCombo, activated, [=](auto pick) {
+    QObject::connect(_ui->qualityCombo, activated, [=](auto) {
         parentWidget()->activateWindow();
     });
 
@@ -50,10 +50,6 @@ VideoControls::VideoControls(QWidget *parent):
     QObject::connect(_ui->qualityCombo, highlighted, [=](auto) {
         _appearTimer->start();
     });
-}
-
-VideoControls::~VideoControls() {
-    delete _ui;
 }
 
 void VideoControls::set_volume(int volume) {

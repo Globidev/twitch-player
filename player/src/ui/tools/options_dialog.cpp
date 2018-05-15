@@ -13,7 +13,7 @@ constexpr auto LIST_WIDGET_ITEM_FLAGS = Qt::ItemIsEnabled
 
 OptionsDialog::OptionsDialog(QWidget *parent):
     QDialog(parent),
-    _ui(new Ui::OptionsDialog)
+    _ui(std::make_unique<Ui::OptionsDialog>())
 {
     setModal(true);
     _ui->setupUi(this);
@@ -40,13 +40,8 @@ OptionsDialog::OptionsDialog(QWidget *parent):
     });
 
     QObject::connect(_ui->libvlcOptionsListDel, &QPushButton::clicked, [this] {
-        for (auto item: _ui->libvlcOptionsList->selectedItems())
-            delete item;
+        qDeleteAll(_ui->libvlcOptionsList->selectedItems());
     });
-}
-
-OptionsDialog::~OptionsDialog() {
-    delete _ui;
 }
 
 // class KeybindEditWidget: QWidget {

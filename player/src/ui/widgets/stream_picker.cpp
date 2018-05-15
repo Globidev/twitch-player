@@ -12,7 +12,7 @@
 
 StreamPicker::StreamPicker(QWidget *parent):
     QWidget(parent),
-    _ui(new Ui::StreamPicker),
+    _ui(std::make_unique<Ui::StreamPicker>()),
     _channels_stream_presenter(new QWidget(this)),
     _followed_stream_presenter(new QWidget(this))
 {
@@ -44,10 +44,6 @@ StreamPicker::StreamPicker(QWidget *parent):
     QObject::connect(_ui->searchBox, &QLineEdit::returnPressed, [this] {
         channel_picked(_ui->searchBox->text());
     });
-}
-
-StreamPicker::~StreamPicker() {
-    delete _ui;
 }
 
 void StreamPicker::focusInEvent(QFocusEvent *event) {

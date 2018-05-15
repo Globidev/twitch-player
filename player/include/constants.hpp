@@ -82,7 +82,7 @@ namespace constants {
 
             #undef Shortcut
 
-            static const auto ALL_SHORTCUTS = std::vector<ActionnableShortcutDescriptor> {
+            Constant ALL_SHORTCUTS = std::vector<ActionnableShortcutDescriptor> {
                 TOGGLE_FULL_SCREEN, TOGGLE_WINDOW_BORDERS, TOGGLE_ALWAYS_ON_TOP, TOGGLE_STREAM_ZOOM,
                 ADD_PANE_LEFT, ADD_PANE_RIGHT, ADD_PANE_UP, ADD_PANE_DOWN,
                 REMOVE_ACTIVE_PANE, MOVE_FOCUS_LEFT, MOVE_FOCUS_RIGHT, MOVE_FOCUS_UP,

@@ -13,8 +13,7 @@ struct MediaPlayer;
 class VideoFilters: public QWidget {
 public:
     VideoFilters(libvlc::MediaPlayer &, QWidget * = nullptr);
-    ~VideoFilters();
 
 private:
-    Ui::VideoFilters *_ui;
+    std::unique_ptr<Ui::VideoFilters> _ui;
 };

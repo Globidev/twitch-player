@@ -51,10 +51,10 @@ private:
 class VLCLogViewer: public QWidget {
 public:
     VLCLogViewer(libvlc::Instance &, QWidget * = nullptr);
-    ~VLCLogViewer();
 
 private:
-    Ui::VLCLogViewer *_ui;
+    std::unique_ptr<Ui::VLCLogViewer> _ui;
+
     VLCLogItemModel *_item_model;
     VLCLogItemFilter *_filter_proxy_model;
     VLCLogger *_logger;

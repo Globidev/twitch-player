@@ -168,11 +168,13 @@ void VideoWidget::wheelEvent(QWheelEvent *event) {
 
 void VideoWidget::resizeEvent(QResizeEvent *event) {
     update_overlay_position();
+    QWidget::resizeEvent(event);
 }
 
 void VideoWidget::showEvent(QShowEvent *event) {
     // have to actually wait for it to be shown ...
     delayed(this, 250, [this] { update_overlay_position(); });
+    QWidget::showEvent(event);
 }
 
 void VideoWidget::mousePressEvent(QMouseEvent *event) {
@@ -292,6 +294,8 @@ void VideoOverlay::paintEvent(QPaintEvent *event) {
             _spinner
         );
     }
+
+    QWidget::paintEvent(event);
 }
 
 void VideoOverlay::show_text(QString new_text) {

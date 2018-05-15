@@ -5,7 +5,7 @@
 
 VideoFilters::VideoFilters(libvlc::MediaPlayer &mp, QWidget *parent):
     QWidget(parent),
-    _ui(new Ui::VideoFilters)
+    _ui(std::make_unique<Ui::VideoFilters>())
 {
     _ui->setupUi(this);
     setWindowFlags(Qt::Tool);
@@ -37,8 +37,4 @@ VideoFilters::VideoFilters(libvlc::MediaPlayer &mp, QWidget *parent):
     QObject::connect(_ui->sliderGamma, &QSlider::valueChanged, [&](int value) {
         mp.set_gamma(static_cast<float>(value) / 100.f);
     });
-}
-
-VideoFilters::~VideoFilters() {
-    delete _ui;
 }

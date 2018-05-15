@@ -13,6 +13,7 @@ struct Cancellable {
     bool cancelled() const {
         return _cancelled;
     }
+
 private:
     bool _cancelled = false;
 };

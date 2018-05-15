@@ -17,7 +17,6 @@ class StreamPicker: public QWidget {
 
 public:
     StreamPicker(QWidget * = nullptr);
-    ~StreamPicker();
 
 protected:
     void focusInEvent(QFocusEvent *) override;
@@ -26,7 +25,8 @@ signals:
     void stream_picked(QString, QString);
 
 private:
-    Ui::StreamPicker *_ui;
+    std::unique_ptr<Ui::StreamPicker> _ui;
+
     QWidget *_channels_stream_presenter;
     QWidget *_followed_stream_presenter;
 

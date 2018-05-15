@@ -7,8 +7,7 @@
 namespace sync {
 
 template <class T>
-class Queue {
-public:
+struct Queue {
     using Item = T;
 
     void push(Item && item) {

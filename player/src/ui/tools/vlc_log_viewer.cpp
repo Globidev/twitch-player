@@ -9,7 +9,8 @@ static QColor level_color(libvlc::LogLevel log_level) {
         case libvlc::LogLevel::Notice:  return Qt::green;
         case libvlc::LogLevel::Warning: return QColor(0xFF, 0xA5, 0x00);
         case libvlc::LogLevel::Error:   return Qt::red;
-        case libvlc::LogLevel::Unknown: return Qt::black;
+        case libvlc::LogLevel::Unknown:
+        default:                        return Qt::black;
     }
 }
 
@@ -19,13 +20,14 @@ static QString level_string(libvlc::LogLevel log_level) {
         case libvlc::LogLevel::Notice:  return "Notice";
         case libvlc::LogLevel::Warning: return "Warning";
         case libvlc::LogLevel::Error:   return "Error";
-        case libvlc::LogLevel::Unknown: return "Unknown";
+        case libvlc::LogLevel::Unknown:
+        default:                        return "Unknown";
     }
 }
 
 VLCLogViewer::VLCLogViewer(libvlc::Instance &video_context, QWidget *parent):
     QWidget(parent),
-    _ui(new Ui::VLCLogViewer),
+    _ui(std::make_unique<Ui::VLCLogViewer>()),
     _item_model(new VLCLogItemModel(this)),
     _filter_proxy_model(new VLCLogItemFilter(*_item_model, this)),
     _logger(new VLCLogger(video_context, this))
@@ -59,16 +61,13 @@ VLCLogViewer::VLCLogViewer(libvlc::Instance &video_context, QWidget *parent):
     add_filter(_ui->checkError,   libvlc::LogLevel::Error);
 }
 
-VLCLogViewer::~VLCLogViewer() {
-    delete _ui;
-}
-
 VLCLogItemModel::VLCLogItemModel(QObject *parent):
     QAbstractItemModel(parent)
 { }
 
 void VLCLogItemModel::add_log_entry(libvlc::LogEntry entry) {
-    beginInsertRows(QModelIndex(), entries.size(), entries.size());
+    auto index = static_cast<int>(entries.size());
+    beginInsertRows(QModelIndex(), index, index);
     entries.push_back(LogEntry { QDateTime::currentDateTime(), entry });
     endInsertRows();
 }
@@ -82,7 +81,7 @@ QModelIndex VLCLogItemModel::parent(const QModelIndex &) const {
 }
 
 int VLCLogItemModel::rowCount(const QModelIndex &) const {
-    return entries.size();
+    return static_cast<int>(entries.size());
 }
 
 int VLCLogItemModel::columnCount(const QModelIndex &) const {

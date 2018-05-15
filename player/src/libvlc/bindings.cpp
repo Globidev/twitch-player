@@ -93,7 +93,7 @@ void MediaPlayer::set_volume(int volume) {
     // Really not sure about the default pre amp value, seems to be 10 on my
     // machine...
     auto pre_amp_value = (volume > 100)
-                       ? 10 + static_cast<float>(volume - 100) / 10.
+                       ? 10 + static_cast<float>(volume - 100) / 10.f
                        : 10;
     libvlc_audio_equalizer_set_preamp(&_equalizer, pre_amp_value);
     libvlc_media_player_set_equalizer(&*this, &_equalizer);

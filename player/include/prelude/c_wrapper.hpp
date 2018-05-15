@@ -15,7 +15,7 @@ struct CWrapper {
     { }
 
     auto operator &()   const { return resource.get(); }
-    bool init_success() const { return resource.get() != nullptr; }
+    bool init_success() const { return static_cast<bool>(resource); }
 
 private:
     using resource_t = CResource<T>;
