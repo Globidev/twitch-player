@@ -10,6 +10,7 @@ class QTimer;
 
 class VideoControls: public QWidget {
     Q_OBJECT
+
 public:
     VideoControls(QWidget * = nullptr);
 

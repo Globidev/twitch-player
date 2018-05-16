@@ -181,7 +181,7 @@ void MediaPlayer::set_audio_device(std::string device_id) {
     libvlc_audio_output_device_set(&*this, nullptr, device_id.c_str());
 }
 
-static constexpr std::array<libvlc_event_e, 17> media_player_events = {
+static constexpr std::array<libvlc_event_e, 5> media_player_events = {
     libvlc_MediaPlayerOpening,
     libvlc_MediaPlayerBuffering,
     libvlc_MediaPlayerStopped,

@@ -26,10 +26,13 @@ SOURCES         +=  src/main.cpp \
                     src/ui/layouts/splitter_grid.cpp \
                     \
                     src/ui/overlays/video_controls.cpp \
+                    src/ui/overlays/video_details.cpp \
                     \
                     src/ui/tools/options_dialog.cpp \
                     src/ui/tools/video_filters.cpp \
                     src/ui/tools/vlc_log_viewer.cpp \
+                    \
+                    src/ui/utils/event_notifier.cpp \
                     \
                     src/ui/widgets/foreign_widget.cpp \
                     src/ui/widgets/pane.cpp \
@@ -64,10 +67,13 @@ HEADERS         +=  include/constants.hpp \
                     include/ui/native/capabilities.hpp \
                     \
                     include/ui/overlays/video_controls.hpp \
+                    include/ui/overlays/video_details.hpp \
                     \
                     include/ui/tools/options_dialog.hpp \
                     include/ui/tools/video_filters.hpp \
                     include/ui/tools/vlc_log_viewer.hpp \
+                    \
+                    include/ui/utils/event_notifier.hpp \
                     \
                     include/ui/widgets/foreign_widget.hpp \
                     include/ui/widgets/pane.hpp \

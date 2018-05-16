@@ -1,6 +1,8 @@
 #include "ui/widgets/video_widget.hpp"
 
 #include "ui/overlays/video_controls.hpp"
+#include "ui/overlays/video_details.hpp"
+#include "ui/utils/event_notifier.hpp"
 #include "ui/native/capabilities.hpp"
 
 #include "libvlc/event_watcher.hpp"
@@ -13,7 +15,6 @@
 #include <QApplication>
 #include <QWheelEvent>
 #include <QMouseEvent>
-#include <QPainter>
 #include <QShortcut>
 #include <QSettings>
 
@@ -26,16 +27,26 @@ static auto quality_names(const StreamIndex & index) {
     return qualities;
 }
 
+static const auto OVERLAY_INVALIDATING_EVENTS = {
+    QEvent::Move,
+    QEvent::KeyRelease,
+};
+
 VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     QWidget(parent),
     _instance(instance),
     _media_player(libvlc::MediaPlayer(instance)),
-    _overlay(new VideoOverlay(this)),
+    _details(new VideoDetails(this)),
     _controls(new VideoControls(this)),
-    _move_filter(new MovementFilter(*this)),
     _event_watcher(new VLCEventWatcher(_media_player, this))
 {
-    window()->installEventFilter(_move_filter);
+    auto notifier = new EventNotifier(OVERLAY_INVALIDATING_EVENTS, this);
+    window()->installEventFilter(notifier);
+
+    QObject::connect(notifier, &EventNotifier::new_event, [=](auto) {
+        update_overlay_position();
+    });
+
     setAttribute(Qt::WA_OpaquePaintEvent);
     setFocusPolicy(Qt::WheelFocus);
     _media_player.set_renderer((void *)winId());
@@ -63,7 +74,7 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     QObject::connect(_event_watcher, &VLCEventWatcher::new_event, [=](auto event) {
         using namespace libvlc::events;
 
-        auto set_buffering = [=](bool on) { _overlay->set_buffering(on); };
+        auto set_buffering = [=](bool on) { _details->set_buffering(on); };
         auto refresh_stream = [=] { play(_current_channel, _current_quality); };
 
         match(event,
@@ -94,7 +105,7 @@ void VideoWidget::play(QString channel, QString quality) {
         _controls->set_qualities(quality, qualities);
     });
 
-    _overlay->show();
+    _details->show();
 
     if (!quality.isEmpty()) {
         using namespace constants::settings::streams;
@@ -111,7 +122,7 @@ void VideoWidget::set_volume(int volume) {
     _vol = volume;
     _media_player.set_volume(_muted ? 0 : _vol);
     _controls->set_volume(_vol);
-    _overlay->show_text(QString::number(_vol) + " %");
+    _details->show_state(QString("%1 %").arg(_vol));
 }
 
 bool VideoWidget::muted() const {
@@ -122,12 +133,12 @@ void VideoWidget::set_muted(bool muted) {
     _muted = muted;
     set_volume(_vol);
     _controls->set_muted(_muted);
-    _overlay->show_text(muted ? "Muted" : "Unmuted");
+    _details->show_state(muted ? "Muted" : "Unmuted");
 }
 
 void VideoWidget::fast_forward() {
     _media_player.set_position(1.0f);
-    _overlay->show_text("Fast forward...");
+    _details->show_state("Fast forward...");
 }
 
 libvlc::MediaPlayer & VideoWidget::media_player() {
@@ -138,8 +149,8 @@ void VideoWidget::update_overlay_position() {
     auto top_left = mapToGlobal(pos()) - pos();
     auto bottom_left = top_left + QPoint(0, height());
 
-    _overlay->resize(size());
-    _overlay->move(top_left);
+    _details->resize(size());
+    _details->move(top_left);
     _controls->resize(width(), _controls->height());
     _controls->move(bottom_left - QPoint(0, _controls->height()));
 }
@@ -189,118 +200,4 @@ void VideoWidget::mouseMoveEvent(QMouseEvent *event) {
     }
     else
         QWidget::mouseMoveEvent(event);
-}
-
-void VideoWidget::keyPressEvent(QKeyEvent *event) {
-    QWidget::keyPressEvent(event);
-    // keypresses might trigger parent's shortcuts which might modify the
-    // overlay. It's hard to detect without adding strong coupling with the
-    // parent so for now let's just schedule an overlay update for the next
-    // event loop iteration
-    delayed(this, 0, [this] { update_overlay_position(); });
-}
-
-MovementFilter::MovementFilter(VideoWidget & video_widget):
-    QObject(&video_widget),
-    _video_widget(video_widget)
-{ }
-
-bool MovementFilter::eventFilter(QObject *watched, QEvent *event) {
-    if (event->type() == QEvent::Type::Move)
-        _video_widget.update_overlay_position();
-    return QObject::eventFilter(watched, event);
-}
-
-VideoOverlay::VideoOverlay(QWidget *parent):
-    QWidget(parent),
-    _timer(new QTimer(this)),
-    _spinner_timer(new QTimer(this)),
-    _spinner(":/images/kappa.png")
-{
-    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
-
-    setAttribute(Qt::WA_NoSystemBackground);
-    setAttribute(Qt::WA_TranslucentBackground);
-    setAttribute(Qt::WA_PaintOnScreen);
-    setAttribute(Qt::WA_TransparentForMouseEvents);
-
-    _text_font.setBold(true);
-    _text_font.setPointSize(40);
-    _text_font.setWeight(40);
-
-    _timer->setInterval(2500);
-    QObject::connect(_timer, &QTimer::timeout, [this] {
-        _text.reset();
-        repaint();
-    });
-
-    _spinner_timer->setInterval(20);
-    QObject::connect(_spinner_timer, &QTimer::timeout, [this] {
-        _spinner_angle = (_spinner_angle + 6) % 360;
-        repaint();
-    });
-}
-
-void VideoOverlay::mouseReleaseEvent(QMouseEvent *event) {
-    event->ignore();
-    parentWidget()->activateWindow();
-};
-
-void VideoOverlay::paintEvent(QPaintEvent *event) {
-    QPainter painter { this };
-
-    painter.setFont(_text_font);
-    painter.setPen(Qt::white);
-
-    if (_text) {
-        QRect br;
-        painter.drawText(rect(), Qt::AlignTop | Qt::AlignRight, *_text, &br);
-
-        QLinearGradient gradient(br.topLeft(), br.bottomLeft());
-        gradient.setColorAt(0, QColor(0, 0, 0, 0xB0));
-        gradient.setColorAt(1, QColor(0, 0, 0, 0x00));
-
-        painter.fillRect(br, QBrush(gradient));
-        painter.drawText(rect(), Qt::AlignTop | Qt::AlignRight, *_text);
-    }
-
-    if (_show_spinner) {
-        auto centered_rect = _spinner.rect();
-        auto aspect_ratio = (float)centered_rect.height() / centered_rect.width();
-        if (rect().width() < centered_rect.width()) {
-            auto new_width = rect().width();
-            centered_rect.setWidth(new_width);
-            centered_rect.setHeight(new_width * aspect_ratio);
-        }
-        if (rect().height() < centered_rect.height()) {
-            auto new_height = rect().height();
-            centered_rect.setHeight(new_height);
-            centered_rect.setWidth(new_height / aspect_ratio);
-        }
-        centered_rect.moveCenter(rect().center());
-        painter.translate(rect().center());
-        painter.rotate(_spinner_angle);
-        painter.drawImage(
-            centered_rect.translated(-rect().center()),
-            _spinner
-        );
-    }
-
-    QWidget::paintEvent(event);
-}
-
-void VideoOverlay::show_text(QString new_text) {
-    _text.emplace(new_text);
-    _timer->start();
-    repaint();
-}
-
-void VideoOverlay::set_buffering(bool enabled) {
-    if (enabled == _show_spinner)
-        return ;
-    _show_spinner = enabled;
-    _spinner_angle = 0;
-    if (enabled) _spinner_timer->start();
-    else         _spinner_timer->stop();
-    repaint();
 }
