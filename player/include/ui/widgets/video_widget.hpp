@@ -53,5 +53,7 @@ private:
 
     QString _current_channel, _current_quality;
 
+    QTimer *_retry_timer;
+
     void update_overlay_position();
 };

@@ -38,7 +38,8 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     _media_player(libvlc::MediaPlayer(instance)),
     _details(new VideoDetails(this)),
     _controls(new VideoControls(this)),
-    _event_watcher(new VLCEventWatcher(_media_player, this))
+    _event_watcher(new VLCEventWatcher(_media_player, this)),
+    _retry_timer(new QTimer(this))
 {
     auto notifier = new EventNotifier(OVERLAY_INVALIDATING_EVENTS, this);
     window()->installEventFilter(notifier);
@@ -71,18 +72,25 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
         activateWindow();
     });
 
+    _retry_timer->setSingleShot(true);
+    _retry_timer->setInterval(1000);
+    QObject::connect(_retry_timer, &QTimer::timeout, [=] {
+        play(_current_channel, _current_quality);
+        _retry_timer->setInterval(_retry_timer->interval() * 2);
+    });
+
     QObject::connect(_event_watcher, &VLCEventWatcher::new_event, [=](auto event) {
         using namespace libvlc::events;
 
         auto set_buffering = [=](bool on) { _details->set_buffering(on); };
-        auto refresh_stream = [=] { play(_current_channel, _current_quality); };
+        auto schedule_refresh = [=] { _retry_timer->start(); };
 
         match(event,
             [=](Opening)          { set_buffering(true); },
             [=](Buffering b)      { set_buffering(b.cache_percent != 100.f); },
-            [=](EndReached)       { refresh_stream(); },
-            [=](Stopped)          { refresh_stream(); },
-            [=](EncounteredError) { refresh_stream(); },
+            [=](EndReached)       { schedule_refresh(); },
+            [=](Stopped)          { schedule_refresh(); },
+            [=](EncounteredError) { schedule_refresh(); },
             [=](auto)             { }
         );
     });
@@ -102,7 +110,9 @@ void VideoWidget::play(QString channel, QString quality) {
 
     _api.stream_index(channel).then([=](StreamIndex index) {
         auto qualities = quality_names(index);
+        _controls->clear_qualities();
         _controls->set_qualities(quality, qualities);
+        _retry_timer->setInterval(1000);
     });
 
     _details->show();
