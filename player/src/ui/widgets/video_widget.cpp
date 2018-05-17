@@ -137,7 +137,7 @@ void VideoWidget::set_muted(bool muted) {
 }
 
 void VideoWidget::fast_forward() {
-    _media_player.set_position(1.0f);
+    _media_player.set_position(std::nextafter(1.0f, 0.f));
     _details->show_state("Fast forward...");
 }
 
