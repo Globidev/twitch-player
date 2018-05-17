@@ -16,3 +16,5 @@ void toggle_always_on_top(WindowHandle, bool);
 void sysclose_window(WindowHandle);
 
 void redraw(WindowHandle);
+
+void set_transparent(WindowHandle);

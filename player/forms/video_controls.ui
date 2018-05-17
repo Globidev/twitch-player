@@ -14,7 +14,9 @@
    <string>Video Controls</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background-color: transparent;</string>
+   <string notr="true">QWidget#VideoControls {
+background-color: qlineargradient(spread:pad, x1:0, y1:1, x2:0, y2:0, stop:0 rgba(0, 0, 0, 176), stop:1 rgba(0, 0, 0, 0));
+}</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>

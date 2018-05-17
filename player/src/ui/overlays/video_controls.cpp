@@ -1,8 +1,6 @@
 #include "ui/overlays/video_controls.hpp"
 #include "ui_video_controls.h"
 
-#include "ui/native/capabilities.hpp"
-
 #include <QTimer>
 #include <QMouseEvent>
 #include <QPainter>
@@ -15,7 +13,7 @@ VideoControls::VideoControls(QWidget *parent):
 {
     _ui->setupUi(this);
 
-    setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
+    setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
 
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_TransparentForMouseEvents);

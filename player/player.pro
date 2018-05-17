@@ -2,6 +2,7 @@ TARGET          =   twitch-player
 TEMPLATE        =   app
 
 QT              +=  core gui widgets network
+QTPLUGIN        +=  qsvg
 
 include(vendor/qtpromise-0.3.0/qtpromise.pri)
 
@@ -92,6 +93,7 @@ FORMS           +=  forms/main_window.ui \
                     forms/stream_card.ui \
                     forms/filters_tool.ui \
                     forms/video_controls.ui \
+                    forms/stream_details.ui \
 
 RESOURCES       =   resources/player.qrc
 

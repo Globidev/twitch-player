@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="icons">
+    <file>joystick.svg</file>
+    <file>viewers.svg</file>
     <file>fast_forward.png</file>
     <file>icon.ico</file>
     <file>volume_off.png</file>

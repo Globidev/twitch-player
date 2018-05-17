@@ -103,3 +103,8 @@ void sysclose_window(HWND handle) {
 void redraw(HWND handle) {
     InvalidateRect(handle, nullptr, TRUE);
 }
+
+void set_transparent(HWND handle) {
+    auto styles = GetWindowLong(handle, GWL_EXSTYLE);
+    SetWindowLong(handle, GWL_EXSTYLE, styles | WS_EX_TRANSPARENT);
+}

@@ -5,6 +5,8 @@
 struct ChannelData {
     QString name, display_name;
     QString title;
+    QString logo_url;
+    uint32_t id;
 };
 
 struct StreamData {
@@ -19,5 +21,11 @@ struct TwitchAPI: APIClient {
 
     streams_response_t stream_search(QString);
     streams_response_t top_streams();
-    streams_response_t followed_streams(const QString & token);
+    streams_response_t followed_streams(const QString &);
+
+    using stream_response_t = response_t<StreamData>;
+    stream_response_t stream(uint32_t);
+
+    using channels_response_t = response_t<QList<ChannelData>>;
+    channels_response_t channel_search(const QString &);
 };

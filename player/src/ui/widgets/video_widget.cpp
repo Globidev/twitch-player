@@ -106,6 +106,7 @@ void VideoWidget::play(QString channel, QString quality) {
     _media_player.set_media(*_media);
     _media_player.play();
 
+    _details->set_channel(channel);
     _controls->clear_qualities();
 
     _api.stream_index(channel).then([=](StreamIndex index) {
@@ -191,6 +192,7 @@ void VideoWidget::showEvent(QShowEvent *event) {
 
 void VideoWidget::mousePressEvent(QMouseEvent *event) {
     _controls->appear();
+    _details->show_stream_details();
 
     if (event->buttons().testFlag(Qt::MouseButton::LeftButton))
         _last_drag_position = event->globalPos();
@@ -200,6 +202,7 @@ void VideoWidget::mousePressEvent(QMouseEvent *event) {
 
 void VideoWidget::mouseMoveEvent(QMouseEvent *event) {
     _controls->appear();
+    _details->show_stream_details();
 
     if (event->buttons().testFlag(Qt::MouseButton::LeftButton)) {
         auto delta = event->globalPos() - _last_drag_position;
