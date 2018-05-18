@@ -80,7 +80,13 @@ void MediaPlayer::set_media(Media &media) {
 }
 
 void MediaPlayer::set_renderer(void *hwnd) {
-    libvlc_media_player_set_hwnd(&*this, hwnd);
+  #ifdef _WIN32
+      libvlc_media_player_set_hwnd(&*this, hwnd);
+  #elif __APPLE__
+      libvlc_media_player_set_nsobject(&*this, hwnd);
+  #elif __linux__
+      // todo
+  #endif
 }
 
 void MediaPlayer::play() {

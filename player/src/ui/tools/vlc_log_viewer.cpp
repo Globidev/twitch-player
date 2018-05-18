@@ -61,6 +61,8 @@ VLCLogViewer::VLCLogViewer(libvlc::Instance &video_context, QWidget *parent):
     add_filter(_ui->checkError,   libvlc::LogLevel::Error);
 }
 
+VLCLogViewer::~VLCLogViewer() = default;
+
 VLCLogItemModel::VLCLogItemModel(QObject *parent):
     QAbstractItemModel(parent)
 { }

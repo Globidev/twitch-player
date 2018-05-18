@@ -12,6 +12,7 @@
 class VideoOverlay: public QWidget {
 public:
     VideoOverlay(QWidget * = nullptr);
+    ~VideoOverlay();
 
     void show_text(QString);
     void set_buffering(bool);
@@ -45,6 +46,7 @@ private:
 class VideoWidget: public QWidget {
 public:
     VideoWidget(libvlc::Instance &, QWidget * = nullptr);
+    ~VideoWidget();
 
     void play(QString, QString);
 

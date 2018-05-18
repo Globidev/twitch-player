@@ -13,6 +13,7 @@ class StreamCard: public QWidget {
 
 public:
     StreamCard(StreamData, QWidget * = nullptr);
+    ~StreamCard();
 
 protected:
     void mousePressEvent(QMouseEvent *) override;

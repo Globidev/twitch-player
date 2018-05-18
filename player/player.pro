@@ -7,6 +7,15 @@ include(vendor/qtpromise-0.3.0/qtpromise.pri)
 
 win32:QMAKE_CXXFLAGS    +=  /std:c++latest
 
+unix {
+    # Only way I found to make it compile with c++17
+    CONFIG -= c++11
+    QMAKE_CXXFLAGS += -std=c++17
+}
+
+QMAKE_CC          =   /usr/local/Cellar/llvm/6.0.0/bin/clang
+QMAKE_CXX         =   /usr/local/Cellar/llvm/6.0.0/bin/clang++
+
 release:CONFIG  +=  static
 
 SOURCES         +=  src/main.cpp \
@@ -78,6 +87,9 @@ HEADERS         +=  include/constants.hpp \
 
 win32:SOURCES   +=  src/ui/native/win32.cpp
 win32:HEADERS   +=  include/ui/native/win32.hpp
+
+macx:SOURCES    +=  src/ui/native/osx.cpp
+macx:HEADERS    +=  include/ui/native/osx.hpp
 
 FORMS           +=  forms/main_window.ui \
                     forms/stream_picker.ui \
