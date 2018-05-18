@@ -29,6 +29,8 @@ StreamCard::StreamCard(StreamData data, QWidget *parent):
     });
 }
 
+StreamCard::~StreamCard() = default;
+
 void StreamCard::mousePressEvent(QMouseEvent *) {
     emit clicked(_data.channel.name);
 }

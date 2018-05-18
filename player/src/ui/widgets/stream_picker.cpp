@@ -46,6 +46,8 @@ StreamPicker::StreamPicker(QWidget *parent):
     });
 }
 
+StreamPicker::~StreamPicker() = default;
+
 void StreamPicker::focusInEvent(QFocusEvent *event) {
     QWidget::focusInEvent(event);
     _ui->searchBox->setFocus();

@@ -13,6 +13,7 @@ class VideoControls: public QWidget {
 
 public:
     VideoControls(QWidget * = nullptr);
+    ~VideoControls();
 
     void set_volume(int);
     void set_muted(bool);

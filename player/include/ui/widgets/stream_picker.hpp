@@ -17,6 +17,7 @@ class StreamPicker: public QWidget {
 
 public:
     StreamPicker(QWidget * = nullptr);
+    ~StreamPicker();
 
 protected:
     void focusInEvent(QFocusEvent *) override;

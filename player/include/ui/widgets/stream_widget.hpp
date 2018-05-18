@@ -17,6 +17,7 @@ enum class ChatPosition { Left, Right };
 class StreamWidget: public QWidget {
 public:
     StreamWidget(libvlc::Instance &, QWidget * = nullptr);
+    ~StreamWidget();
 
     void play(QString, QString);
 
