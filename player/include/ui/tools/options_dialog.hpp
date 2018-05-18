@@ -14,6 +14,7 @@ class OptionsDialog: public QDialog {
 
 public:
     OptionsDialog(QWidget * = nullptr);
+    ~OptionsDialog();
 
 signals:
     void settings_changed();

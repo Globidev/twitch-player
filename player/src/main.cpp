@@ -5,6 +5,7 @@
 #include "ui/main_window.hpp"
 #include "ui/widgets/pane.hpp"
 
+#include <vlc/vlc.h>
 #include <QApplication>
 #include <QProcess>
 #include <QSettings>
@@ -18,39 +19,6 @@ struct Options {
 
 using VLCArgs = std::vector<std::string>;
 
-Options parse_options(QStringList args);
-VLCArgs load_vlc_args();
-void handle_vlc_init_failure();
-
-int main(int argc, char *argv[]) {
-    QProcess::startDetached(constants::TWITCHD_PATH, QStringList()
-        << "--client-id" << constants::TWITCHD_CLIENT_ID
-        << "--host" << "127.0.0.1"
-    );
-
-    QApplication app { argc, argv };
-
-    app.setOrganizationName("GlobiCorp");
-    app.setApplicationName("Twitch Player");
-
-    libvlc::Instance video_context { load_vlc_args() };
-
-    if (!video_context.init_success()) {
-        handle_vlc_init_failure();
-        return EXIT_FAILURE;
-    }
-
-    MainWindow main_window { video_context };
-    auto pane = main_window.add_pane(Position { 0, 0 });
-
-    auto options = parse_options(app.arguments());
-    if (options.initial_channel)
-        pane->play(*options.initial_channel);
-
-    main_window.show();
-
-    return app.exec();
-}
 
 static Options parse_options(QStringList args) {
     if (args.size() <= 1)
@@ -100,4 +68,34 @@ static void handle_vlc_init_failure() {
     );
 
     QMessageBox::critical(nullptr, "libvlc error", error_message);
+}
+
+int main(int argc, char *argv[]) {
+    QProcess::startDetached(constants::TWITCHD_PATH, QStringList()
+        << "--client-id" << constants::TWITCHD_CLIENT_ID
+        << "--host" << "127.0.0.1"
+    );
+
+    QApplication app { argc, argv };
+
+    app.setOrganizationName("GlobiCorp");
+    app.setApplicationName("Twitch Player");
+
+    libvlc::Instance video_context { load_vlc_args() };
+
+    if (!video_context.init_success()) {
+        handle_vlc_init_failure();
+        return EXIT_FAILURE;
+    }
+
+    MainWindow main_window { video_context };
+    auto pane = main_window.add_pane(Position { 0, 0 });
+
+    auto options = parse_options(app.arguments());
+    if (options.initial_channel)
+        pane->play(*options.initial_channel);
+
+    main_window.show();
+
+    return app.exec();
 }

@@ -96,6 +96,8 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     });
 }
 
+VideoWidget::~VideoWidget() = default;
+
 void VideoWidget::play(QString channel, QString quality) {
     _current_channel = channel;
     _current_quality = quality;

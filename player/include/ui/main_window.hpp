@@ -19,6 +19,7 @@ struct Instance;
 class Pane;
 class VLCLogViewer;
 class QStackedWidget;
+class QShortcut;
 
 class MainWindow : public QMainWindow {
 public:

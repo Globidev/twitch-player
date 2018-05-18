@@ -14,6 +14,7 @@ class VLCEventWatcher;
 class VideoWidget: public QWidget {
 public:
     VideoWidget(libvlc::Instance &, QWidget * = nullptr);
+    ~VideoWidget();
 
     void play(QString, QString);
 

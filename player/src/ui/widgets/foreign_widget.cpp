@@ -48,5 +48,5 @@ void ForeignWidget::redraw()  {
     // On Windows, there are sometimes issues where the window won't redraw
     // itself when the container or its parents are reparented
     if (_container)
-        ::redraw((HWND)(*_container)->winId());
+        ::redraw((WindowHandle)(*_container)->winId());
 }

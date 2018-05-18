@@ -50,6 +50,8 @@ StreamWidget::StreamWidget(libvlc::Instance &inst, QWidget *parent):
     _splitter->setSizes(QList<int>() << _video_size << _chat_size);
 }
 
+StreamWidget::~StreamWidget() = default;
+
 void StreamWidget::play(QString channel, QString quality) {
     using namespace constants::settings::chat_renderer;
 

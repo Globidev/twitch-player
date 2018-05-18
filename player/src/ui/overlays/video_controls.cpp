@@ -50,6 +50,8 @@ VideoControls::VideoControls(QWidget *parent):
     });
 }
 
+VideoControls::~VideoControls() = default;
+
 void VideoControls::set_volume(int volume) {
     QSignalBlocker blocker(this);
 
