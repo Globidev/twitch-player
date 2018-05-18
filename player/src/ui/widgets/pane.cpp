@@ -5,7 +5,7 @@
 
 #include "libvlc/bindings.hpp"
 
-#include <QHboxLayout>
+#include <QHBoxLayout>
 #include <QPainter>
 #include <QApplication>
 
