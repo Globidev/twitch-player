@@ -6,7 +6,11 @@
 #define Constant static const auto
 
 namespace constants {
-    Constant TWITCHD_PATH = "/Users/tripnity/Projects/Rust/twitch-player/player/debug/twitch-player.app/Contents/MacOS/twitchd";
+#ifdef _WIN32
+    Constant TWITCHD_PATH = "twitchd.exe";
+#else
+    Constant TWITCHD_PATH = "./twitchd";
+#endif
     Constant TWITCHD_CLIENT_ID = "alcht5gave31yctuzv48v2i1hlwq53";
 
     Constant OAUTH_REDIRECT_URI_PORT = 4242;
@@ -25,7 +29,11 @@ namespace constants {
             Constant KEY_CHAT_RENDERER_PATH = "chat-renderer/paths";
             // TODO: Improve default chat renderer path logic
             Constant CHROME_PATH =
+#ifdef _WIN32
+                R"(C:\Program Files (x86)\Google\Chrome\Application\chrome.exe)";
+#else
                 R"(/Applications/Google Chrome.app/Contents/MacOS/Google Chrome)";
+#endif
             Constant DEFAULT_CHAT_RENDERER_PATH = CHROME_PATH;
 
             Constant KEY_CHAT_RENDERER_ARGS = "chat-renderer/args";

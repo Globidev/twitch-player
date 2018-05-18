@@ -42,8 +42,8 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     if (event->modifiers() == Qt::ALT && event->key() == Qt::Key_Alt) {
         auto menu_visible = !_ui->menuBar->isVisible();
         _ui->menuBar->setVisible(menu_visible);
-        for (auto [_a, pair]: _shortcuts) {
-            auto [shortcut, _b] = pair;
+        for (auto [_key, pair]: _shortcuts) {
+            auto [shortcut, _action] = pair;
             shortcut->setEnabled(!menu_visible);
         }
     }

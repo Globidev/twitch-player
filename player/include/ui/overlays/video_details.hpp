@@ -14,6 +14,7 @@ class StreamDetails;
 class VideoDetails: public QWidget {
 public:
     VideoDetails(QWidget * = nullptr);
+    ~VideoDetails();
 
     void show_state(const QString &);
     void set_buffering(bool);

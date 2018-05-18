@@ -5,7 +5,7 @@
 #elif __APPLE__
     #include "ui/native/osx.hpp"
 #elif __linux__
-    static_assert(false, "Linux not supported yet");
+    #include "ui/native/x11.hpp"
 #else
     static_assert(false, "Unsupported target");
 #endif

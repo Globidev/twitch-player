@@ -58,6 +58,8 @@ VideoDetails::VideoDetails(QWidget *parent):
     set_transparent((WindowHandle)winId());
 }
 
+VideoDetails::~VideoDetails() = default;
+
 void VideoDetails::mouseReleaseEvent(QMouseEvent *event) {
     event->ignore();
     parentWidget()->activateWindow();

@@ -14,9 +14,6 @@ unix {
     QMAKE_CXXFLAGS += -std=c++17
 }
 
-QMAKE_CC          =   /usr/local/Cellar/llvm/6.0.0/bin/clang
-QMAKE_CXX         =   /usr/local/Cellar/llvm/6.0.0/bin/clang++
-
 release:CONFIG  +=  static
 
 SOURCES         +=  src/main.cpp \
@@ -98,6 +95,9 @@ win32:HEADERS   +=  include/ui/native/win32.hpp
 macx:SOURCES    +=  src/ui/native/osx.cpp
 macx:HEADERS    +=  include/ui/native/osx.hpp
 
+unix:!macx:SOURCES    +=  src/ui/native/x11.cpp
+unix:!macx:HEADERS    +=  include/ui/native/x11.hpp
+
 FORMS           +=  forms/main_window.ui \
                     forms/stream_picker.ui \
                     forms/vlc_log_viewer.ui \
@@ -121,8 +121,9 @@ isEmpty(LIBVLC_LIB_DIR) {
 INCLUDEPATH     +=  include \
                     $${LIBVLC_INCLUDE_DIR}
 
-LIBS            +=  -L$${LIBVLC_LIB_DIR} -llibvlc
-win32:LIBS      +=  -luser32
+LIBS            +=  -L$${LIBVLC_LIB_DIR}
+unix:LIBS       +=  -lvlc
+win32:LIBS      +=  -llibvlc -luser32
 
 release:DESTDIR = release
 debug:DESTDIR   = debug
