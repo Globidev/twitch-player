@@ -53,12 +53,6 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     QMainWindow::keyPressEvent(event);
 }
 
-void MainWindow::mousePressEvent(QMouseEvent *event) {
-    // Focus might have updated
-    for (auto pane: _panes)
-        pane->repaint();
-    QMainWindow::mousePressEvent(event);
-}
 Pane * MainWindow::add_pane(Position pos) {
     auto pane = new Pane(_video_context, this);
 
@@ -72,12 +66,6 @@ Pane * MainWindow::add_pane(Position pos) {
         }
     );
 
-void MainWindow::wheelEvent(QWheelEvent *event) {
-    // Focus might have updated
-    for (auto pane: _panes)
-        pane->repaint();
-    QMainWindow::wheelEvent(event);
-}
     QObject::connect(
         pane,
         &Pane::zoom_requested,

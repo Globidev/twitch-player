@@ -4,6 +4,7 @@
 #include "ui/widgets/stream_widget.hpp"
 #include "ui/widgets/video_widget.hpp"
 #include "ui/overlays/video_controls.hpp"
+#include "ui/utils/event_notifier.hpp"
 
 #include "libvlc/bindings.hpp"
 
@@ -15,6 +16,11 @@
 
 constexpr auto border_width = 1;
 
+static const auto FOCUS_INVALIDATING_EVENTS = {
+    QEvent::MouseButtonRelease,
+    QEvent::KeyRelease
+};
+
 Pane::Pane(libvlc::Instance &video_ctx, QWidget *parent):
     QWidget(parent),
     _video_ctx(video_ctx),
@@ -22,6 +28,13 @@ Pane::Pane(libvlc::Instance &video_ctx, QWidget *parent):
     _picker(std::make_unique<StreamPicker>(this)),
     _stream(std::make_unique<StreamWidget>(video_ctx, this))
 {
+    auto notifier = new EventNotifier(FOCUS_INVALIDATING_EVENTS, this);
+    window()->installEventFilter(notifier);
+
+    QObject::connect(notifier, &EventNotifier::new_event, [=] {
+        repaint();
+    });
+
     setup_picker();
     setup_stream();
 

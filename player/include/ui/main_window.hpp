@@ -32,8 +32,6 @@ public:
 protected:
     void changeEvent(QEvent *) override;
     void keyPressEvent(QKeyEvent *) override;
-    void mousePressEvent(QMouseEvent *) override;
-    void wheelEvent(QWheelEvent *) override;
 
 private:
     std::unique_ptr<Ui::MainWindow> _ui;
