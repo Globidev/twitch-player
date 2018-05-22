@@ -26,7 +26,11 @@ public:
 
     void fast_forward();
 
+    void hint_layout_change();
+
     libvlc::MediaPlayer & media_player();
+
+    VideoControls & controls() const;
 
 protected:
     void wheelEvent(QWheelEvent *) override;

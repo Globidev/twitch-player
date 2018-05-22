@@ -5,7 +5,10 @@
 #include "ui/widgets/stream_widget.hpp"
 #include "ui/widgets/video_widget.hpp"
 #include "ui/widgets/foreign_widget.hpp"
+#include "ui/overlays/video_controls.hpp"
 #include "ui/tools/vlc_log_viewer.hpp"
+
+#include "prelude/timer.hpp"
 
 #include <QStackedWidget>
 #include <QKeyEvent>
@@ -56,6 +59,18 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         pane->repaint();
     QMainWindow::mousePressEvent(event);
 }
+Pane * MainWindow::add_pane(Position pos) {
+    auto pane = new Pane(_video_context, this);
+
+    QObject::connect(
+        pane,
+        &Pane::remove_requested,
+        [=] {
+            // For some unknown reasons, the foreign widget doesn't get properly
+            // released unless we schedule the removing for later...
+            delayed(this, 250, [=] { remove_pane(pane); });
+        }
+    );
 
 void MainWindow::wheelEvent(QWheelEvent *event) {
     // Focus might have updated
@@ -63,14 +78,24 @@ void MainWindow::wheelEvent(QWheelEvent *event) {
         pane->repaint();
     QMainWindow::wheelEvent(event);
 }
+    QObject::connect(
+        pane,
+        &Pane::zoom_requested,
+        [=](bool on) { on ? zoom(pane) : unzoom(); }
+    );
 
-Pane * MainWindow::add_pane(Position pos) {
-    auto stream_container = new Pane(_video_context, this);
-    _grid->insert_widget(pos, stream_container);
-    stream_container->setFocus();
-    stream_container->activateWindow();
-    _panes.push_back(stream_container);
-    return stream_container;
+    QObject::connect(
+        pane,
+        &Pane::fullscreen_requested,
+        [=](bool on) { set_fullscreen(on); }
+    );
+
+    _grid->insert_widget(pos, pane);
+    pane->setFocus();
+    pane->activateWindow();
+    _panes.push_back(pane);
+
+    return pane;
 }
 
 void MainWindow::remove_pane(Pane *pane) {
@@ -118,30 +143,37 @@ void MainWindow::move_pane(Position from, Position to) {
         pane->repaint();
 }
 
+void MainWindow::set_fullscreen(bool on) {
+    setWindowState(windowState().setFlag(Qt::WindowFullScreen, on));
+    _action_fullscreen->setChecked(on);
+    for (auto pane: _panes)
+        pane->stream()->video()->controls().set_fullscreen(on);
+}
+
 bool MainWindow::is_zoomed() {
     return _central_widget->currentWidget() != _grid;
 }
 
-void MainWindow::zoom() {
+void MainWindow::zoom(Pane *pane) {
     if (is_zoomed()) {
-        _ui->actionStreamZoom->setChecked(true);
+        _action_stream_zoom->setChecked(true);
         return ;
     }
 
-    if (auto active_pane = focused_pane(); active_pane) {
-        _zoomed_position = _grid->widget_position(active_pane);
-        _central_widget->addWidget(active_pane);
-        _central_widget->setCurrentWidget(active_pane);
-        _ui->actionStreamZoom->setChecked(true);
-    }
-    else {
-        _ui->actionStreamZoom->setChecked(false);
+    _zoomed_position = _grid->widget_position(pane);
+    _central_widget->addWidget(pane);
+    _central_widget->setCurrentWidget(pane);
+    _action_stream_zoom->setChecked(true);
+
+    for (auto pane: _panes) {
+        pane->stream()->video()->controls().set_zoomed(true);
+        pane->stream()->video()->hint_layout_change();
     }
 }
 
 void MainWindow::unzoom() {
     if (!is_zoomed()) {
-        _ui->actionStreamZoom->setChecked(false);
+        _action_stream_zoom->setChecked(false);
         return ;
     }
 
@@ -155,7 +187,9 @@ void MainWindow::unzoom() {
     if (auto active_pane = focused_pane(); active_pane)
         active_pane->stream()->chat()->redraw();
 
-    _ui->actionStreamZoom->setChecked(false);
+    _action_stream_zoom->setChecked(false);
+    for (auto pane: _panes)
+        pane->stream()->video()->controls().set_zoomed(false);
 }
 
 void MainWindow::setup_audio_devices() {

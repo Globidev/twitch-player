@@ -11,6 +11,8 @@ namespace libvlc {
 }
 
 class Pane: public QWidget {
+    Q_OBJECT
+
 public:
     Pane(libvlc::Instance &, QWidget * = nullptr);
 
@@ -23,8 +25,18 @@ protected:
     void focusOutEvent(QFocusEvent *) override;
     void focusInEvent(QFocusEvent *) override;
 
+signals:
+    void remove_requested();
+    void zoom_requested(bool);
+    void fullscreen_requested(bool);
+
 private:
+    libvlc::Instance & _video_ctx;
+
     QHBoxLayout *_layout;
-    StreamPicker *_picker;
-    StreamWidget *_stream;
+    std::unique_ptr<StreamPicker> _picker;
+    std::unique_ptr<StreamWidget> _stream;
+
+    void setup_picker();
+    void setup_stream();
 };

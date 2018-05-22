@@ -22,6 +22,8 @@ public:
 
     void set_channel(const QString &);
 
+    void hide_stream_details();
+
 protected:
     void paintEvent(QPaintEvent *) override;
     void mouseReleaseEvent(QMouseEvent *) override;

@@ -63,6 +63,16 @@ void VideoControls::set_muted(bool muted) {
     set_volume_icon();
 }
 
+void VideoControls::set_zoomed(bool zoomed) {
+    _zoomed = zoomed;
+    set_zoomed_icon();
+}
+
+void VideoControls::set_fullscreen(bool fullscreen) {
+    _fullscreen = fullscreen;
+    set_fullscreen_icon();
+}
+
 void VideoControls::appear() {
     show();
     _appearTimer->start();
@@ -86,6 +96,16 @@ void VideoControls::set_volume_icon() {
     _ui->volumeLabel->setPixmap(QPixmap(icon_path));
 }
 
+void VideoControls::set_zoomed_icon() {
+    auto icon_path = _zoomed ? ":/icons/unzoom.png" : ":/icons/zoom.png";
+    _ui->zoomLabel->setPixmap(QPixmap(icon_path));
+}
+
+void VideoControls::set_fullscreen_icon() {
+    auto icon_path = _fullscreen ? ":/icons/fullscreen_exit.png" : ":/icons/fullscreen_enter.png";
+    _ui->fullscreenLabel->setPixmap(QPixmap(icon_path));
+}
+
 void VideoControls::mousePressEvent(QMouseEvent *event) {
     auto widget_clicked = [=](auto widget) {
         return widget->rect().contains(event->pos() - widget->pos());
@@ -98,6 +118,27 @@ void VideoControls::mousePressEvent(QMouseEvent *event) {
     else if (widget_clicked(_ui->fastForwardLabel)) {
         emit fast_forward();
     }
+    else if (widget_clicked(_ui->layoutLeftLabel)) {
+        emit layout_left_requested();
+    }
+    else if (widget_clicked(_ui->layoutRightLabel)) {
+        emit layout_right_requested();
+    }
+    else if (widget_clicked(_ui->zoomLabel)) {
+        _zoomed = !_zoomed;
+        emit zoom_requested(_zoomed);
+    }
+    else if (widget_clicked(_ui->fullscreenLabel)) {
+        _fullscreen = !_fullscreen;
+        emit fullscreen_requested(_fullscreen);
+    }
+    else if (widget_clicked(_ui->browseLabel)) {
+        emit browse_requested();
+    }
+    else if (widget_clicked(_ui->removeLabel)) {
+        emit remove_requested();
+    }
+
     QWidget::mousePressEvent(event);
     parentWidget()->activateWindow();
 }

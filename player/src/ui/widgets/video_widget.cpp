@@ -154,8 +154,20 @@ void VideoWidget::fast_forward() {
     _details->show_state("Fast forward...");
 }
 
+void VideoWidget::hint_layout_change() {
+    update_overlay_position();
+    if (!isVisible()) {
+        _controls->hide();
+        _details->hide_stream_details();
+    }
+}
+
 libvlc::MediaPlayer & VideoWidget::media_player() {
     return _media_player;
+}
+
+VideoControls & VideoWidget::controls() const {
+    return *_controls;
 }
 
 void VideoWidget::update_overlay_position() {

@@ -2,8 +2,12 @@
 
 #include "ui/widgets/stream_picker.hpp"
 #include "ui/widgets/stream_widget.hpp"
+#include "ui/widgets/video_widget.hpp"
+#include "ui/overlays/video_controls.hpp"
 
 #include "libvlc/bindings.hpp"
+
+#include "prelude/timer.hpp"
 
 #include <QHBoxLayout>
 #include <QPainter>
@@ -13,20 +17,18 @@ constexpr auto border_width = 1;
 
 Pane::Pane(libvlc::Instance &video_ctx, QWidget *parent):
     QWidget(parent),
+    _video_ctx(video_ctx),
     _layout(new QHBoxLayout(this)),
-    _picker(new StreamPicker(this)),
-    _stream(new StreamWidget(video_ctx, this))
+    _picker(std::make_unique<StreamPicker>(this)),
+    _stream(std::make_unique<StreamWidget>(video_ctx, this))
 {
-    QObject::connect(
-        _picker,
-        &StreamPicker::stream_picked,
-        [this](QString channel, QString quality) { play(channel, quality); }
-    );
+    setup_picker();
+    setup_stream();
 
     _stream->hide();
     setLayout(_layout);
 
-    _layout->addWidget(_picker);
+    _layout->addWidget(_picker.get());
 
     setFocusPolicy(Qt::StrongFocus);
     auto margins = QMargins(border_width, border_width, border_width, border_width);
@@ -38,8 +40,8 @@ Pane::Pane(libvlc::Instance &video_ctx, QWidget *parent):
 void Pane::play(QString channel, QString quality) {
     _picker->hide();
 
-    _layout->removeWidget(_picker);
-    _layout->addWidget(_stream);
+    _layout->removeWidget(_picker.get());
+    _layout->addWidget(_stream.get());
 
     _stream->setFocus();
     _stream->show();
@@ -49,7 +51,7 @@ void Pane::play(QString channel, QString quality) {
 }
 
 StreamWidget *Pane::stream() const {
-    return _stream;
+    return _stream.get();
 }
 
 void Pane::paintEvent(QPaintEvent *event) {
@@ -78,6 +80,62 @@ void Pane::focusOutEvent(QFocusEvent *event) {
 
 void Pane::focusInEvent(QFocusEvent *event) {
     QWidget::focusInEvent(event);
-    _layout->itemAt(0)->widget()->setFocus();
+    if (auto item = _layout->itemAt(0); item)
+        item->widget()->setFocus();
     repaint();
+}
+
+void Pane::setup_picker() {
+    auto play_stream = [=](QString channel, QString quality) {
+        play(channel, quality);
+    };
+
+    QObject::connect( _picker.get(), &StreamPicker::stream_picked, play_stream);
+}
+
+void Pane::setup_stream() {
+    auto on_browse = [=] {
+        // For some unknown reasons, the foreign widget doesn't get properly
+        // released unless we schedule the removing for later...
+        delayed(this, 250, [=] {
+            _layout->removeWidget(_stream.get());
+
+            _picker = std::make_unique<StreamPicker>(this);
+            _stream = std::make_unique<StreamWidget>(_video_ctx, this);
+            setup_picker();
+            setup_stream();
+
+            _layout->addWidget(_picker.get());
+
+            _picker->show();
+        });
+    };
+
+    QObject::connect(
+        &_stream->video()->controls(),
+        &VideoControls::browse_requested,
+        on_browse
+    );
+
+    QObject::connect(
+        &_stream->video()->controls(),
+        &VideoControls::remove_requested,
+        [=] { emit remove_requested(); }
+    );
+    QObject::connect(
+        &_stream->video()->controls(),
+        &VideoControls::zoom_requested,
+        [=](bool on) {
+            emit zoom_requested(on);
+            _stream->video()->controls().set_zoomed(on);
+        }
+    );
+    QObject::connect(
+        &_stream->video()->controls(),
+        &VideoControls::fullscreen_requested,
+        [=](bool on) {
+            emit fullscreen_requested(on);
+            _stream->video()->controls().set_fullscreen(on);
+        }
+    );
 }

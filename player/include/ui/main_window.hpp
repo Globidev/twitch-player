@@ -53,8 +53,9 @@ private:
     void move_focus(Position);
     void move_pane(Position, Position);
 
+    void set_fullscreen(bool);
     bool is_zoomed();
-    void zoom();
+    void zoom(Pane *);
     void unzoom();
 
     std::vector<std::pair<QString, std::pair<QShortcut *, QAction*>>> _shortcuts;
@@ -64,4 +65,7 @@ private:
 
     QMenu *_audio_devices_menu;
     void setup_audio_devices();
+
+    QAction *_action_stream_zoom;
+    QAction *_action_fullscreen;
 };

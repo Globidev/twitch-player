@@ -2,6 +2,7 @@
 
 #include "ui/widgets/video_widget.hpp"
 #include "ui/widgets/foreign_widget.hpp"
+#include "ui/overlays/video_controls.hpp"
 
 #include "libvlc/bindings.hpp"
 #include "constants.hpp"
@@ -48,6 +49,14 @@ StreamWidget::StreamWidget(libvlc::Instance &inst, QWidget *parent):
     _splitter->addWidget(_video);
     _splitter->addWidget(_chat);
     _splitter->setSizes(QList<int>() << _video_size << _chat_size);
+
+    QObject::connect(&_video->controls(), &VideoControls::layout_left_requested, [=] {
+        reposition_chat(ChatPosition::Left);
+    });
+
+    QObject::connect(&_video->controls(), &VideoControls::layout_right_requested, [=] {
+        reposition_chat(ChatPosition::Right);
+    });
 }
 
 StreamWidget::~StreamWidget() = default;
@@ -117,6 +126,7 @@ void StreamWidget::reposition_chat(ChatPosition position) {
     _chat->setVisible(!_chat->isVisible() || _chat_position != position);
 
     _chat_position = position;
+    _video->hint_layout_change();
 }
 
 void StreamWidget::resize_chat(ChatPosition position) {

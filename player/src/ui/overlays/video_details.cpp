@@ -45,8 +45,7 @@ VideoDetails::VideoDetails(QWidget *parent):
 
     _stream_details_timer->setInterval(2500);
     QObject::connect(_stream_details_timer, &QTimer::timeout, [this] {
-        _show_stream_details = false;
-        repaint();
+        hide_stream_details();
     });
 
     _stream_details_ui->setupUi(_stream_details_widget.get());
@@ -154,6 +153,11 @@ void VideoDetails::set_channel(const QString &channel) {
     _stream_details_ui->channelLogo->setPixmap(QPixmap{});
     _has_valid_stream_details = false;
     fetch_channel_details();
+}
+
+void VideoDetails::hide_stream_details() {
+    _show_stream_details = false;
+    repaint();
 }
 
 void VideoDetails::fetch_channel_details() {

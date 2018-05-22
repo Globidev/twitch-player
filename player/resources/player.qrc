@@ -1,5 +1,13 @@
 <RCC>
   <qresource prefix="icons">
+    <file>unzoom.png</file>
+    <file>zoom.png</file>
+    <file>fullscreen_enter.png</file>
+    <file>browse.png</file>
+    <file>fullscreen_exit.png</file>
+    <file>layout_left.png</file>
+    <file>layout_right.png</file>
+    <file>remove.png</file>
     <file>joystick.svg</file>
     <file>viewers.svg</file>
     <file>fast_forward.png</file>

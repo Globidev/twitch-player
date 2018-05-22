@@ -94,7 +94,7 @@ void MainWindow::setup_shortcuts() {
 
     // View
     auto toggle_fullscreen = [=](bool on) {
-        setWindowState(windowState().setFlag(Qt::WindowFullScreen, on));
+        set_fullscreen(on);
     };
     auto toggle_window_borders = [=](bool on) {
         ::toggle_window_borders(window_handle(), on);
@@ -103,14 +103,22 @@ void MainWindow::setup_shortcuts() {
         ::toggle_always_on_top(window_handle(), on);
     };
     auto toggle_stream_zoon = [=](bool on) {
-        on ? zoom() : unzoom();
+        if (on) {
+            if (auto active_pane = focused_pane(); active_pane)
+                zoom(active_pane);
+            else
+                _action_stream_zoom->setChecked(false);
+        }
+        else {
+            unzoom();
+        }
     };
 
-    add_toggle(_ui->menuView, TOGGLE_FULL_SCREEN,    toggle_fullscreen);
+    _action_fullscreen = add_toggle(_ui->menuView, TOGGLE_FULL_SCREEN,    toggle_fullscreen);
     add_toggle(_ui->menuView, TOGGLE_WINDOW_BORDERS, toggle_window_borders)
         ->setChecked(true);
     add_toggle(_ui->menuView, TOGGLE_ALWAYS_ON_TOP, toggle_always_on_top);
-    add_toggle(_ui->menuView, TOGGLE_STREAM_ZOOM,   toggle_stream_zoon);
+    _action_stream_zoom = add_toggle(_ui->menuView, TOGGLE_STREAM_ZOOM,   toggle_stream_zoon);
         //
     _ui->menuView->addSeparator();
     auto add_pane_at  = [=](auto dpos) {
