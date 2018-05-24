@@ -3,7 +3,7 @@
 #include <string>
 #include <set>
 
-using WindowHandle = void *;
+using WindowHandle = unsigned long;
 using FindWindowResult = std::set<WindowHandle>;
 
 FindWindowResult find_windows_by_title_and_pname(std::string, std::string);
