@@ -50,6 +50,8 @@ Pane::Pane(libvlc::Instance &video_ctx, QWidget *parent):
     setAutoFillBackground(true);
 }
 
+Pane::~Pane() = default;
+
 void Pane::play(QString channel, QString quality) {
     _picker->hide();
 

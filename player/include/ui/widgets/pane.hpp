@@ -15,6 +15,7 @@ class Pane: public QWidget {
 
 public:
     Pane(libvlc::Instance &, QWidget * = nullptr);
+    ~Pane();
 
     void play(QString, QString = QString());
 
