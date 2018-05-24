@@ -31,8 +31,10 @@ namespace constants {
             Constant CHROME_PATH =
 #ifdef _WIN32
                 R"(C:\Program Files (x86)\Google\Chrome\Application\chrome.exe)";
-#else
+#elif __APPLE__
                 R"(/Applications/Google Chrome.app/Contents/MacOS/Google Chrome)";
+#elif __linux__
+                R"(/bin/google-chrome-stable)";
 #endif
             Constant DEFAULT_CHAT_RENDERER_PATH = CHROME_PATH;
 
