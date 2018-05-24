@@ -54,7 +54,7 @@ VideoDetails::VideoDetails(QWidget *parent):
 
     _http_client->setRedirectPolicy(QNetworkRequest::NoLessSafeRedirectPolicy);
 
-    set_transparent((WindowHandle)winId());
+    set_transparent(to_native_handle(winId()));
 }
 
 VideoDetails::~VideoDetails() = default;

@@ -78,7 +78,7 @@ void MainWindow::setup_shortcuts() {
     };
 
     auto window_handle = [this] {
-        return static_cast<WindowHandle>(window()->winId());
+        return to_native_handle(window()->winId());
     };
 
     auto still = [](auto pos) { return pos; };
