@@ -36,7 +36,7 @@ void SplitterGrid::insert_widget(Position pos, QWidget *widget) {
 void SplitterGrid::remove_widget(QWidget *widget) {
     auto pos = widget_position(widget);
 
-    if (pos.row < _inner_splitters.size()) {
+    if (static_cast<size_t>(pos.row) < _inner_splitters.size()) {
         auto inner_splitter_it = _inner_splitters.begin();
         std::advance(inner_splitter_it, pos.row);
         if ((*inner_splitter_it)->count() == 1) {
@@ -47,7 +47,7 @@ void SplitterGrid::remove_widget(QWidget *widget) {
 }
 
 Position SplitterGrid::widget_position(QWidget *widget) {
-    for (int row = 0; row < _inner_splitters.size(); ++row)
+    for (int row = 0; static_cast<size_t>(row) < _inner_splitters.size(); ++row)
         for (int col = 0; col < _inner_splitters[row]->count(); ++col)
             if (_inner_splitters[row]->widget(col) == widget)
                 return { row, col };
@@ -103,7 +103,7 @@ QSplitter * SplitterGrid::get_inner(int row) {
         _inner_splitters.insert(_inner_splitters.begin(), splitter);
         return splitter;
     }
-    else if (row >= _inner_splitters.size()) {
+    else if (static_cast<size_t>(row) >= _inner_splitters.size()) {
         auto splitter = new QSplitter(invert(_main_orientation), this);
         _main_splitter->addWidget(splitter);
         _main_splitter->setSizes(equal_sizes(_main_splitter->count()));

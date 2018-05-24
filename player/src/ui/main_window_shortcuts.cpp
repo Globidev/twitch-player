@@ -69,7 +69,7 @@ void MainWindow::setup_shortcuts() {
         return action;
     };
 
-    auto add_action = [this](auto action, auto slot) {
+    auto add_action = [](auto action, auto slot) {
         QObject::connect(action, &QAction::triggered, slot);
     };
 
@@ -78,7 +78,7 @@ void MainWindow::setup_shortcuts() {
     };
 
     auto window_handle = [this] {
-        return reinterpret_cast<WindowHandle>(window()->winId());
+        return static_cast<WindowHandle>(window()->winId());
     };
 
     auto still = [](auto pos) { return pos; };
@@ -190,7 +190,7 @@ void MainWindow::setup_shortcuts() {
         _vlc_log_viewer->show();
         _vlc_log_viewer->raise();
     });
-    add_action(_ui->actionLoginWithTwitch, [this] {
+    add_action(_ui->actionLoginWithTwitch, [] {
         {
             QSettings settings;
 

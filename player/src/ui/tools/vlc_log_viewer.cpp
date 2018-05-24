@@ -91,7 +91,7 @@ int VLCLogItemModel::columnCount(const QModelIndex &) const {
 }
 
 QVariant VLCLogItemModel::data(const QModelIndex &index, int role) const {
-    if (index.row() >= entries.size())
+    if (static_cast<size_t>(index.row()) >= entries.size())
         return QVariant();
 
     auto & entry = entries[index.row()];
@@ -135,7 +135,7 @@ VLCLogItemFilter::VLCLogItemFilter(VLCLogItemModel &model, QObject *parent):
 }
 
 bool VLCLogItemFilter::filterAcceptsRow(int row, const QModelIndex &) const {
-    if (row >= _model.entries.size())
+    if (static_cast<size_t>(row) >= _model.entries.size())
         return false;
 
     return _filtered_levels.count(_model.entries[row].data.level) == 0;

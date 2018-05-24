@@ -123,6 +123,7 @@ INCLUDEPATH     +=  include \
 
 LIBS            +=  -L$${LIBVLC_LIB_DIR}
 unix:LIBS       +=  -lvlc
+unix:!macx:LIBS +=  -lX11
 win32:LIBS      +=  -llibvlc -luser32
 
 release:DESTDIR = release

@@ -44,11 +44,11 @@ public:
     Qt::Orientation orientation() const;
 
 private:
+    Qt::Orientation _main_orientation = Qt::Vertical;
+
     QHBoxLayout *_layout;
     QSplitter *_main_splitter;
     std::vector<QSplitter *> _inner_splitters;
-
-    Qt::Orientation _main_orientation = Qt::Vertical;
 
     QSplitter * get_inner(int);
 };
