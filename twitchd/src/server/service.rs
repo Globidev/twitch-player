@@ -13,6 +13,8 @@ use super::state::{State, index_cache::IndexError};
 
 use std::rc::Rc;
 
+const DAEMON_VERSION: &str = "0.9.5";
+
 type ApiRequest = server::Request;
 type ApiResponse = server::Response;
 type ApiError = hyper::Error;
@@ -60,6 +62,12 @@ impl TwitchdApi {
         }
     }
 
+    fn get_version(&self) -> ApiFuture {
+        let response = ApiResponse::new()
+            .with_body(DAEMON_VERSION);
+        respond(response)
+    }
+
     fn fetch_and_play(&self, stream: Stream) -> ApiFuture {
         let (channel, quality) = stream.clone();
 
@@ -99,8 +107,11 @@ impl server::Service for TwitchdApi {
             .unwrap_or_default();
 
         match (req.method(), req.path()) {
+            // Capabilities
             (Get, "/stream_index") => self.get_stream_index(params),
             (Get, "/play")         => self.get_video_stream(params),
+            // Utilities
+            (Get,  "/version")      => self.get_version(),
             // Default => 404
             _ => respond(not_found())
         }
