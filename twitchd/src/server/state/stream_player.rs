@@ -58,7 +58,16 @@ impl StreamPlayer {
             }
         };
 
-        segment_stream(self.client.clone(), playlist_info, self.opts.player_playlist_fetch_interval)
+        let video_data_stream = segment_stream(
+            self.client.clone(),
+            playlist_info,
+            self.opts.player_playlist_fetch_interval
+        );
+
+        let video_data_stream_with_timeout = Timer::default()
+            .timeout_stream(video_data_stream, Duration::from_secs(10));
+
+        video_data_stream_with_timeout
             .for_each(write_to_sinks)
     }
 
@@ -129,9 +138,20 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
         .filter_map(|opt_segment| opt_segment)
 }
 
+#[derive(Debug)]
 pub enum StreamPlayerError {
     TimerError(tokio_timer::TimerError),
     FetchPlaylistFail(ApiError),
     FetchSegmentFail(HttpError),
-    InactiveTooLong
+    InactiveTooLong,
+    TooLongToFetch
+}
+
+impl<T> From<tokio_timer::TimeoutError<T>> for StreamPlayerError
+where
+    T: Stream<Error = StreamPlayerError>
+{
+    fn from(_err: tokio_timer::TimeoutError<T>) -> Self {
+        StreamPlayerError::TooLongToFetch
+    }
 }

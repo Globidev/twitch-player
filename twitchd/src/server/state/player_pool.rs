@@ -41,7 +41,8 @@ impl PlayerPool {
         let remove_player = {
             let stream = stream.clone();
             let players = Rc::clone(&self.players);
-            move |_result| {
+            move |result| {
+                println!("{:?}", result);
                 players.borrow_mut().remove(&stream);
                 Ok(())
             }
