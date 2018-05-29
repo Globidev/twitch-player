@@ -55,6 +55,10 @@ pub struct Options {
                 parse(try_from_str = "parse_duration"),
                 help = "Duration after which an inactive stream will be closed")]
     pub player_inactive_timeout: Duration,
+    #[structopt(long = "player-fetch-timeout", default_value = "5s",
+                parse(try_from_str = "parse_duration"),
+                help = "Maximum time allowed to fetch video data from Twitch")]
+    pub player_fetch_timeout: Duration,
 }
 
 #[derive(Debug)]

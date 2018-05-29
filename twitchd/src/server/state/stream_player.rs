@@ -65,7 +65,7 @@ impl StreamPlayer {
         );
 
         let video_data_stream_with_timeout = Timer::default()
-            .timeout_stream(video_data_stream, Duration::from_secs(10));
+            .timeout_stream(video_data_stream, self.opts.player_fetch_timeout);
 
         video_data_stream_with_timeout
             .for_each(write_to_sinks)
