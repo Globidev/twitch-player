@@ -68,6 +68,14 @@ impl TwitchdApi {
         respond(response)
     }
 
+    fn quit(&self) -> ApiFuture {
+        if let Some(signal) = self.state.shutdown_signal.take() {
+            signal.send(()).unwrap_or_default();
+        }
+        let response = ApiResponse::new();
+        respond(response)
+    }
+
     fn fetch_and_play(&self, stream: Stream) -> ApiFuture {
         let (channel, quality) = stream.clone();
 
@@ -100,7 +108,7 @@ impl server::Service for TwitchdApi {
     type Future = ApiFuture;
 
     fn call(&self, req: Self::Request) -> Self::Future {
-        use self::hyper::Method::Get;
+        use self::hyper::Method::{Get, Post};
 
         let params = req.query()
             .map(parse_query_params)
@@ -112,6 +120,7 @@ impl server::Service for TwitchdApi {
             (Get, "/play")         => self.get_video_stream(params),
             // Utilities
             (Get,  "/version")      => self.get_version(),
+            (Post, "/quit")         => self.quit(),
             // Default => 404
             _ => respond(not_found())
         }

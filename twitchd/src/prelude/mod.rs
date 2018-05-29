@@ -10,6 +10,7 @@ pub mod futures {
 
     pub use self::futures::prelude::*;
     pub use self::futures::future;
+    pub use self::futures::sync;
 }
 
 pub mod http;
