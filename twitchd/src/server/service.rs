@@ -13,7 +13,7 @@ use super::state::{State, index_cache::IndexError};
 
 use std::rc::Rc;
 
-const DAEMON_VERSION: &str = "0.9.5";
+const DAEMON_VERSION: &str = "1.0.0";
 
 type ApiRequest = server::Request;
 type ApiResponse = server::Response;
@@ -49,14 +49,34 @@ impl TwitchdApi {
                 let quality = params.get("quality")
                     .map(|raw_quality| Quality::from(raw_quality.clone()))
                     .unwrap_or_default();
+                let meta_key = params.get("meta_key")
+                    .cloned();
                 let stream = (channel.clone(), quality);
 
                 if self.state.player_pool.is_playing(&stream) {
                     let (sink, response) = streaming_response();
-                    self.state.player_pool.add_sink(&stream, sink);
+                    self.state.player_pool.add_sink(&stream, sink, meta_key);
                     respond(response)
                 } else {
-                    self.fetch_and_play(stream)
+                    self.fetch_and_play(stream, meta_key)
+                }
+            }
+        }
+    }
+
+    fn get_metadata(&self, params: QueryParams) -> ApiFuture {
+        match (params.get("channel"), params.get("key")) {
+            (None, _)                  => respond(bad_request("Missing channel")),
+            (_, None)                  => respond(bad_request("Missing key")),
+            (Some(channel), Some(key)) => {
+                let quality = params.get("quality")
+                    .map(|raw_quality| Quality::from(raw_quality.clone()))
+                    .unwrap_or_default();
+                let stream = (channel.clone(), quality);
+
+                match self.state.player_pool.get_metadata(&stream, key) {
+                    Some(metadata) => respond(json_response(metadata)),
+                    None        => respond(not_found())
                 }
             }
         }
@@ -76,7 +96,7 @@ impl TwitchdApi {
         respond(response)
     }
 
-    fn fetch_and_play(&self, stream: Stream) -> ApiFuture {
+    fn fetch_and_play(&self, stream: Stream, meta_key: Option<String>) -> ApiFuture {
         let (channel, quality) = stream.clone();
 
         let stream_response = {
@@ -86,7 +106,8 @@ impl TwitchdApi {
                     None                => not_found(),
                     Some(playlist) => {
                         let (sink, response) = streaming_response();
-                        state.player_pool.add_player(stream, playlist, sink);
+                        state.player_pool
+                            .add_player(stream, playlist, sink, meta_key);
                         response
                     }
                 }
@@ -118,6 +139,7 @@ impl server::Service for TwitchdApi {
             // Capabilities
             (Get, "/stream_index") => self.get_stream_index(params),
             (Get, "/play")         => self.get_video_stream(params),
+            (Get, "/meta")         => self.get_metadata(params),
             // Utilities
             (Get,  "/version")      => self.get_version(),
             (Post, "/quit")         => self.quit(),

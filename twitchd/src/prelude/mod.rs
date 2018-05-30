@@ -10,6 +10,7 @@ pub mod futures {
 
     pub use self::futures::prelude::*;
     pub use self::futures::future;
+    pub use self::futures::stream;
     pub use self::futures::sync;
 }
 

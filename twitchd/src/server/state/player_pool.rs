@@ -3,7 +3,7 @@ use prelude::http::{HttpsClient, http_client};
 use prelude::futures::*;
 use options::Options;
 
-use super::stream_player::{StreamPlayer, PlayerSink};
+use super::stream_player::{StreamPlayer, PlayerSink, MetaKey, SegmentMetadata};
 use twitch::types::{PlaylistInfo, Stream};
 
 use std::rc::Rc;
@@ -31,13 +31,18 @@ impl PlayerPool {
         self.players.borrow().contains_key(stream)
     }
 
-    pub fn add_sink(&self, stream: &Stream, sink: PlayerSink) {
+    pub fn add_sink(&self, stream: &Stream, sink: PlayerSink, opt_meta_key: Option<MetaKey>) {
         if let Some(player) = self.players.borrow().get(stream) {
-            player.add_sink(sink);
+            player.queue_sink(sink, opt_meta_key.unwrap_or_default());
         }
     }
 
-    pub fn add_player(&self, stream: Stream, playlist: PlaylistInfo, sink: PlayerSink) {
+    pub fn get_metadata(&self, stream: &Stream, meta_key: &MetaKey) -> Option<SegmentMetadata> {
+        self.players.borrow().get(stream)
+            .and_then(|player| player.get_metadata(meta_key))
+    }
+
+    pub fn add_player(&self, stream: Stream, playlist: PlaylistInfo, sink: PlayerSink, opt_meta_key: Option<MetaKey>) {
         let remove_player = {
             let stream = stream.clone();
             let players = Rc::clone(&self.players);
@@ -62,6 +67,6 @@ impl PlayerPool {
         self.players.borrow_mut()
             .entry(stream)
             .or_insert_with(new_player)
-            .add_sink(sink);
+            .queue_sink(sink, opt_meta_key.unwrap_or_default());
     }
 }
