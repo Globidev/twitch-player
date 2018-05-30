@@ -11,7 +11,8 @@
             "program": "${workspaceRoot}/target/debug/twitchd.exe",
             "args": [
                 "--client-id", "alcht5gave31yctuzv48v2i1hlwq53",
-                "--port", "9999"
+                "--port", "9999",
+                "--player-inactive-timeout", "10s"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
