@@ -89,15 +89,12 @@ impl StreamPlayer {
 
                         if !sink_queue.is_empty() {
                             if let Some(mut metadata) = extract_metadata(&data) {
-                                println!("{:#?} {}", metadata, total_stream_time);
                                 metadata.stream_offset = total_stream_time - metadata.stream_offset;
                                 let mut indexed_metadata = indexed_metadata.borrow_mut();
                                 for (key, sink) in sink_queue.split_off(0).into_iter() {
                                     sinks.push(sink);
                                     indexed_metadata.insert(key, metadata.clone());
                                 }
-                            } else {
-                                println!("Failed to parse metadata...");
                             }
                         }
 
@@ -188,6 +185,15 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
 
                 let segment_stream = fetch_streamed(&client, request)
                     .map_err(StreamPlayerError::FetchSegmentFail)
+                    .chunks(20)
+                    .map(|chunks| {
+                        let concatenated = chunks.iter()
+                            .fold(Vec::new(), |mut acc, chunk| {
+                                acc.extend(&chunk[..]);
+                                acc
+                            });
+                        Chunk::from(concatenated)
+                    })
                     .into_future()
                     .map_err(|(head_error, _tail)| head_error)
                     .map(move |(opt_head_chunk, tail)| {
