@@ -74,8 +74,20 @@ pub struct RestrictedPlaylistInfo {
     pub restriction: String,
 }
 
-pub type SegmentUrl = String;
-pub type Playlist = Vec<SegmentUrl>;
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct Segment {
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Playlist {
+    pub version: u32,
+    pub target_duration: u32,
+    pub media_sequence: u32,
+    pub twitch_elapsed_secs: f64,
+    pub twitch_total_secs: f64,
+    pub segments: Vec<Segment>,
+}
 
 pub type Channel = String;
 pub type Stream = (Channel, Quality);

@@ -11,6 +11,22 @@ use twitch::types::*;
 #[derive(Debug)]
 pub struct ParseError(pub String);
 
+pub fn parse_playlist(data: &[u8]) -> Result<Playlist, ParseError> {
+    use nom::IResult::*;
+
+    match playlist_parser(data) {
+        Done(_, result) => Ok(result),
+        Error(e) => {
+            let detail = format!("Error: {}", e);
+            Err(ParseError(detail))
+        },
+        Incomplete(n) => {
+            let detail = format!("Incomplete: {:?}", n);
+            Err(ParseError(detail))
+        }
+    }
+}
+
 pub fn parse_stream_index(data: &[u8]) -> Result<StreamIndex, ParseError> {
     use nom::IResult::*;
 
@@ -29,6 +45,11 @@ pub fn parse_stream_index(data: &[u8]) -> Result<StreamIndex, ParseError> {
 
 fn to_string(data: &[u8]) -> Result<String, Utf8Error> {
     from_utf8(data).map(String::from)
+}
+
+fn from_raw<T: FromStr>(data: &[u8]) -> Option<T> {
+    from_utf8(data).ok()
+        .and_then(|s| FromStr::from_str(s).ok())
 }
 
 named!(parse_quoted_string, delimited!(
@@ -90,6 +111,66 @@ named!(stream_index_parser<StreamIndex>, do_parse!(
         twitch_info: twitch_info,
         playlist_infos: playlist_infos,
         restricted_playlists_infos: restricted_playlists_infos
+    })
+));
+
+named!(playlist_version_parser<u32>, preceded!(
+    tag!("#EXT-X-VERSION:"),
+    map_opt!(take_until!("\n"), from_raw::<u32>)
+));
+
+named!(playlist_target_duration_parser<u32>, preceded!(
+    tag!("#EXT-X-TARGETDURATION:"),
+    map_opt!(take_until!("\n"), from_raw::<u32>)
+));
+
+named!(playlist_media_sequence_parser<u32>, preceded!(
+    tag!("#EXT-X-MEDIA-SEQUENCE:"),
+    map_opt!(take_until!("\n"), from_raw::<u32>)
+));
+
+named!(playlist_twitch_elapsed_secs_parser<f64>, preceded!(
+    tag!("#EXT-X-TWITCH-ELAPSED-SECS:"),
+    map_opt!(take_until!("\n"), from_raw::<f64>)
+));
+
+named!(playlist_twitch_total_secs_parser<f64>, preceded!(
+    tag!("#EXT-X-TWITCH-TOTAL-SECS:"),
+    map_opt!(take_until!("\n"), from_raw::<f64>)
+));
+
+named!(extinf_segment_parser<Segment>, do_parse!(
+    tag!("#EXTINF:") >> take_until!("\n") >> tag!("\n") >>
+    url:  map_res!(take_until!("\n"), to_string) >> tag!("\n") >>
+    (Segment { url })
+));
+
+named!(prefetch_segment_parser<Segment>, do_parse!(
+    tag!("#EXT-X-TWITCH-PREFETCH:") >>
+    url:  map_res!(take_until!("\n"), to_string) >> tag!("\n") >>
+    (Segment { url })
+));
+
+named!(playlist_segment_parser<Segment>, alt!(
+    extinf_segment_parser |
+    prefetch_segment_parser
+));
+
+named!(playlist_parser<Playlist>, do_parse!(
+    tag!("#EXTM3U") >> tag!("\n") >>
+    version: playlist_version_parser >> tag!("\n") >>
+    target_duration: playlist_target_duration_parser >> tag!("\n") >>
+    media_sequence: playlist_media_sequence_parser >> tag!("\n") >>
+    twitch_elapsed_secs: playlist_twitch_elapsed_secs_parser >> tag!("\n") >>
+    twitch_total_secs: playlist_twitch_total_secs_parser >> tag!("\n") >>
+    segments: many0!(playlist_segment_parser) >>
+    (Playlist {
+        version,
+        target_duration,
+        media_sequence,
+        twitch_elapsed_secs,
+        twitch_total_secs,
+        segments,
     })
 ));
 

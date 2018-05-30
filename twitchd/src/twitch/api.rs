@@ -74,7 +74,7 @@ fn stream_index_uri(channel: &str, token: &AccessToken) -> hyper::Uri {
     url.parse().unwrap()
 }
 
-fn parse_token (chunk: hyper::Chunk) -> ParseResult<AccessToken> {
+fn parse_token(chunk: hyper::Chunk) -> ParseResult<AccessToken> {
     use self::serde_json::from_slice as json_decode;
 
     json_decode(&chunk)
@@ -82,33 +82,18 @@ fn parse_token (chunk: hyper::Chunk) -> ParseResult<AccessToken> {
 }
 
 
-fn parse_index (chunk: hyper::Chunk) -> ParseResult<StreamIndex> {
+fn parse_index(chunk: hyper::Chunk) -> ParseResult<StreamIndex> {
     use super::m3u8::{ParseError, parse_stream_index};
 
     parse_stream_index(&chunk)
         .map_err(|ParseError(error)| ApiError::FormatError(error))
 }
 
-const EXT_PREFETCH_PREFIX: &str = "#EXT-X-TWITCH-PREFETCH:";
+fn parse_playlist(chunk: hyper::Chunk) -> ParseResult<Playlist> {
+    use super::m3u8::{ParseError, parse_playlist};
 
-fn parse_playlist(data: hyper::Chunk) -> ParseResult<Playlist> {
-    use std::str::from_utf8;
-
-    from_utf8(&data)
-        .map_err(|error| ApiError::FormatError(error.to_string()))
-        .map(|string| {
-            string.split('\n')
-                .filter_map(|line| {
-                    if line.starts_with("index-") || line.starts_with("http://") {
-                        Some(String::from(line))
-                    } else if line.starts_with(EXT_PREFETCH_PREFIX) {
-                        Some(String::from(&line[EXT_PREFETCH_PREFIX.len()..]))
-                    } else {
-                        None
-                    }
-                })
-                .collect()
-        })
+    parse_playlist(&chunk)
+        .map_err(|ParseError(error)| ApiError::FormatError(error))
 }
 
 #[derive(Debug)]
