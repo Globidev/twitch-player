@@ -76,7 +76,7 @@ pub struct RestrictedPlaylistInfo {
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct Segment {
-    pub url: String,
+    pub location: String,
 }
 
 #[derive(Debug, Clone, Serialize)]

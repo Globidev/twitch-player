@@ -141,14 +141,14 @@ named!(playlist_twitch_total_secs_parser<f64>, preceded!(
 
 named!(extinf_segment_parser<Segment>, do_parse!(
     tag!("#EXTINF:") >> take_until!("\n") >> tag!("\n") >>
-    url:  map_res!(take_until!("\n"), to_string) >> tag!("\n") >>
-    (Segment { url })
+    location:  map_res!(take_until!("\n"), to_string) >> tag!("\n") >>
+    (Segment { location })
 ));
 
 named!(prefetch_segment_parser<Segment>, do_parse!(
     tag!("#EXT-X-TWITCH-PREFETCH:") >>
-    url:  map_res!(take_until!("\n"), to_string) >> tag!("\n") >>
-    (Segment { url })
+    location:  map_res!(take_until!("\n"), to_string) >> tag!("\n") >>
+    (Segment { location })
 ));
 
 named!(playlist_segment_parser<Segment>, alt!(
