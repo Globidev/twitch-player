@@ -5,10 +5,16 @@ pub fn find_playlist(index: StreamIndex, quality: &Quality)
 {
     use self::Quality::{Exact, Approx};
 
-    match quality {
+    let default_playlist = index.playlist_infos
+        .first()
+        .cloned();
+
+    let playlist = match quality {
         Exact(exact_quality) => find_playlist_exact(index, exact_quality),
         Approx(approx_quality) => find_playlist_approx(index, approx_quality)
-    }
+    };
+
+    playlist.or(default_playlist)
 }
 
 fn find_playlist_exact(index: StreamIndex, quality: &str)
