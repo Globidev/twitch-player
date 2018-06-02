@@ -310,3 +310,50 @@ impl Extractable for MediaType {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Input;
+    use super::nom::IResult;
+
+    fn parse_test<T>(parser: fn(Input) -> IResult<Input, T>, data: &[u8]) {
+        let parsed_sucessfully = match parser(Input(data)) {
+            Ok((remaining, _)) if remaining.is_empty() => true,
+            _ => false
+        };
+
+        assert!(parsed_sucessfully);
+    }
+
+    #[test]
+    fn parse_simple_playlist() {
+        parse_test(
+            super::playlist_parser,
+            include_bytes!("../../test_samples/m3u8/simple_playlist.m3u8")
+        );
+    }
+
+    #[test]
+    fn parse_playlist_with_prefetch_segments() {
+        parse_test(
+            super::playlist_parser,
+            include_bytes!("../../test_samples/m3u8/playlist_with_prefetch_segments.m3u8")
+        );
+    }
+
+    #[test]
+    fn parse_simple_index() {
+        parse_test(
+            super::stream_index_parser,
+            include_bytes!("../../test_samples/m3u8/simple_index.m3u8")
+        );
+    }
+
+    #[test]
+    fn parse_index_with_restricted_playlist() {
+        parse_test(
+            super::stream_index_parser,
+            include_bytes!("../../test_samples/m3u8/index_with_restricted_playlist.m3u8")
+        );
+    }
+}
