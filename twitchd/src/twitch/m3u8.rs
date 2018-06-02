@@ -8,55 +8,45 @@ type RawInfoMap = HashMap<String, String>;
 
 use twitch::types::*;
 
+use nom::types::CompleteByteSlice as Input;
+
 #[derive(Debug)]
 pub struct ParseError(pub String);
 
 pub fn parse_playlist(data: &[u8]) -> Result<Playlist, ParseError> {
-    use nom::IResult::*;
-
-    match playlist_parser(data) {
-        Done(_, result) => Ok(result),
-        Error(e) => {
+    match playlist_parser(Input(data)) {
+        Ok((_, result)) => Ok(result),
+        Err(e) => {
             let detail = format!("Error: {}", e);
-            Err(ParseError(detail))
-        },
-        Incomplete(n) => {
-            let detail = format!("Incomplete: {:?}", n);
             Err(ParseError(detail))
         }
     }
 }
 
 pub fn parse_stream_index(data: &[u8]) -> Result<StreamIndex, ParseError> {
-    use nom::IResult::*;
-
-    match stream_index_parser(data) {
-        Done(_, result) => Ok(result),
-        Error(e) => {
+    match stream_index_parser(Input(data)) {
+        Ok((_, result)) => Ok(result),
+        Err(e) => {
             let detail = format!("Error: {}", e);
-            Err(ParseError(detail))
-        },
-        Incomplete(n) => {
-            let detail = format!("Incomplete: {:?}", n);
             Err(ParseError(detail))
         }
     }
 }
 
-fn to_string(data: &[u8]) -> Result<String, Utf8Error> {
-    from_utf8(data).map(String::from)
+fn to_string(data: Input) -> Result<String, Utf8Error> {
+    from_utf8(&data).map(String::from)
 }
 
-fn from_raw<T: FromStr>(data: &[u8]) -> Option<T> {
-    from_utf8(data).ok()
+fn from_raw<T: FromStr>(data: Input) -> Option<T> {
+    from_utf8(&data).ok()
         .and_then(|s| FromStr::from_str(s).ok())
 }
 
-named!(parse_quoted_string, delimited!(
+named!(parse_quoted_string<Input, Input>, delimited!(
     tag!("\""), take_until!("\""), tag!("\"")
 ));
 
-named!(parse_key_value<(String, String)>, separated_pair!(
+named!(parse_key_value<Input, (String, String)>, separated_pair!(
     map_res!(take_until!("="), to_string),
     tag!("="),
     map_res!(
@@ -65,105 +55,97 @@ named!(parse_key_value<(String, String)>, separated_pair!(
     )
 ));
 
-named!(raw_info_parser<RawInfoMap>, map!(
+named!(raw_info_parser<Input, RawInfoMap>, map!(
     separated_list!(tag!(","), parse_key_value),
     FromIterator::from_iter
 ));
 
-named!(twitch_info_parser<TwitchInfo>, preceded!(
+named!(twitch_info_parser<Input, TwitchInfo>, preceded!(
     tag!("#EXT-X-TWITCH-INFO:"),
     map_res!(raw_info_parser, extract_twitch_info)
 ));
 
-named!(media_info_parser<MediaInfo>, preceded!(
+named!(media_info_parser<Input, MediaInfo>, preceded!(
     tag!("#EXT-X-MEDIA:"),
     map_res!(raw_info_parser, extract_media_info)
 ));
 
-named!(stream_info_parser<StreamInfo>, preceded!(
+named!(stream_info_parser<Input, StreamInfo>, preceded!(
     tag!("#EXT-X-STREAM-INF:"),
     map_res!(raw_info_parser, extract_stream_info)
 ));
 
-named!(playlist_info_parser<PlaylistInfo>, do_parse!(
+named!(playlist_info_parser<Input, PlaylistInfo>, do_parse!(
     media_info:  media_info_parser                      >> tag!("\n") >>
     stream_info: stream_info_parser                     >> tag!("\n") >>
     url:         map_res!(take_until!("\n"), to_string) >> tag!("\n") >>
-    (PlaylistInfo {
-        media_info: media_info,
-        stream_info: stream_info,
-        url: url
-    })
+    (PlaylistInfo { media_info, stream_info, url })
 ));
 
-named!(restricted_playlist_info_parser<RestrictedPlaylistInfo>, delimited!(
+named!(restricted_playlist_info_parser<Input, RestrictedPlaylistInfo>, delimited!(
     tag!("#EXT-X-TWITCH-RESTRICTED:"),
     map_res!(raw_info_parser, extract_restricted_playlist_info),
     tag!("\n")
 ));
 
-named!(stream_index_parser<StreamIndex>, do_parse!(
-    tag!("#EXTM3U") >> tag!("\n") >>
-    twitch_info: twitch_info_parser >> tag!("\n") >>
+named!(stream_index_parser<Input, StreamIndex>, do_parse!(
+    tag!("#EXTM3U")                                                     >> tag!("\n") >>
+    twitch_info:                twitch_info_parser                      >> tag!("\n") >>
     restricted_playlists_infos: many0!(restricted_playlist_info_parser) >>
-    playlist_infos: many1!(playlist_info_parser) >>
-    (StreamIndex {
-        twitch_info: twitch_info,
-        playlist_infos: playlist_infos,
-        restricted_playlists_infos: restricted_playlists_infos
-    })
+    playlist_infos:             many1!(playlist_info_parser)            >>
+    (StreamIndex { twitch_info, playlist_infos, restricted_playlists_infos })
 ));
 
-named!(playlist_version_parser<u32>, preceded!(
+named!(playlist_version_parser<Input, u32>, preceded!(
     tag!("#EXT-X-VERSION:"),
     map_opt!(take_until!("\n"), from_raw::<u32>)
 ));
 
-named!(playlist_target_duration_parser<u32>, preceded!(
+named!(playlist_target_duration_parser<Input, u32>, preceded!(
     tag!("#EXT-X-TARGETDURATION:"),
     map_opt!(take_until!("\n"), from_raw::<u32>)
 ));
 
-named!(playlist_media_sequence_parser<u32>, preceded!(
+named!(playlist_media_sequence_parser<Input, u32>, preceded!(
     tag!("#EXT-X-MEDIA-SEQUENCE:"),
     map_opt!(take_until!("\n"), from_raw::<u32>)
 ));
 
-named!(playlist_twitch_elapsed_secs_parser<f64>, preceded!(
+named!(playlist_twitch_elapsed_secs_parser<Input, f64>, preceded!(
     tag!("#EXT-X-TWITCH-ELAPSED-SECS:"),
     map_opt!(take_until!("\n"), from_raw::<f64>)
 ));
 
-named!(playlist_twitch_total_secs_parser<f64>, preceded!(
+named!(playlist_twitch_total_secs_parser<Input, f64>, preceded!(
     tag!("#EXT-X-TWITCH-TOTAL-SECS:"),
     map_opt!(take_until!("\n"), from_raw::<f64>)
 ));
 
-named!(extinf_segment_parser<Segment>, do_parse!(
-    tag!("#EXTINF:") >> take_until!("\n") >> tag!("\n") >>
-    location:  map_res!(take_until!("\n"), to_string) >> tag!("\n") >>
+named!(extinf_segment_parser<Input, Segment>, do_parse!(
+    tag!("#EXTINF:") >> take_until_and_consume!("\n") >>
+    location:  map_res!(take_until_and_consume!("\n"), to_string) >>
     (Segment { location })
 ));
 
-named!(prefetch_segment_parser<Segment>, do_parse!(
+named!(prefetch_segment_parser<Input, Segment>, do_parse!(
     tag!("#EXT-X-TWITCH-PREFETCH:") >>
-    location:  map_res!(take_until!("\n"), to_string) >> tag!("\n") >>
+    location:  map_res!(take_until_and_consume!("\n"), to_string) >>
     (Segment { location })
 ));
 
-named!(playlist_segment_parser<Segment>, alt!(
+named!(playlist_segment_parser<Input, Segment>, alt!(
     extinf_segment_parser |
     prefetch_segment_parser
 ));
 
-named!(playlist_parser<Playlist>, do_parse!(
-    tag!("#EXTM3U") >> tag!("\n") >>
-    version: playlist_version_parser >> tag!("\n") >>
-    target_duration: playlist_target_duration_parser >> tag!("\n") >>
-    media_sequence: playlist_media_sequence_parser >> tag!("\n") >>
+named!(playlist_parser<Input, Playlist>, do_parse!(
+    tag!("#EXTM3U")                                          >> tag!("\n") >>
+    version:             playlist_version_parser             >> tag!("\n") >>
+    target_duration:     playlist_target_duration_parser     >> tag!("\n") >>
+    media_sequence:      playlist_media_sequence_parser      >> tag!("\n") >>
     twitch_elapsed_secs: playlist_twitch_elapsed_secs_parser >> tag!("\n") >>
-    twitch_total_secs: playlist_twitch_total_secs_parser >> tag!("\n") >>
-    segments: many0!(playlist_segment_parser) >>
+    twitch_total_secs:   playlist_twitch_total_secs_parser   >> tag!("\n") >>
+    segments:            many1!(playlist_segment_parser)     >>
     (Playlist {
         version,
         target_duration,

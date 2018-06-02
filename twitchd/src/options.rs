@@ -25,7 +25,7 @@ fn parse_duration(src: &str) -> Result<Duration, ParseDurationError> {
     ));
 
     parse_final(src.as_bytes())
-        .to_full_result()
+        .map(|(_remain, result)| result)
         .map_err(|_error| ParseDurationError)
 }
 
