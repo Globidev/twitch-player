@@ -322,3 +322,40 @@ where
         StreamPlayerError::TooLongToFetch
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    fn extract_metadata_test(data: &[u8]) {
+        assert!(super::extract_metadata(&Vec::from(data)).is_some());
+    }
+
+    #[test]
+    fn extract_source_segment_metadata() {
+        extract_metadata_test(
+            include_bytes!("../../../test_samples/mpeg_ts/source_1080p60.ts")
+        );
+    }
+
+    #[test]
+    fn extract_encoded_high_quality_segment_metadata() {
+        extract_metadata_test(
+            include_bytes!("../../../test_samples/mpeg_ts/encoded_720p60.ts")
+        );
+    }
+
+    #[test]
+    fn extract_encoded_medium_quality_segment_metadata() {
+        extract_metadata_test(
+            include_bytes!("../../../test_samples/mpeg_ts/encoded_480p.ts")
+        );
+    }
+
+    #[test]
+    fn extract_encoded_low_quality_segment_metadata() {
+        extract_metadata_test(
+            include_bytes!("../../../test_samples/mpeg_ts/encoded_160p.ts")
+        );
+    }
+
+}

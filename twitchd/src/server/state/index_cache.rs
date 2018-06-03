@@ -41,7 +41,7 @@ impl IndexCache {
         let channel_lc = channel.to_lowercase();
         let cached_index = self.cache.borrow()
             .get(&channel_lc)
-            .map(Clone::clone);
+            .cloned();
 
         match cached_index {
             Some(index) => Box::new(future::ok(index)),
