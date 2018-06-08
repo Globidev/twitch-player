@@ -1,28 +1,30 @@
-extern crate futures;
+extern crate url;
+extern crate http;
 extern crate hyper;
 extern crate hyper_tls;
 extern crate num_cpus;
-extern crate url;
 
-use self::futures::sync::mpsc;
-use self::hyper::{Client, client::HttpConnector};
+pub use self::http::method::Method;
+pub use self::http::header;
+
+use self::hyper::client::HttpConnector;
 use self::hyper_tls::{HttpsConnector, Error as TlsError};
 
-use super::asio::Handle;
 use super::futures::*;
 
 use std::collections::HashMap;
 
-pub type HttpsClient = Client<HttpsConnector<HttpConnector>>;
+pub type Request = hyper::Request<hyper::Body>;
+pub type Response = hyper::Response<hyper::Body>;
+pub type HttpsClient = hyper::Client<HttpsConnector<HttpConnector>>;
 pub type QueryParams = HashMap<String, String>;
-pub type ResponseSink = mpsc::Sender<Result<hyper::Chunk, hyper::Error>>;
+pub type ResponseSink = hyper::body::Sender;
 
-pub fn http_client(handle: &Handle) -> Result<HttpsClient, TlsError> {
-    let connector = HttpsConnector::new(num_cpus::get(), handle)?;
+pub fn http_client() -> Result<HttpsClient, TlsError> {
+    let connector = HttpsConnector::new(num_cpus::get())?;
 
-    let client = Client::configure()
-        .connector(connector)
-        .build(handle);
+    let client = hyper::Client::builder()
+        .build(connector);
 
     Ok(client)
 }
@@ -35,55 +37,35 @@ pub fn parse_query_params(query: &str) -> QueryParams {
         .collect()
 }
 
-pub fn fetch(client: &HttpsClient, request: hyper::Request)
+pub fn fetch(client: &HttpsClient, request: Request)
     -> impl Future<Item = hyper::Chunk, Error = HttpError>
 {
-    client.request(request)
-        .map_err(HttpError::NetworkError)
-        .and_then(read_response)
+    fetch_streamed(client, request)
+        .concat2()
 }
 
-pub fn fetch_streamed(client: &HttpsClient, request: hyper::Request)
+pub fn fetch_streamed(client: &HttpsClient, request: Request)
     -> impl Stream<Item = hyper::Chunk, Error = HttpError>
 {
     client.request(request)
-        .into_stream()
         .map_err(HttpError::NetworkError)
         .map(stream_response)
-        .flatten()
+        .flatten_stream()
 }
 
-pub fn streaming_response() -> (ResponseSink, hyper::Response) {
-    let (sink, body) = hyper::Body::pair();
-    let response = hyper::Response::new()
-        .with_body(body);
+pub fn streaming_response() -> (ResponseSink, Response) {
+    let (sink, body) = hyper::Body::channel();
+    let response = Response::new(body);
 
     (sink, response)
 }
 
-fn read_response(response: hyper::Response)
-    -> Box<Future<Item = hyper::Chunk, Error = HttpError>>
-{
+fn stream_response(response: Response) -> BoxStream<hyper::Chunk, HttpError> {
     match response.status() {
-        hyper::StatusCode::Ok => {
-            let full_body = response.body()
-                .concat2()
+        hyper::StatusCode::OK => {
+            let streamed_body = response.into_body()
                 .map_err(HttpError::NetworkError);
-            Box::new(full_body)
-        },
-        status => {
-            let error = future::err(HttpError::BadStatus(status));
-            Box::new(error)
-        }
-    }
-}
-
-fn stream_response(response: hyper::Response)
-    -> Box<Stream<Item = hyper::Chunk, Error = HttpError>>
-{
-    match response.status() {
-        hyper::StatusCode::Ok => {
-            Box::new(response.body().map_err(HttpError::NetworkError))
+            Box::new(streamed_body)
         },
         status => {
             let error = future::err(HttpError::BadStatus(status));

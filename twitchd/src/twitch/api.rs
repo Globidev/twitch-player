@@ -5,8 +5,6 @@ extern crate url;
 use prelude::http::*;
 use prelude::futures::*;
 
-use self::hyper::{Request, Get};
-
 use super::types::{AccessToken, StreamIndex, Playlist};
 
 type ParseResult<T> = Result<T, ApiError>;
@@ -14,9 +12,10 @@ type ParseResult<T> = Result<T, ApiError>;
 pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str)
     -> impl Future<Item = AccessToken, Error = ApiError>
 {
-    let mut request = Request::new(Get, access_token_uri(channel));
-    request.headers_mut()
-        .set_raw("Client-ID", client_id);
+    let request = hyper::Request::get(access_token_url(channel))
+        .header("Client-ID", client_id)
+        .body(hyper::Body::default())
+        .unwrap();
 
     api_call(client, request, parse_token)
 }
@@ -24,7 +23,9 @@ pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str)
 pub fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
     -> impl Future<Item = StreamIndex, Error = ApiError>
 {
-    let request = Request::new(Get, stream_index_uri(channel, token));
+    let request = hyper::Request::get(stream_index_url(channel, token))
+        .body(hyper::Body::default())
+        .unwrap();
 
     api_call(client, request, parse_index)
 }
@@ -32,12 +33,14 @@ pub fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
 pub fn playlist(client: &HttpsClient, url: &str)
     -> impl Future<Item = Playlist, Error = ApiError>
 {
-    let request = Request::new(Get, url.parse().unwrap_or_default());
+    let request = hyper::Request::get(url)
+        .body(hyper::Body::default())
+        .unwrap();
 
     api_call(client, request, parse_playlist)
 }
 
-fn api_call<F, T>(client: &HttpsClient, request: hyper::Request, parse: F)
+fn api_call<F, T>(client: &HttpsClient, request: Request, parse: F)
     -> impl Future<Item = T, Error = ApiError>
 where
     F: FnOnce(hyper::Chunk) -> ParseResult<T>
@@ -47,15 +50,14 @@ where
         .and_then(parse)
 }
 
-fn access_token_uri(channel: &str) -> hyper::Uri {
-    let url = format!(
+fn access_token_url(channel: &str) -> String {
+    format!(
         "https://api.twitch.tv/api/channels/{}/access_token",
         channel.to_lowercase()
-    );
-    url.parse().unwrap()
+    )
 }
 
-fn stream_index_uri(channel: &str, token: &AccessToken) -> hyper::Uri {
+fn stream_index_url(channel: &str, token: &AccessToken) -> String {
     use self::url::form_urlencoded;
 
     let query_string = form_urlencoded::Serializer::new(String::new())
@@ -65,13 +67,11 @@ fn stream_index_uri(channel: &str, token: &AccessToken) -> hyper::Uri {
         .append_pair("fast_bread",   "true")
         .finish();
 
-    let url = format!(
+    format!(
         "http://usher.twitch.tv/api/channel/hls/{}.m3u8?{}",
         channel.to_lowercase(),
         query_string
-    );
-
-    url.parse().unwrap()
+    )
 }
 
 fn parse_token(chunk: hyper::Chunk) -> ParseResult<AccessToken> {

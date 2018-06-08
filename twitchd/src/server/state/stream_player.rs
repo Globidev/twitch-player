@@ -1,18 +1,20 @@
 extern crate hyper;
-extern crate tokio_timer;
+extern crate tokio;
 extern crate serde_json;
 
 use self::hyper::Chunk;
-use self::tokio_timer::Timer;
+use self::tokio::timer::Interval;
 
 use prelude::futures::*;
+use prelude::http::*;
+use prelude::timer::*;
+
 use twitch::types::{PlaylistInfo, Playlist, Segment};
 use twitch::api::ApiError;
-use prelude::http::{HttpsClient, HttpError, fetch_streamed, ResponseSink};
+
 use options::Options;
 
-use std::rc::Rc;
-use std::cell::RefCell;
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
@@ -26,24 +28,23 @@ const PES_METADATA_OFFSET: usize = MPEG_TS_SECTION_LENGTH * 3;
 const VIDEO_DATA_CHUNKS_BUFFER_SIZE: usize = 20;
 
 type RawVideoData = Vec<u8>;
-type BoxedStream<T> = Box<Stream<Item = T, Error = StreamPlayerError>>;
 
 pub struct StreamPlayer {
-    client: HttpsClient,
     opts: Options,
-    sinks: Rc<RefCell<Vec<PlayerSink>>>,
-    sink_queue: Rc<RefCell<Vec<(MetaKey, PlayerSink)>>>,
-    indexed_metadata: Rc<RefCell<HashMap<MetaKey, SegmentMetadata>>>,
+    client: HttpsClient,
+    sinks: Arc<Mutex<Vec<PlayerSink>>>,
+    sink_queue: Arc<Mutex<Vec<(MetaKey, PlayerSink)>>>,
+    indexed_metadata: Arc<RwLock<HashMap<MetaKey, SegmentMetadata>>>,
 }
 
 impl StreamPlayer {
     pub fn new(opts: Options, client: HttpsClient) -> Self {
         Self {
-            client: client,
             opts: opts,
-            sinks: Rc::new(RefCell::new(Vec::new())),
-            sink_queue: Rc::new(RefCell::new(Vec::new())),
-            indexed_metadata: Rc::new(RefCell::new(HashMap::new())),
+            client: client,
+            sinks: Default::default(),
+            sink_queue: Default::default(),
+            indexed_metadata: Default::default(),
         }
     }
 
@@ -51,18 +52,19 @@ impl StreamPlayer {
         -> impl Future<Item = (), Error = StreamPlayerError>
     {
         let process_meta_data = {
-            let sinks = Rc::clone(&self.sinks);
-            let sink_queue = Rc::clone(&self.sink_queue);
-            let indexed_metadata = Rc::clone(&self.indexed_metadata);
+            let sinks = Arc::clone(&self.sinks);
+            let sink_queue = Arc::clone(&self.sink_queue);
+            let indexed_metadata = Arc::clone(&self.indexed_metadata);
 
             move |data: &RawVideoData| {
-                let mut sink_queue = sink_queue.borrow_mut();
-                // Nothing to process if the queue is empty
+                let mut sink_queue = sink_queue.lock().unwrap();
+
                 if sink_queue.is_empty() { return }
 
                 if let Some(metadata) = extract_metadata(data) {
-                    let mut sinks = sinks.borrow_mut();
-                    let mut indexed_metadata = indexed_metadata.borrow_mut();
+                    let mut sinks = sinks.lock().unwrap();
+                    let mut indexed_metadata = indexed_metadata.write().unwrap();
+
                     // Transfer metakeys and sinks to the active containers
                     sink_queue.drain(..).for_each(|(key, sink)| {
                         sinks.push(sink);
@@ -73,7 +75,7 @@ impl StreamPlayer {
         };
 
         let process_segment_chunk = {
-            let sinks = Rc::clone(&self.sinks);
+            let sinks = Arc::clone(&self.sinks);
             let inactive_timeout = self.opts.player_inactive_timeout;
             let mut last_active = Instant::now();
 
@@ -86,11 +88,11 @@ impl StreamPlayer {
                     }
                 };
 
-                let mut sinks = sinks.borrow_mut();
+                if let Ok(mut sinks) = sinks.lock() {
+                    fanout_and_filter(&mut sinks, raw_data);
 
-                fanout_and_filter(&mut sinks, raw_data);
-
-                if !sinks.is_empty() { last_active = Instant::now(); }
+                    if !sinks.is_empty() { last_active = Instant::now(); }
+                }
 
                 let timed_out = last_active.elapsed() > inactive_timeout;
                 match timed_out {
@@ -106,19 +108,21 @@ impl StreamPlayer {
             self.opts.player_playlist_fetch_interval
         );
 
-        let video_data_stream_with_timeout = Timer::default()
-            .timeout_stream(video_data_stream, self.opts.player_fetch_timeout);
+        let video_data_stream_with_timeout = timeout_stream(
+            video_data_stream,
+            self.opts.player_fetch_timeout
+        );
 
         video_data_stream_with_timeout
             .for_each(process_segment_chunk)
     }
 
     pub fn queue_sink(&self, sink: PlayerSink, meta_key: MetaKey) {
-        self.sink_queue.borrow_mut().push((meta_key, sink));
+        self.sink_queue.lock().unwrap().push((meta_key, sink))
     }
 
     pub fn get_metadata(&self, meta_key: &MetaKey) -> Option<SegmentMetadata> {
-        self.indexed_metadata.borrow().get(meta_key).cloned()
+        self.indexed_metadata.read().unwrap().get(meta_key).cloned()
     }
 }
 
@@ -126,7 +130,6 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
     -> impl Stream<Item = SegmentChunk, Error = StreamPlayerError>
 {
     use twitch::api::playlist;
-    use self::hyper::{Request, Get};
 
     let origin = playlist_info.url
         .rsplitn(2, '/')
@@ -134,12 +137,11 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
         .map(String::from)
         .unwrap(); // Very unlikely to find malformed urls
 
-    let segment_uri = move |segment_location: &str| {
-        let parsed = match segment_location.starts_with("http://") {
-            true  => segment_location.parse(),
-            false => format!("{}/{}", origin, segment_location).parse()
-        };
-        parsed.unwrap() // Very unlikely to find malformed urls
+    let segment_url = move |segment_location: &str| {
+        match segment_location.starts_with("http://") {
+            true  => String::from(segment_location),
+            false => format!("{}/{}", origin, segment_location)
+        }
     };
 
     let fetch_playlist = {
@@ -168,6 +170,7 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
                         // new playlist, we still want to have the least delay
                         // possible, so we return the most recent segment
                         None      => playlist.segments.pop(),
+                        // Otherwise return the next logical segment
                         Some(idx) => playlist.segments.into_iter().nth(idx + 1)
                     }
                 }
@@ -180,7 +183,9 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
     };
 
     let dowload_segment = move |segment: Segment| {
-        let request = Request::new(Get, segment_uri(&segment.location));
+        let request = hyper::Request::get(segment_url(&segment.location))
+            .body(hyper::Body::default())
+            .unwrap();
 
         let segment_stream = fetch_streamed(&client, request)
             .map_err(StreamPlayerError::FetchSegmentFail)
@@ -215,7 +220,7 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
             // Flattens our future of stream F<S<...>> to the stream S<...>
             .flatten_stream();
 
-        Box::new(segment_stream) as BoxedStream<_>
+        Box::new(segment_stream) as BoxStream<_, _>
     };
 
     let fetch_latest_segment = move |playlist: Playlist| {
@@ -224,18 +229,19 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
             .unwrap_or_else(|| Box::new(stream::empty()))
     };
 
-    let playlist_stream = Timer::default()
-        .interval(fetch_interval)
+    let playlist_stream = Interval::new(Instant::now(), fetch_interval)
         .map_err(StreamPlayerError::TimerError)
         .and_then(fetch_playlist);
 
-    playlist_stream
+    let future = playlist_stream
         .map(fetch_latest_segment)
-        .flatten()
+        .flatten();
+
+    Box::new(future)
 }
 
 fn concat_video_chunks(chunks: Vec<Chunk>) -> RawVideoData {
-    let total_size = chunks.iter().fold(0usize, |acc, chk| acc + chk.len());
+    let total_size = chunks.iter().fold(0_usize, |acc, chk| acc + chk.len());
     let accumulator = Vec::with_capacity(total_size);
 
     let accumulate_chunks = |mut acc: Vec<_>, chunk: Chunk| {
@@ -257,16 +263,16 @@ fn fanout_and_filter(sinks: &mut Vec<PlayerSink>, data: RawVideoData) {
     while i < sinks.len() - 1 {
         let chunk_out = Chunk::from(data.clone());
 
-        match sinks[i].try_send(Ok(chunk_out)) {
+        match sinks[i].send_data(chunk_out) {
             Ok(_)  => { i += 1; },
-            Err(_) => { sinks.remove(i); }
+            Err(_) => { let _ = sinks.remove(i); }
         }
     }
     // The last sink can save us a clone on the input data
     let last_chunk_out = Chunk::from(data);
 
-    if let Err(_) = sinks[i].try_send(Ok(last_chunk_out)) {
-        sinks.remove(i);
+    if let Err(_) = sinks[i].send_data(last_chunk_out) {
+        let _ = sinks.remove(i);
     }
 }
 
@@ -306,7 +312,7 @@ fn extract_metadata(data: &RawVideoData) -> Option<SegmentMetadata> {
 
 #[derive(Debug)]
 pub enum StreamPlayerError {
-    TimerError(tokio_timer::TimerError),
+    TimerError(tokio::timer::Error),
     FetchPlaylistFail(ApiError),
     FetchSegmentFail(HttpError),
     InactiveTooLong,
@@ -314,12 +320,15 @@ pub enum StreamPlayerError {
     EmptySegment
 }
 
-impl<T> From<tokio_timer::TimeoutError<T>> for StreamPlayerError
-where
-    T: Stream<Error = StreamPlayerError>
-{
-    fn from(_err: tokio_timer::TimeoutError<T>) -> Self {
-        StreamPlayerError::TooLongToFetch
+impl From<TimeoutError> for StreamPlayerError {
+    fn from(err: TimeoutError) -> Self {
+        use self::TimeoutError::*;
+        use self::StreamPlayerError::*;
+
+        match err {
+            Timer(timer_error) => TimerError(timer_error),
+            TimedOut           => TooLongToFetch
+        }
     }
 }
 

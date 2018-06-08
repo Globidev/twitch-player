@@ -1,32 +1,34 @@
 extern crate hyper;
 extern crate url;
+extern crate mime;
 extern crate serde;
 extern crate serde_json;
 
-use self::hyper::server;
+use prelude::futures::*;
+use prelude::http::*;
 
-use prelude::futures::{Future, future};
-use prelude::http::{QueryParams, parse_query_params, streaming_response};
 use twitch::types::{StreamIndex, Quality, Stream};
 use twitch::utils::find_playlist;
+
 use super::state::{State, index_cache::IndexError};
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 const DAEMON_VERSION: &str = "1.0.0";
 
-type ApiRequest = server::Request;
-type ApiResponse = server::Response;
+type ApiRequest = Request;
+type ApiResponse = Response;
+type ApiBody = hyper::Body;
 type ApiError = hyper::Error;
-type ApiFuture = Box<Future<Item = ApiResponse, Error = ApiError>>;
+pub type ApiFuture = BoxFuture<ApiResponse, ApiError>;
 
 pub struct TwitchdApi {
-    state: Rc<State>
+    state: Arc<State>
 }
 
 impl TwitchdApi {
-    pub fn new(state: &Rc<State>) -> Self {
-        Self { state: Rc::clone(state) }
+    pub fn new(state: &Arc<State>) -> Self {
+        Self { state: Arc::clone(state) }
     }
 
     fn get_stream_index(&self, params: QueryParams) -> ApiFuture {
@@ -83,16 +85,15 @@ impl TwitchdApi {
     }
 
     fn get_version(&self) -> ApiFuture {
-        let response = ApiResponse::new()
-            .with_body(DAEMON_VERSION);
+        let response = ApiResponse::new(ApiBody::from(DAEMON_VERSION));
         respond(response)
     }
 
     fn quit(&self) -> ApiFuture {
-        if let Some(signal) = self.state.shutdown_signal.take() {
+        if let Some(signal) = (*self.state.shutdown_signal.lock().unwrap()).take() {
             signal.send(()).unwrap_or_default();
         }
-        let response = ApiResponse::new();
+        let response = ApiResponse::default();
         respond(response)
     }
 
@@ -100,10 +101,10 @@ impl TwitchdApi {
         let (channel, quality) = stream.clone();
 
         let stream_response = {
-            let state = Rc::clone(&self.state);
+            let state = Arc::clone(&self.state);
             move |index: StreamIndex| {
                 match find_playlist(index, &quality) {
-                    None                => not_found(),
+                    None           => not_found(),
                     Some(playlist) => {
                         let (sink, response) = streaming_response();
                         state.player_pool
@@ -122,27 +123,25 @@ impl TwitchdApi {
     }
 }
 
-impl server::Service for TwitchdApi {
-    type Request = ApiRequest;
-    type Response = ApiResponse;
+impl hyper::service::Service for TwitchdApi {
+    type ReqBody = ApiBody;
+    type ResBody = ApiBody;
     type Error = ApiError;
     type Future = ApiFuture;
 
-    fn call(&self, req: Self::Request) -> Self::Future {
-        use self::hyper::Method::{Get, Post};
-
-        let params = req.query()
+    fn call(&mut self, req: ApiRequest) -> Self::Future {
+        let params = req.uri().query()
             .map(parse_query_params)
             .unwrap_or_default();
 
-        match (req.method(), req.path()) {
+        match (req.method(), req.uri().path()) {
             // Capabilities
-            (Get, "/stream_index") => self.get_stream_index(params),
-            (Get, "/play")         => self.get_video_stream(params),
-            (Get, "/meta")         => self.get_metadata(params),
+            (&Method::GET, "/stream_index")  => self.get_stream_index(params),
+            (&Method::GET, "/play")          => self.get_video_stream(params),
+            (&Method::GET, "/meta")          => self.get_metadata(params),
             // Utilities
-            (Get,  "/version")      => self.get_version(),
-            (Post, "/quit")         => self.quit(),
+            (&Method::GET,  "/version")      => self.get_version(),
+            (&Method::POST, "/quit")         => self.quit(),
             // Default => 404
             _ => respond(not_found())
         }
@@ -150,38 +149,40 @@ impl server::Service for TwitchdApi {
 }
 
 fn not_found() -> ApiResponse {
-    ApiResponse::new()
-        .with_status(hyper::StatusCode::NotFound)
+    hyper::Response::builder()
+        .status(hyper::StatusCode::NOT_FOUND)
+        .body(ApiBody::default())
+        .unwrap()
 }
 
 fn bad_request(detail: &str) -> ApiResponse {
-    ApiResponse::new()
-        .with_status(hyper::StatusCode::BadRequest)
-        .with_body(String::from(detail))
+    hyper::Response::builder()
+        .status(hyper::StatusCode::BAD_REQUEST)
+        .body(ApiBody::from(Vec::from(detail)))
+        .unwrap()
 }
 
 fn server_error(detail: &str) -> ApiResponse {
-    ApiResponse::new()
-        .with_status(hyper::StatusCode::InternalServerError)
-        .with_body(String::from(detail))
+    hyper::Response::builder()
+        .status(hyper::StatusCode::INTERNAL_SERVER_ERROR)
+        .body(ApiBody::from(Vec::from(detail)))
+        .unwrap()
 }
 
 fn json_response(value: impl serde::Serialize) -> ApiResponse {
     use self::serde_json::to_vec as encode;
-    use self::hyper::{header, mime};
 
     let reply_with_data = |data: Vec<u8>| {
-        ApiResponse::new()
-            .with_header(header::ContentLength(data.len() as u64))
-            .with_header(header::ContentType(mime::APPLICATION_JSON))
-            .with_body(data)
+        hyper::Response::builder()
+            .header(header::CONTENT_LENGTH, data.len().to_string().as_str())
+            .header(header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .body(ApiBody::from(data))
+            .unwrap()
     };
 
     let reply_with_error = |error| {
         let detail = format!("Encoding error: {}", error);
-        ApiResponse::new()
-            .with_status(hyper::StatusCode::InternalServerError)
-            .with_body(detail)
+        server_error(&detail)
     };
 
     encode(&value)
