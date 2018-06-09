@@ -26,6 +26,8 @@ public:
     void clear_qualities();
     void set_qualities(QString, QStringList);
 
+    void set_delay(float);
+
 protected:
     void mousePressEvent(QMouseEvent *) override;
     void paintEvent(QPaintEvent *) override;

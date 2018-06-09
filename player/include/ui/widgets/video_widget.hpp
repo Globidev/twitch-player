@@ -56,9 +56,11 @@ private:
 
     TwitchdAPI _api;
 
-    QString _current_channel, _current_quality;
+    QString _current_channel, _current_quality, _current_meta_key;
+    std::optional<SegmentMetadata> _current_metadata;
 
     QTimer *_retry_timer;
 
     void update_overlay_position();
+
 };

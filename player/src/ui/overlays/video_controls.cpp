@@ -91,6 +91,11 @@ void VideoControls::set_qualities(QString quality, QStringList qualities) {
     _ui->qualityCombo->setCurrentText(quality);
 }
 
+void VideoControls::set_delay(float delay) {
+    auto formatted_delay = QString::asprintf("%.2fs", delay);
+    _ui->delayLabel->setText(formatted_delay);
+}
+
 void VideoControls::set_volume_icon() {
     auto icon_path = _muted ? ":/icons/volume_off.png" : ":/icons/volume_on.png";
     _ui->volumeLabel->setPixmap(QPixmap(icon_path));

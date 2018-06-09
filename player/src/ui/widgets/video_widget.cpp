@@ -103,6 +103,30 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
 
         match(event,
             [=](Opening)          { set_buffering(true); },
+            [=](Playing)          {
+                if (!_current_metadata) {
+                    _api.metadata(_current_channel, _current_quality, _current_meta_key)
+                        .then([=](SegmentMetadata metadata) {
+                            _current_metadata = metadata;
+                        });
+                }
+            },
+            [=](TimeChanged c)    {
+                if (_current_metadata) {
+                    auto now = QDateTime::currentMSecsSinceEpoch();
+
+                    auto delay_ms = now - _current_metadata->transc_r
+                                        - c.new_time
+                                        // The website shows aditional delay
+                                        // Noticed it to be around +1s
+                                        + 1'000;
+
+                    if (delay_ms < 0 || delay_ms > 60'000)
+                        return ;
+
+                    _controls->set_delay(delay_ms / 1000.f);
+                }
+            },
             [=](Buffering b)      { set_buffering(b.cache_percent != 100.f); },
             [=](EndReached)       { schedule_refresh(); },
             [=](Stopped)          { schedule_refresh(); },

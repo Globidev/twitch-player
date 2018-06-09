@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icons">
+    <file>dashboard.png</file>
     <file>unzoom.png</file>
     <file>zoom.png</file>
     <file>fullscreen_enter.png</file>
