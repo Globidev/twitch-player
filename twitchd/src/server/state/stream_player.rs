@@ -233,11 +233,9 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
         .map_err(StreamPlayerError::TimerError)
         .and_then(fetch_playlist);
 
-    let future = playlist_stream
+    playlist_stream
         .map(fetch_latest_segment)
-        .flatten();
-
-    Box::new(future)
+        .flatten()
 }
 
 fn concat_video_chunks(chunks: Vec<Chunk>) -> RawVideoData {

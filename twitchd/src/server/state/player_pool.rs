@@ -7,37 +7,36 @@ use options::Options;
 use super::stream_player::{StreamPlayer, PlayerSink, MetaKey, SegmentMetadata};
 use twitch::types::{PlaylistInfo, Stream};
 
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 
 pub struct PlayerPool {
-    client: HttpsClient,
-    players: Arc<Mutex<HashMap<Stream, StreamPlayer>>>,
     opts: Options,
+    client: HttpsClient,
+    players: Arc<RwLock<HashMap<Stream, StreamPlayer>>>,
 }
 
 impl PlayerPool {
     pub fn new(opts: Options) -> Self {
         Self {
-            players: Default::default(),
             opts: opts,
             client: http_client().expect("Failed to initialize HTTP client"),
+            players: Default::default(),
         }
     }
 
     pub fn is_playing(&self, stream: &Stream) -> bool {
-        self.players.lock().unwrap().contains_key(stream)
+        self.players.read().unwrap().contains_key(stream)
     }
 
     pub fn add_sink(&self, stream: &Stream, sink: PlayerSink, opt_meta_key: Option<MetaKey>) {
-        if let Some(player) = self.players.lock().unwrap().get(stream) {
+        if let Some(player) = self.players.read().unwrap().get(stream) {
             player.queue_sink(sink, opt_meta_key.unwrap_or_default());
         }
     }
 
     pub fn get_metadata(&self, stream: &Stream, meta_key: &MetaKey) -> Option<SegmentMetadata> {
-        self.players.lock().unwrap().get(stream)
+        self.players.read().unwrap().get(stream)
             .and_then(|player| player.get_metadata(meta_key))
     }
 
@@ -47,7 +46,7 @@ impl PlayerPool {
             let players = Arc::clone(&self.players);
             move |result| {
                 println!("{:?}", result);
-                players.lock().unwrap().remove(&stream);
+                players.write().unwrap().remove(&stream);
                 Ok(())
             }
         };
@@ -63,8 +62,7 @@ impl PlayerPool {
             }
         };
 
-        self.players.lock()
-            .unwrap()
+        self.players.write().unwrap()
             .entry(stream)
             .or_insert_with(new_player)
             .queue_sink(sink, opt_meta_key.unwrap_or_default());
