@@ -135,7 +135,7 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
         .rsplitn(2, '/')
         .nth(1)
         .map(String::from)
-        .unwrap(); // Very unlikely to find malformed urls
+        .expect("Malformed playlist info URL");
 
     let segment_url = move |segment_location: &str| {
         match segment_location.starts_with("http://") {
@@ -185,7 +185,7 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
     let dowload_segment = move |segment: Segment| {
         let request = hyper::Request::get(segment_url(&segment.location))
             .body(hyper::Body::default())
-            .unwrap();
+            .expect("Request building error: Video Segment");
 
         let segment_stream = fetch_streamed(&client, request)
             .map_err(StreamPlayerError::FetchSegmentFail)

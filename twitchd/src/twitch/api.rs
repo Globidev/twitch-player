@@ -15,7 +15,7 @@ pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str)
     let request = hyper::Request::get(access_token_url(channel))
         .header("Client-ID", client_id)
         .body(hyper::Body::default())
-        .unwrap();
+        .expect("Request Building error: Access Token");
 
     api_call(client, request, parse_token)
 }
@@ -25,7 +25,7 @@ pub fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
 {
     let request = hyper::Request::get(stream_index_url(channel, token))
         .body(hyper::Body::default())
-        .unwrap();
+        .expect("Request Building error: Stream Index");
 
     api_call(client, request, parse_index)
 }
@@ -35,7 +35,7 @@ pub fn playlist(client: &HttpsClient, url: &str)
 {
     let request = hyper::Request::get(url)
         .body(hyper::Body::default())
-        .unwrap();
+        .expect("Request Building error: Playlist");
 
     api_call(client, request, parse_playlist)
 }

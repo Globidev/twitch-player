@@ -20,9 +20,9 @@ pub struct PlayerPool {
 impl PlayerPool {
     pub fn new(opts: Options) -> Self {
         Self {
-            client: http_client().unwrap(),
             players: Default::default(),
             opts: opts,
+            client: http_client().expect("Failed to initialize HTTP client"),
         }
     }
 

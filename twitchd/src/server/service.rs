@@ -152,21 +152,21 @@ fn not_found() -> ApiResponse {
     hyper::Response::builder()
         .status(hyper::StatusCode::NOT_FOUND)
         .body(ApiBody::default())
-        .unwrap()
+        .expect("Response building error: Not Found")
 }
 
 fn bad_request(detail: &str) -> ApiResponse {
     hyper::Response::builder()
         .status(hyper::StatusCode::BAD_REQUEST)
         .body(ApiBody::from(Vec::from(detail)))
-        .unwrap()
+        .expect("Response building error: Bad request")
 }
 
 fn server_error(detail: &str) -> ApiResponse {
     hyper::Response::builder()
         .status(hyper::StatusCode::INTERNAL_SERVER_ERROR)
         .body(ApiBody::from(Vec::from(detail)))
-        .unwrap()
+        .expect("Response building error: Server Error")
 }
 
 fn json_response(value: impl serde::Serialize) -> ApiResponse {
@@ -177,7 +177,7 @@ fn json_response(value: impl serde::Serialize) -> ApiResponse {
             .header(header::CONTENT_LENGTH, data.len().to_string().as_str())
             .header(header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
             .body(ApiBody::from(data))
-            .unwrap()
+            .expect("Response building error: Json Data")
     };
 
     let reply_with_error = |error| {
