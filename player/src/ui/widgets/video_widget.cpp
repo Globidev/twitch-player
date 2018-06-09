@@ -27,6 +27,22 @@ static auto quality_names(const StreamIndex & index) {
     return qualities;
 }
 
+static QString generate_meta_key()
+{
+    const QString charset {
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    };
+
+    QString key;
+
+    for (int i = 0; i < 32; ++i) {
+        int index = qrand() % charset.length();
+        key.append(charset.at(index));
+    }
+
+    return key;
+}
+
 static const auto OVERLAY_INVALIDATING_EVENTS = {
     QEvent::Move,
     QEvent::KeyRelease,
@@ -101,8 +117,10 @@ VideoWidget::~VideoWidget() = default;
 void VideoWidget::play(QString channel, QString quality) {
     _current_channel = channel;
     _current_quality = quality;
+    _current_meta_key = generate_meta_key();
+    _current_metadata.reset();
 
-    auto location = TwitchdAPI::playback_url(channel, quality);
+    auto location = TwitchdAPI::playback_url(channel, quality, _current_meta_key);
 
     _media.emplace(_instance, location.toStdString().c_str());
     _media_player.set_media(*_media);
