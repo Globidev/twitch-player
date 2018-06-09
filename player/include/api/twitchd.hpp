@@ -26,9 +26,20 @@ struct StreamIndex {
     QList<PlaylistInfo> playlist_infos;
 };
 
+struct SegmentMetadata {
+    quint32 broadc_s;
+    QString cmd;
+    quint32 ingest_r, ingest_s;
+    double stream_offset;
+    quint64 transc_r, transc_s;
+};
+
 struct TwitchdAPI: APIClient {
     using stream_index_response_t = response_t<StreamIndex>;
+    using metadata_response_t = response_t<SegmentMetadata>;
 
     stream_index_response_t stream_index(QString);
-    static QString playback_url(QString, QString);
+    metadata_response_t metadata(QString, QString, QString);
+
+    static QString playback_url(QString, QString, QString);
 };

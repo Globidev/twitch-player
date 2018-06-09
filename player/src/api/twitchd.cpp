@@ -45,6 +45,20 @@ static StreamIndex parse_stream_index_data(const QByteArray &raw) {
     return StreamIndex { playlist_infos };
 }
 
+static SegmentMetadata parse_metadata(const QByteArray &raw) {
+    auto json_data = QJsonDocument::fromJson(raw).object();
+
+    return SegmentMetadata {
+        static_cast<quint32>(json_data["broadc_s"].toInt()),
+        json_data["cmd"].toString(),
+        static_cast<quint32>(json_data["ingest_r"].toInt()),
+        static_cast<quint32>(json_data["ingest_r"].toInt()),
+        json_data["stream_offset"].toDouble(),
+        static_cast<quint64>(json_data["transc_r"].toDouble()),
+        static_cast<quint64>(json_data["transc_r"].toDouble()),
+    };
+}
+
 TwitchdAPI::stream_index_response_t TwitchdAPI::stream_index(QString channel) {
     QUrl url { "http://127.0.0.1:7777/stream_index" };
 
@@ -57,13 +71,29 @@ TwitchdAPI::stream_index_response_t TwitchdAPI::stream_index(QString channel) {
     return get(request).then(&parse_stream_index_data);
 }
 
-QString TwitchdAPI::playback_url(QString channel, QString quality) {
+TwitchdAPI::metadata_response_t TwitchdAPI::metadata(QString channel, QString quality, QString key) {
+    QUrl url { "http://127.0.0.1:7777/meta" };
+
+    QUrlQuery url_query;
+    url_query.addQueryItem("channel", channel);
+    if (!quality.isEmpty())
+        url_query.addQueryItem("quality", quality);
+    url_query.addQueryItem("key", key);
+    url.setQuery(url_query);
+
+    QNetworkRequest request { url };
+
+    return get(request).then(&parse_metadata);
+}
+
+QString TwitchdAPI::playback_url(QString channel, QString quality, QString meta_key) {
     QUrl url { "http://127.0.0.1:7777/play" };
 
     QUrlQuery url_query;
     url_query.addQueryItem("channel", channel);
     if (!quality.isEmpty())
         url_query.addQueryItem("quality", quality);
+    url_query.addQueryItem("meta_key", meta_key);
     url.setQuery(url_query);
 
     return url.toString(QUrl::FullyEncoded);
