@@ -85,6 +85,10 @@ void MediaPlayer::set_renderer(void *hwnd) {
 #endif
 }
 
+void MediaPlayer::stop() {
+    libvlc_media_player_stop(&*this);
+}
+
 void MediaPlayer::play() {
     libvlc_media_player_play(&*this);
 }
