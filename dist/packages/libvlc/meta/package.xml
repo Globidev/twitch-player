@@ -2,8 +2,8 @@
 <Package>
     <DisplayName>libvlc</DisplayName>
     <Description>Install the libvlc dependencies (RECOMMENDED)</Description>
-    <Version>3.0.2.2</Version>
-    <ReleaseDate>2018-05-04</ReleaseDate>
+    <Version>3.0.3</Version>
+    <ReleaseDate>2018-06-10</ReleaseDate>
     <Default>true</Default>
-    <UpdateText>Added video filters</UpdateText>
+    <UpdateText>Bump libvlc version</UpdateText>
 </Package>
