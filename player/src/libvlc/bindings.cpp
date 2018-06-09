@@ -1,10 +1,5 @@
 #include "libvlc/bindings.hpp"
 
-// LibVLC uses ssize_t, which is POSIX...
-#if defined(_MSC_VER)
-  #include <BaseTsd.h>
-  typedef SSIZE_T ssize_t;
-#endif
 #include <vlc/vlc.h>
 
 #include <algorithm>
@@ -188,8 +183,10 @@ void MediaPlayer::set_audio_device(std::string device_id) {
     libvlc_audio_output_device_set(&*this, nullptr, device_id.c_str());
 }
 
-static constexpr std::array<libvlc_event_e, 5> media_player_events = {
+static constexpr std::array<libvlc_event_e, 7> media_player_events = {
     libvlc_MediaPlayerOpening,
+    libvlc_MediaPlayerPlaying,
+    libvlc_MediaPlayerTimeChanged,
     libvlc_MediaPlayerBuffering,
     libvlc_MediaPlayerStopped,
     libvlc_MediaPlayerEndReached,
@@ -202,6 +199,10 @@ static Event reify_event(const libvlc_event_t *p_event) {
     switch (p_event->type) {
         case libvlc_MediaPlayerOpening:
             return Opening { };
+        case libvlc_MediaPlayerPlaying:
+            return Playing { };
+        case libvlc_MediaPlayerTimeChanged:
+            return TimeChanged { p_event->u.media_player_time_changed.new_time };
         case libvlc_MediaPlayerBuffering:
             return Buffering { p_event->u.media_player_buffering.new_cache };
         case libvlc_MediaPlayerStopped:

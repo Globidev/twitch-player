@@ -3,6 +3,12 @@
 #include <string>
 #include <variant>
 
+// LibVLC uses ssize_t, which is POSIX...
+#if defined(_MSC_VER)
+  #include <BaseTsd.h>
+  using ssize_t = SSIZE_T;
+#endif
+
 // libvlc Forwards
 struct libvlc_instance_t;
 struct libvlc_media_player_t;
@@ -23,6 +29,8 @@ struct MediaPlayer;
 
 namespace events {
     struct Opening { };
+    struct Playing { };
+    struct TimeChanged { int64_t new_time; };
     struct Buffering { float cache_percent; };
     struct Stopped { };
     struct EndReached { };
@@ -32,6 +40,8 @@ namespace events {
 
 using Event = std::variant<
     events::Opening,
+    events::Playing,
+    events::TimeChanged,
     events::Buffering,
     events::Stopped,
     events::EndReached,
