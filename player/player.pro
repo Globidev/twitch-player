@@ -26,6 +26,8 @@ SOURCES         +=  src/main.cpp \
                     src/libvlc/event_watcher.cpp \
                     src/libvlc/logger.cpp \
                     \
+                    src/process/daemon_control.cpp \
+                    \
                     src/ui/main_window.cpp \
                     src/ui/main_window_shortcuts.cpp \
                     \
@@ -65,6 +67,8 @@ HEADERS         +=  include/constants.hpp \
                     include/prelude/sync.hpp \
                     include/prelude/timer.hpp \
                     include/prelude/variant.hpp \
+                    \
+                    include/process/daemon_control.hpp \
                     \
                     include/ui/main_window.hpp \
                     \
