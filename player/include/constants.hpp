@@ -52,6 +52,8 @@ namespace constants {
         namespace ui {
             Constant KEY_LAST_VOLUME = "ui/last_volume";
             Constant DEFAULT_VOLUME = 50;
+            Constant KEY_LAST_MUTE = "ui/last_mute";
+            Constant DEFAULT_LAST_MUTE = false;
             Constant KEY_LAST_CHAT_SIZE_PERCENT = "ui/last_chat_size_percent";
             Constant DEFAULT_CHAT_SIZE_PERCENT = 25;
             Constant KEY_LAST_CHAT_POSITION = "ui/last_chat_position";

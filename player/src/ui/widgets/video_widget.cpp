@@ -61,6 +61,7 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
 
     QSettings settings;
     _vol = settings.value(ui::KEY_LAST_VOLUME, ui::DEFAULT_VOLUME).toInt();
+    _muted = settings.value(ui::KEY_LAST_MUTE, ui::DEFAULT_LAST_MUTE).toBool();
 
     auto notifier = new EventNotifier(OVERLAY_INVALIDATING_EVENTS, this);
     window()->installEventFilter(notifier);
@@ -72,7 +73,8 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     setAttribute(Qt::WA_OpaquePaintEvent);
     setFocusPolicy(Qt::WheelFocus);
     _media_player.set_renderer((void *)winId());
-    _media_player.set_volume(_vol);
+    set_volume(_vol);
+    set_muted(_muted);
     update_overlay_position();
     setMinimumSize(160, 90);
     setMouseTracking(true);
@@ -199,6 +201,11 @@ void VideoWidget::set_muted(bool muted) {
     set_volume(_vol);
     _controls->set_muted(_muted);
     _details->show_state(muted ? "Muted" : "Unmuted");
+
+    using namespace constants::settings;
+
+    QSettings settings;
+    settings.setValue(ui::KEY_LAST_MUTE, _muted);
 }
 
 void VideoWidget::fast_forward() {
