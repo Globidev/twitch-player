@@ -52,7 +52,7 @@ namespace constants {
         namespace vlc {
             Constant KEY_VLC_ARGS = "vlc/args";
             Constant DEFAULT_VLC_ARGS = QStringList()
-                << "--network-caching=3000";
+                << "--network-caching=1000";
         }
 
         namespace shortcuts {
