@@ -33,6 +33,6 @@ private:
     VideoWidget *_video;
     ForeignWidget *_chat;
 
-    int _chat_size = 50, _video_size = 50;
-    ChatPosition _chat_position = ChatPosition::Right;
+    int _chat_size, _video_size;
+    ChatPosition _chat_position;
 };

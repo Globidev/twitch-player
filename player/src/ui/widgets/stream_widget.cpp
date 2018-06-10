@@ -3,6 +3,7 @@
 #include "ui/widgets/video_widget.hpp"
 #include "ui/widgets/foreign_widget.hpp"
 #include "ui/overlays/video_controls.hpp"
+#include "ui/utils/event_notifier.hpp"
 
 #include "libvlc/bindings.hpp"
 #include "constants.hpp"
@@ -41,14 +42,35 @@ StreamWidget::StreamWidget(libvlc::Instance &inst, QWidget *parent):
     _video(new VideoWidget(inst, this)),
     _chat(new ForeignWidget(this))
 {
+    using namespace constants::settings;
+    QSettings settings;
+
+    _chat_size = settings.value(
+        ui::KEY_LAST_CHAT_SIZE_PERCENT,
+        ui::DEFAULT_CHAT_SIZE_PERCENT
+    ).toInt() * 10;
+    _chat_position = static_cast<ChatPosition>(settings.value(
+        ui::KEY_LAST_CHAT_POSITION,
+        ui::DEFAULT_CHAT_POSITION
+    ).toInt());
+
+    _video_size = 1'000 - _chat_size;
+
     setLayout(_layout);
 
     _layout->setContentsMargins(QMargins());
     _layout->addWidget(_splitter);
 
-    _splitter->addWidget(_video);
-    _splitter->addWidget(_chat);
-    _splitter->setSizes(QList<int>() << _video_size << _chat_size);
+    auto chat_index = (_chat_position == ChatPosition::Left ? 0 : 1);
+    auto video_index = (chat_index + 1) % 2;
+
+    QList<int> sizes;
+    sizes.insert(chat_index, _chat_size);
+    sizes.insert(video_index, _video_size);
+
+    _splitter->insertWidget(chat_index, _chat);
+    _splitter->insertWidget(video_index, _video);
+    _splitter->setSizes(sizes);
 
     QObject::connect(&_video->controls(), &VideoControls::layout_left_requested, [=] {
         reposition_chat(ChatPosition::Left);
@@ -56,6 +78,18 @@ StreamWidget::StreamWidget(libvlc::Instance &inst, QWidget *parent):
 
     QObject::connect(&_video->controls(), &VideoControls::layout_right_requested, [=] {
         reposition_chat(ChatPosition::Right);
+    });
+
+    auto resize_notifier = new EventNotifier({ QEvent::Resize }, this);
+    _chat->installEventFilter(resize_notifier);
+    QObject::connect(resize_notifier, &EventNotifier::new_event, [=](auto) {
+        QSettings settings;
+
+        auto chat_index = _splitter->indexOf(_chat);
+        auto chat_size = static_cast<float>(_splitter->sizes()[chat_index]);
+        auto chat_size_percent = static_cast<int>(chat_size / _splitter->width() * 100);
+
+        settings.setValue(ui::KEY_LAST_CHAT_SIZE_PERCENT, chat_size_percent);
     });
 }
 
@@ -127,6 +161,10 @@ void StreamWidget::reposition_chat(ChatPosition position) {
 
     _chat_position = position;
     _video->hint_layout_change();
+
+    using namespace constants::settings;
+    QSettings settings;
+    settings.setValue(ui::KEY_LAST_CHAT_POSITION, static_cast<int>(_chat_position));
 }
 
 void StreamWidget::resize_chat(ChatPosition position) {
