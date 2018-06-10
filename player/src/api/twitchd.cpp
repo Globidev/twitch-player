@@ -1,5 +1,9 @@
 #include "api/twitchd.hpp"
 
+#include "constants.hpp"
+
+#include <QSettings>
+
 #include <QUrlQuery>
 
 #include <QJsonDocument>
@@ -59,8 +63,19 @@ static SegmentMetadata parse_metadata(const QByteArray &raw) {
     };
 }
 
+static QUrl endpoint(const QString &path) {
+    using namespace constants::settings::daemon;
+
+    QSettings settings;
+
+    auto address = settings.value(KEY_ADDRESS, DEFAULT_ADDRESS).toString();
+    auto port = settings.value(KEY_PORT, DEFAULT_PORT).value<qint16>();
+
+    return QUrl { QString("http://%1:%2/%3").arg(address).arg(port).arg(path) };
+}
+
 TwitchdAPI::stream_index_response_t TwitchdAPI::stream_index(QString channel) {
-    QUrl url { "http://127.0.0.1:7777/stream_index" };
+    auto url = endpoint("stream_index");
 
     QUrlQuery url_query;
     url_query.addQueryItem("channel", channel);
@@ -72,7 +87,7 @@ TwitchdAPI::stream_index_response_t TwitchdAPI::stream_index(QString channel) {
 }
 
 TwitchdAPI::metadata_response_t TwitchdAPI::metadata(QString channel, QString quality, QString key) {
-    QUrl url { "http://127.0.0.1:7777/meta" };
+    auto url = endpoint("meta");
 
     QUrlQuery url_query;
     url_query.addQueryItem("channel", channel);
@@ -86,8 +101,27 @@ TwitchdAPI::metadata_response_t TwitchdAPI::metadata(QString channel, QString qu
     return get(request).then(&parse_metadata);
 }
 
+TwitchdAPI::daemon_version_response_t TwitchdAPI::daemon_version() {
+    auto url = endpoint("version");
+
+    QNetworkRequest request { url };
+
+    return get(request)
+        .then([](const QByteArray &raw) {
+            return QString(raw);
+        });
+}
+
+TwitchdAPI::daemon_quit_response_t TwitchdAPI::daemon_quit() {
+    auto url = endpoint("quit");
+
+    QNetworkRequest request { url };
+
+    return post(request).then([](const QByteArray &) { });
+}
+
 QString TwitchdAPI::playback_url(QString channel, QString quality, QString meta_key) {
-    QUrl url { "http://127.0.0.1:7777/play" };
+    auto url = endpoint("play");
 
     QUrlQuery url_query;
     url_query.addQueryItem("channel", channel);

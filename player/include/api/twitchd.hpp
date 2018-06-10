@@ -36,10 +36,16 @@ struct SegmentMetadata {
 
 struct TwitchdAPI: APIClient {
     using stream_index_response_t = response_t<StreamIndex>;
-    using metadata_response_t = response_t<SegmentMetadata>;
-
     stream_index_response_t stream_index(QString);
+
+    using metadata_response_t = response_t<SegmentMetadata>;
     metadata_response_t metadata(QString, QString, QString);
+
+    using daemon_version_response_t = response_t<QString>;
+    daemon_version_response_t daemon_version();
+
+    using daemon_quit_response_t = response_t<void>;
+    daemon_quit_response_t daemon_quit();
 
     static QString playback_url(QString, QString, QString);
 };

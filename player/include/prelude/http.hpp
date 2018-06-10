@@ -6,12 +6,14 @@
 #include <QtPromise>
 
 class APIClient {
-public:
-    auto get(const QNetworkRequest &request) {
+private:
+    QNetworkAccessManager _http_client;
+
+    auto send_request(const QNetworkRequest &request, const QByteArray &verb) {
         using QtPromise::QPromise;
 
         return QPromise<QByteArray>([=](auto& resolve, auto& reject) {
-            auto reply = _http_client.get(request);
+            auto reply = _http_client.sendCustomRequest(request, verb);
 
             QObject::connect(reply, &QNetworkReply::finished, [=]() {
                 auto error = reply->error();
@@ -27,10 +29,16 @@ public:
         });
     }
 
+public:
+    auto get(const QNetworkRequest &request) {
+        return send_request(request, "GET");
+    }
+
+    auto post(const QNetworkRequest &request) {
+        return send_request(request, "POST");
+    }
+
 protected:
     template <class T>
     using response_t = QtPromise::QPromise<T>;
-
-private:
-    QNetworkAccessManager _http_client;
 };

@@ -64,6 +64,23 @@ namespace constants {
                 << "--network-caching=1000";
         }
 
+        namespace daemon {
+            Constant KEY_ADDRESS = "daemon/address";
+            Constant DEFAULT_ADDRESS = "127.0.0.1";
+            Constant KEY_HOST = "daemon/host";
+            Constant DEFAULT_HOST = "127.0.0.1";
+            Constant KEY_PORT = "daemon/port";
+            Constant DEFAULT_PORT = 7777;
+            Constant KEY_CACHE_TIMEOUT = "daemon/cache_timeout";
+            Constant DEFAULT_CACHE_TIMEOUT = 60;
+            Constant KEY_PLAYLIST_FETCH_INTERVAL = "daemon/playlist_fetch_interval";
+            Constant DEFAULT_PLAYLIST_FETCH_INTERVAL = 1000;
+            Constant KEY_PLAYER_INACTIVE_TIMEOUT = "daemon/player_inactive_timeout";
+            Constant DEFAULT_PLAYER_INACTIVE_TIMEOUT = 60;
+            Constant KEY_PLAYER_FETCH_TIMEOUT = "daemon/player_fetch_timeout";
+            Constant DEFAULT_PLAYER_FETCH_TIMEOUT = 10;
+        }
+
         namespace shortcuts {
             struct ActionnableShortcutDescriptor {
                 QString action_text;
