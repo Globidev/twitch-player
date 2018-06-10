@@ -2,15 +2,18 @@
 
 #include "libvlc/bindings.hpp"
 
+#include "process/daemon_control.hpp"
+
 #include "ui/main_window.hpp"
 #include "ui/widgets/pane.hpp"
 
 #include <QApplication>
-#include <QProcess>
 #include <QSettings>
 #include <QMessageBox>
 
 #include <optional>
+
+constexpr auto EXPECTED_DAEMON_VERSION = "1.1.0";
 
 struct Options {
     std::optional<QString> initial_channel;
@@ -21,13 +24,9 @@ using VLCArgs = std::vector<std::string>;
 static Options parse_options(QStringList args);
 static VLCArgs load_vlc_args();
 static void handle_vlc_init_failure();
+static bool init_daemon();
 
 int main(int argc, char *argv[]) {
-    QProcess::startDetached(constants::TWITCHD_PATH, QStringList()
-        << "--client-id" << constants::TWITCHD_CLIENT_ID
-        << "--host" << "127.0.0.1"
-    );
-
     QApplication app { argc, argv };
 
     app.setOrganizationName("GlobiCorp");
@@ -37,6 +36,10 @@ int main(int argc, char *argv[]) {
 
     if (!video_context.init_success()) {
         handle_vlc_init_failure();
+        return EXIT_FAILURE;
+    }
+
+    if (!init_daemon()) {
         return EXIT_FAILURE;
     }
 
@@ -100,4 +103,44 @@ static void handle_vlc_init_failure() {
     );
 
     QMessageBox::critical(nullptr, "libvlc error", error_message);
+}
+
+static bool init_daemon() {
+    auto status = daemon_control::status();
+
+    auto start_daemon = [] {
+        if (!daemon_control::start()) {
+            auto error_message = QString(
+                "Failed to start the daemon process\n"
+                "Make sure that you have the correct permissions to run it"
+            );
+            QMessageBox::critical(nullptr, "Daemon error", error_message);
+            return false;
+        }
+        else {
+            return true;
+        }
+    };
+
+    if (!status.running) {
+        if (!start_daemon())
+            return false;
+    }
+    else if (status.version != EXPECTED_DAEMON_VERSION) {
+        if (!daemon_control::stop()) {
+            auto warning_message = QString(
+                "Failed to gracefully stop the daemon process\n"
+                "Your daemon is out of date and might lack a shutdown capability\n"
+                "Please try to manually stop the process called \"twitchd\" and run the app again\n"
+                "If you choose to ignore that warning, your experience might not be optimal"
+            );
+            QMessageBox::warning(nullptr, "Daemon warning", warning_message);
+            return true;
+        }
+
+        if (!start_daemon())
+            return false;
+    }
+
+    return true;
 }
