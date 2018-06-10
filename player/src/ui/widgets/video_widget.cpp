@@ -57,6 +57,11 @@ VideoWidget::VideoWidget(libvlc::Instance &instance, QWidget *parent):
     _event_watcher(new VLCEventWatcher(_media_player, this)),
     _retry_timer(new QTimer(this))
 {
+    using namespace constants::settings;
+
+    QSettings settings;
+    _vol = settings.value(ui::KEY_LAST_VOLUME, ui::DEFAULT_VOLUME).toInt();
+
     auto notifier = new EventNotifier(OVERLAY_INVALIDATING_EVENTS, this);
     window()->installEventFilter(notifier);
 
@@ -178,6 +183,11 @@ void VideoWidget::set_volume(int volume) {
     _media_player.set_volume(_muted ? 0 : _vol);
     _controls->set_volume(_vol);
     _details->show_state(QString("%1 %").arg(_vol));
+
+    using namespace constants::settings;
+
+    QSettings settings;
+    settings.setValue(ui::KEY_LAST_VOLUME, volume);
 }
 
 bool VideoWidget::muted() const {

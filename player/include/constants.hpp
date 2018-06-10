@@ -49,6 +49,11 @@ namespace constants {
             };
         }
 
+        namespace ui {
+            Constant KEY_LAST_VOLUME = "ui/last_volume";
+            Constant DEFAULT_VOLUME = 50;
+        }
+
         namespace vlc {
             Constant KEY_VLC_ARGS = "vlc/args";
             Constant DEFAULT_VLC_ARGS = QStringList()
