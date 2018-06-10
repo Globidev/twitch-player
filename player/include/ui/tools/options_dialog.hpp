@@ -23,6 +23,8 @@ private:
     void load_settings();
     void save_settings();
 
+    void set_daemon_status();
+
     std::unique_ptr<Ui::OptionsDialog> _ui;
     std::vector<std::pair<QString, QKeySequenceEdit *>> _keybind_edits;
 };
