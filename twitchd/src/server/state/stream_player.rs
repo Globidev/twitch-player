@@ -177,7 +177,9 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
             };
             // Update the state for the next iteration before yielding the
             // segment that we should download next
-            previous_segment = next_segment.clone();
+            if let Some(ref segment) = next_segment {
+                previous_segment = Some(segment.clone());
+            }
             next_segment
         }
     };
