@@ -337,7 +337,8 @@ impl From<TimeoutError> for StreamPlayerError {
 mod tests {
 
     fn extract_metadata_test(data: &[u8]) {
-        assert!(super::extract_metadata(&Vec::from(data)).is_some());
+        use super::{extract_metadata, RawVideoData};
+        assert!(extract_metadata(&RawVideoData::from(data)).is_some());
     }
 
     #[test]
