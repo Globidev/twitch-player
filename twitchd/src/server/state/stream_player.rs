@@ -1,5 +1,6 @@
 extern crate hyper;
 extern crate tokio;
+extern crate bytes;
 extern crate serde_json;
 
 use self::hyper::Chunk;
@@ -27,7 +28,7 @@ const PES_METADATA_OFFSET: usize = MPEG_TS_SECTION_LENGTH * 3;
 // Number of raw video chunks to buffer before yielding them back to the clients
 const VIDEO_DATA_CHUNKS_BUFFER_SIZE: usize = 20;
 
-type RawVideoData = Vec<u8>;
+type RawVideoData = bytes::Bytes;
 
 pub struct StreamPlayer {
     opts: Options,
@@ -242,10 +243,10 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
 
 fn concat_video_chunks(chunks: Vec<Chunk>) -> RawVideoData {
     let total_size = chunks.iter().fold(0_usize, |acc, chk| acc + chk.len());
-    let accumulator = Vec::with_capacity(total_size);
+    let accumulator = bytes::Bytes::with_capacity(total_size);
 
-    let accumulate_chunks = |mut acc: Vec<_>, chunk: Chunk| {
-        acc.extend(chunk);
+    let accumulate_chunks = |mut acc: RawVideoData, chunk: Chunk| {
+        acc.extend_from_slice(&chunk);
         acc
     };
 
