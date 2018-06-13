@@ -19,9 +19,6 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
-pub type PlayerSink = ResponseSink;
-pub type MetaKey = String;
-
 const MPEG_TS_SECTION_LENGTH: usize = 188;
 // The metadata packet seems to always be the 3rd one
 const PES_METADATA_OFFSET: usize = MPEG_TS_SECTION_LENGTH * 3;
@@ -30,10 +27,12 @@ const VIDEO_DATA_CHUNKS_BUFFER_SIZE: usize = 20;
 
 type RawVideoData = bytes::Bytes;
 
+pub type PlayerSink = ResponseSink;
+pub type MetaKey = String;
+
 pub struct StreamPlayer {
     opts: Options,
     client: HttpsClient,
-    sinks: Arc<Mutex<Vec<PlayerSink>>>,
     sink_queue: Arc<Mutex<Vec<(MetaKey, PlayerSink)>>>,
     indexed_metadata: Arc<RwLock<HashMap<MetaKey, SegmentMetadata>>>,
 }
@@ -43,7 +42,6 @@ impl StreamPlayer {
         Self {
             opts: opts,
             client: client,
-            sinks: Default::default(),
             sink_queue: Default::default(),
             indexed_metadata: Default::default(),
         }
@@ -53,47 +51,47 @@ impl StreamPlayer {
         -> impl Future<Item = (), Error = StreamPlayerError>
     {
         let process_meta_data = {
-            let sinks = Arc::clone(&self.sinks);
             let sink_queue = Arc::clone(&self.sink_queue);
             let indexed_metadata = Arc::clone(&self.indexed_metadata);
 
-            move |data: &RawVideoData| {
+            move |data: &RawVideoData, senders: &mut Vec<_>| {
                 let mut sink_queue = sink_queue.lock().unwrap();
 
                 if sink_queue.is_empty() { return }
 
                 if let Some(metadata) = extract_metadata(data) {
-                    let mut sinks = sinks.lock().unwrap();
                     let mut indexed_metadata = indexed_metadata.write().unwrap();
 
-                    // Transfer metakeys and sinks to the active containers
                     sink_queue.drain(..).for_each(|(key, sink)| {
-                        sinks.push(sink);
                         indexed_metadata.insert(key, metadata.clone());
+
+                        let (sender, stream) = sync::mpsc::channel(16);
+                        senders.push(sender);
+
+                        hyper::rt::spawn(drain_stream(stream, sink));
                     });
                 }
             }
         };
 
-        let process_segment_chunk = {
-            let sinks = Arc::clone(&self.sinks);
+        let mut process_segment_chunk = {
             let inactive_timeout = self.opts.player_inactive_timeout;
+
             let mut last_active = Instant::now();
+            let mut senders = Vec::new();
 
             move |chunk: SegmentChunk| {
                 let raw_data = match chunk {
                     SegmentChunk::Tail(data) => data,
                     SegmentChunk::Head(data) => {
-                        process_meta_data(&data);
+                        process_meta_data(&data, &mut senders);
                         data
                     }
                 };
 
-                if let Ok(mut sinks) = sinks.lock() {
-                    fanout_and_filter(&mut sinks, raw_data);
+                fanout_and_filter(&mut senders, raw_data);
 
-                    if !sinks.is_empty() { last_active = Instant::now(); }
-                }
+                if !senders.is_empty() { last_active = Instant::now(); }
 
                 let timed_out = last_active.elapsed() > inactive_timeout;
                 match timed_out {
@@ -115,10 +113,10 @@ impl StreamPlayer {
         );
 
         video_data_stream_with_timeout
-            .for_each(process_segment_chunk)
+            .for_each(move |data| process_segment_chunk(data))
     }
 
-    pub fn queue_sink(&self, sink: PlayerSink, meta_key: MetaKey) {
+    pub fn queue_sink(&self, sink: ResponseSink, meta_key: MetaKey) {
         self.sink_queue.lock().unwrap().push((meta_key, sink))
     }
 
@@ -256,25 +254,61 @@ fn concat_video_chunks(chunks: Vec<Chunk>) -> RawVideoData {
 
 // Helper function that pretty much combines a `drain_filter` algorithm
 // with a fan out style data dispatching
-fn fanout_and_filter(sinks: &mut Vec<PlayerSink>, data: RawVideoData) {
-    if sinks.is_empty() { return }
+fn fanout_and_filter(senders: &mut Vec<sync::mpsc::Sender<RawVideoData>>, data: RawVideoData) {
+    if senders.is_empty() { return }
 
     let mut i = 0;
     // Fan the input data out to every client except the last one
-    while i < sinks.len() - 1 {
-        let chunk_out = Chunk::from(data.clone());
-
-        match sinks[i].send_data(chunk_out) {
+    while i < senders.len() - 1 {
+        match senders[i].try_send(data.clone()) {
             Ok(_)  => { i += 1; },
-            Err(_) => { let _ = sinks.remove(i); }
+            Err(_) => { let _ = senders.remove(i); }
         }
     }
     // The last sink can save us a clone on the input data
-    let last_chunk_out = Chunk::from(data);
-
-    if let Err(_) = sinks[i].send_data(last_chunk_out) {
-        let _ = sinks.remove(i);
+    if let Err(_) = senders[i].try_send(data) {
+        let _ = senders.remove(i);
     }
+}
+
+fn drain_stream<S>(video_stream: S, mut sink: PlayerSink)
+    -> impl Future<Item = (), Error = ()>
+where
+    S: Stream<Item = RawVideoData, Error = ()>
+{
+    use std::mem::replace;
+
+    let mut data_backlog = RawVideoData::new();
+
+    let data_to_send = |data: RawVideoData, backlog: &mut RawVideoData| {
+        match backlog.is_empty() {
+            true => data,
+            false => {
+                backlog.extend_from_slice(&data);
+                replace(backlog, RawVideoData::new())
+            }
+        }
+    };
+
+    let send_or_buffer = move |data: RawVideoData| {
+        // TODO: Add backlog size limit
+        match sink.poll_ready() {
+            Ok(Async::Ready(_)) => {
+                let data_out = data_to_send(data, &mut data_backlog);
+                sink.send_data(Chunk::from(data_out))
+                    .map_err(|_chunk| {
+                        eprintln!("Send data failed after successful polling");
+                    })
+            },
+            Ok(Async::NotReady) => {
+                data_backlog.extend_from_slice(&data);
+                Ok(())
+            },
+            Err(_) => Err(())
+        }
+    };
+
+    video_stream.for_each(send_or_buffer)
 }
 
 enum SegmentChunk {
