@@ -44,6 +44,7 @@ impl StreamPlayer {
         -> impl Future<Item = (), Error = StreamPlayerError>
     {
         let process_meta_data = {
+            let sink_size = self.opts.player_max_sink_buffer_size;
             let sink_queue = Arc::clone(&self.sink_queue);
             let indexed_metadata = Arc::clone(&self.indexed_metadata);
 
@@ -61,7 +62,7 @@ impl StreamPlayer {
                         let (sender, stream) = sync::mpsc::channel(16);
                         senders.push(sender);
 
-                        hyper::rt::spawn(drain_stream(stream, sink));
+                        hyper::rt::spawn(drain_stream(stream, sink, sink_size));
                     });
                 }
             }
@@ -243,14 +244,14 @@ fn fanout_and_filter(senders: &mut Vec<sync::mpsc::Sender<RawVideoData>>, data: 
     }
 }
 
-fn drain_stream<S>(video_stream: S, mut sink: PlayerSink)
+fn drain_stream<S>(video_stream: S, mut sink: PlayerSink, max_buffer_size: usize)
     -> impl Future<Item = (), Error = ()>
 where
     S: Stream<Item = RawVideoData, Error = ()>
 {
     use std::mem::replace;
 
-    let mut data_backlog = RawVideoData::new();
+    let mut sink_buffer = RawVideoData::new();
 
     let data_to_send = |data: RawVideoData, backlog: &mut RawVideoData| {
         match backlog.is_empty() {
@@ -263,17 +264,20 @@ where
     };
 
     let send_or_buffer = move |data: RawVideoData| {
-        // TODO: Add backlog size limit
+        if sink_buffer.len() > max_buffer_size {
+            return Err(())
+        }
+
         match sink.poll_ready() {
             Ok(Async::Ready(_)) => {
-                let data_out = data_to_send(data, &mut data_backlog);
+                let data_out = data_to_send(data, &mut sink_buffer);
                 sink.send_data(Chunk::from(data_out))
                     .map_err(|_chunk| {
                         eprintln!("Send data failed after successful polling");
                     })
             },
             Ok(Async::NotReady) => {
-                data_backlog.extend_from_slice(&data);
+                sink_buffer.extend_from_slice(&data);
                 Ok(())
             },
             Err(_) => Err(())

@@ -62,6 +62,9 @@ pub struct Options {
     #[structopt(long = "player-video-chunks-size", default_value = "131072",
                 help = "Size of the video chunks in bytes sent to each client")]
     pub player_video_chunks_size: usize,
+    #[structopt(long = "player-max-sink-buffer-size", default_value = "10000000", // 10 MB ≅ 5 segments of 1080p60 source video
+                help = "Maximum size in bytes of buffered data per client waiting to be sent")]
+    pub player_max_sink_buffer_size: usize,
 }
 
 #[derive(Debug)]
