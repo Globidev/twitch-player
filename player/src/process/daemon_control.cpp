@@ -17,6 +17,8 @@ struct DaemonSettings {
     quint32 playlist_fetch_interval_ms;
     quint32 player_inactive_timeout_s;
     quint32 player_fetch_timeout_s;
+    quint32 player_video_chunks_size;
+    quint32 player_max_sink_buffer_size;
 };
 
 static DaemonSettings load_settings() {
@@ -33,6 +35,8 @@ static DaemonSettings load_settings() {
         settings.value(KEY_PLAYLIST_FETCH_INTERVAL, DEFAULT_PLAYLIST_FETCH_INTERVAL).value<quint32>(),
         settings.value(KEY_PLAYER_INACTIVE_TIMEOUT, DEFAULT_PLAYER_INACTIVE_TIMEOUT).value<quint32>(),
         settings.value(KEY_PLAYER_FETCH_TIMEOUT, DEFAULT_PLAYER_FETCH_TIMEOUT).value<quint32>(),
+        settings.value(KEY_PLAYER_VIDEO_CHUNKS_SIZE, DEFAULT_PLAYER_VIDEO_CHUNKS_SIZE).value<quint32>(),
+        settings.value(KEY_PLAYER_MAX_SINK_BUFFER_SIZE, DEFAULT_PLAYER_MAX_SINK_BUFFER_SIZE).value<quint32>(),
     };
 }
 
@@ -49,6 +53,8 @@ bool start() {
         << "--playlist-fetch-interval" << QString("%1ms").arg(settings.playlist_fetch_interval_ms)
         << "--player-inactive-timeout" << QString("%1s").arg(settings.player_inactive_timeout_s)
         << "--player-fetch-timeout" << QString("%1s").arg(settings.player_fetch_timeout_s)
+        << "--player-video-chunks-size" << QString("%1").arg(settings.player_video_chunks_size)
+        << "--player-max-sink-buffer-size" << QString("%1").arg(settings.player_max_sink_buffer_size)
         ;
 
     return QProcess::startDetached(constants::TWITCHD_PATH, arguments);

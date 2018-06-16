@@ -69,6 +69,12 @@ OptionsDialog::OptionsDialog(QWidget *parent):
     QObject::connect(_ui->daemonPlayerInactiveTimeout, &QSlider::valueChanged, [this](int value) {
         _ui->daemonPlayerInactiveTimeoutLabel->setText(QString("%1 seconds").arg(value));
     });
+    QObject::connect(_ui->daemonPlayerVideoChunksSize, &QSlider::valueChanged, [this](int value) {
+        _ui->daemonPlayerVideoChunksSizeLabel->setText(QString("%1 bytes").arg(value));
+    });
+    QObject::connect(_ui->daemonPlayerSinkBufferLimit, &QSlider::valueChanged, [this](int value) {
+        _ui->daemonPlayerSinkBufferLimitLabel->setText(QString("%1 bytes").arg(value));
+    });
 
     QObject::connect(_ui->daemonStart, &QPushButton::clicked, [this] {
         update_daemon("Starting...", [] { daemon_control::start(); });
@@ -135,6 +141,8 @@ void OptionsDialog::load_settings() {
     _ui->daemonPlaylistFetchInterval->setValue(settings.value(KEY_PLAYLIST_FETCH_INTERVAL, DEFAULT_PLAYLIST_FETCH_INTERVAL).toInt());
     _ui->daemonPlayerFetchTimeout->setValue(settings.value(KEY_PLAYER_FETCH_TIMEOUT, DEFAULT_PLAYER_FETCH_TIMEOUT).toInt());
     _ui->daemonPlayerInactiveTimeout->setValue(settings.value(KEY_PLAYER_INACTIVE_TIMEOUT, DEFAULT_PLAYER_INACTIVE_TIMEOUT).toInt());
+    _ui->daemonPlayerVideoChunksSize->setValue(settings.value(KEY_PLAYER_VIDEO_CHUNKS_SIZE, DEFAULT_PLAYER_VIDEO_CHUNKS_SIZE).toInt());
+    _ui->daemonPlayerSinkBufferLimit->setValue(settings.value(KEY_PLAYER_MAX_SINK_BUFFER_SIZE, DEFAULT_PLAYER_MAX_SINK_BUFFER_SIZE).toInt());
 
     _ui->daemonUnmanagedHost->setText(settings.value(KEY_HOST_UNMANAGED, DEFAULT_HOST_UNMANAGED).toString());
     _ui->daemonUnmanagedPort->setValue(settings.value(KEY_PORT_UNMANAGED, DEFAULT_PORT_UNMANAGED).value<quint16>());
@@ -169,6 +177,8 @@ void OptionsDialog::save_settings() {
     settings.setValue(KEY_PLAYLIST_FETCH_INTERVAL, _ui->daemonPlaylistFetchInterval->value());
     settings.setValue(KEY_PLAYER_FETCH_TIMEOUT, _ui->daemonPlayerFetchTimeout->value());
     settings.setValue(KEY_PLAYER_INACTIVE_TIMEOUT, _ui->daemonPlayerInactiveTimeout->value());
+    settings.setValue(KEY_PLAYER_VIDEO_CHUNKS_SIZE, _ui->daemonPlayerVideoChunksSize->value());
+    settings.setValue(KEY_PLAYER_MAX_SINK_BUFFER_SIZE, _ui->daemonPlayerSinkBufferLimit->value());
 
     settings.setValue(KEY_HOST_UNMANAGED, _ui->daemonUnmanagedHost->text());
     settings.setValue(KEY_PORT_UNMANAGED, _ui->daemonUnmanagedPort->value());

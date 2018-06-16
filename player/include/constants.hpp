@@ -85,6 +85,10 @@ namespace constants {
             Constant DEFAULT_PLAYER_INACTIVE_TIMEOUT = 60;
             Constant KEY_PLAYER_FETCH_TIMEOUT = "daemon/player_fetch_timeout";
             Constant DEFAULT_PLAYER_FETCH_TIMEOUT = 10;
+            Constant KEY_PLAYER_VIDEO_CHUNKS_SIZE = "daemon/player_video_chunks_size";
+            Constant DEFAULT_PLAYER_VIDEO_CHUNKS_SIZE = 131072;
+            Constant KEY_PLAYER_MAX_SINK_BUFFER_SIZE = "daemon/player_max_sink_buffer_size";
+            Constant DEFAULT_PLAYER_MAX_SINK_BUFFER_SIZE = 10000000;
         }
 
         namespace shortcuts {

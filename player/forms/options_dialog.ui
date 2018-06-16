@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>453</width>
-    <height>421</height>
+    <width>452</width>
+    <height>447</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -215,8 +215,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>409</width>
-            <height>328</height>
+            <width>408</width>
+            <height>354</height>
            </rect>
           </property>
          </widget>
@@ -595,6 +595,124 @@
             </item>
             <item>
              <spacer name="horizontalSpacer_9">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_13">
+            <item>
+             <widget class="QLabel" name="label_13">
+              <property name="minimumSize">
+               <size>
+                <width>150</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Player video chunks size:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSlider" name="daemonPlayerVideoChunksSize">
+              <property name="minimumSize">
+               <size>
+                <width>150</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="minimum">
+               <number>4096</number>
+              </property>
+              <property name="maximum">
+               <number>10485760</number>
+              </property>
+              <property name="singleStep">
+               <number>4096</number>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="daemonPlayerVideoChunksSizeLabel">
+              <property name="text">
+               <string>bytes</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_13">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_15">
+            <item>
+             <widget class="QLabel" name="label_15">
+              <property name="minimumSize">
+               <size>
+                <width>150</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Player sink buffer limit:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSlider" name="daemonPlayerSinkBufferLimit">
+              <property name="minimumSize">
+               <size>
+                <width>150</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="minimum">
+               <number>0</number>
+              </property>
+              <property name="maximum">
+               <number>33554432</number>
+              </property>
+              <property name="singleStep">
+               <number>4096</number>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="daemonPlayerSinkBufferLimitLabel">
+              <property name="text">
+               <string>bytes</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_15">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
               </property>
