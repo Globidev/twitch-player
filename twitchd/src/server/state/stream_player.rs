@@ -8,7 +8,6 @@ use self::tokio::timer::Interval;
 
 use prelude::futures::*;
 use prelude::http::*;
-use prelude::timer::*;
 
 use twitch::types::{PlaylistInfo, Playlist, Segment};
 use twitch::api::ApiError;
@@ -23,7 +22,7 @@ const MPEG_TS_SECTION_LENGTH: usize = 188;
 // The metadata packet seems to always be the 3rd one
 const PES_METADATA_OFFSET: usize = MPEG_TS_SECTION_LENGTH * 3;
 // Number of raw video chunks to buffer before yielding them back to the clients
-const VIDEO_DATA_CHUNKS_BUFFER_SIZE: usize = 20;
+const VIDEO_DATA_BUFFER_SIZE: usize = 1024 * 128;
 
 type RawVideoData = bytes::Bytes;
 
@@ -74,7 +73,7 @@ impl StreamPlayer {
             }
         };
 
-        let mut process_segment_chunk = {
+        let process_segment_chunk = {
             let inactive_timeout = self.opts.player_inactive_timeout;
 
             let mut last_active = Instant::now();
@@ -107,13 +106,9 @@ impl StreamPlayer {
             self.opts.player_playlist_fetch_interval
         );
 
-        let video_data_stream_with_timeout = timeout_stream(
-            video_data_stream,
-            self.opts.player_fetch_timeout
-        );
-
-        video_data_stream_with_timeout
-            .for_each(move |data| process_segment_chunk(data))
+        video_data_stream
+            .timeout(self.opts.player_fetch_timeout)
+            .for_each(process_segment_chunk)
     }
 
     pub fn queue_sink(&self, sink: ResponseSink, meta_key: MetaKey) {
@@ -191,12 +186,7 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
         let segment_stream = fetch_streamed(&client, request)
             .map_err(StreamPlayerError::FetchSegmentFail)
             // -> Buffer incoming data into larger chunks
-            .chunks(VIDEO_DATA_CHUNKS_BUFFER_SIZE)
-            // At this point, we have a stream of Vec<Chunk>
-            // S = Stream<Vec<Chunk>, E>
-            // -> cancatenate each vector into a single blob of raw data
-            .map(concat_video_chunks)
-            // The stream is now S = Stream<RawVideoData, E>
+            .buffer_concat(VIDEO_DATA_BUFFER_SIZE)
             // Now we need to split the head and the tail of the data to be able
             // to process the metadata that's in the head
             // -> convert the stream into a future
@@ -237,19 +227,6 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
     playlist_stream
         .map(fetch_latest_segment)
         .flatten()
-}
-
-fn concat_video_chunks(chunks: Vec<Chunk>) -> RawVideoData {
-    let total_size = chunks.iter().fold(0_usize, |acc, chk| acc + chk.len());
-    let accumulator = bytes::Bytes::with_capacity(total_size);
-
-    let accumulate_chunks = |mut acc: RawVideoData, chunk: Chunk| {
-        acc.extend_from_slice(&chunk);
-        acc
-    };
-
-    chunks.into_iter()
-        .fold(accumulator, accumulate_chunks)
 }
 
 // Helper function that pretty much combines a `drain_filter` algorithm
@@ -340,7 +317,7 @@ fn extract_metadata(data: &RawVideoData) -> Option<SegmentMetadata> {
 
     let json_end_offset = unbounded_json_slice.iter()
         .position(|&c| c == b'}')?;
-    let json_slice = &unbounded_json_slice[..json_end_offset + 1];
+    let json_slice = &unbounded_json_slice[..=json_end_offset];
 
     serde_json::from_slice(json_slice).ok()
 }
