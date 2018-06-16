@@ -18,12 +18,6 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
-const MPEG_TS_SECTION_LENGTH: usize = 188;
-// The metadata packet seems to always be the 3rd one
-const PES_METADATA_OFFSET: usize = MPEG_TS_SECTION_LENGTH * 3;
-// Number of raw video chunks to buffer before yielding them back to the clients
-const VIDEO_DATA_BUFFER_SIZE: usize = 1024 * 128;
-
 type RawVideoData = bytes::Bytes;
 
 pub type PlayerSink = ResponseSink;
@@ -103,7 +97,8 @@ impl StreamPlayer {
         let video_data_stream = segment_stream(
             self.client.clone(),
             playlist_info,
-            self.opts.player_playlist_fetch_interval
+            self.opts.player_playlist_fetch_interval,
+            self.opts.player_video_chunks_size,
         );
 
         video_data_stream
@@ -120,7 +115,7 @@ impl StreamPlayer {
     }
 }
 
-fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interval: Duration)
+fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interval: Duration, video_chunks_size: usize)
     -> impl Stream<Item = SegmentChunk, Error = StreamPlayerError>
 {
     use twitch::api::playlist;
@@ -186,7 +181,7 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
         let segment_stream = fetch_streamed(&client, request)
             .map_err(StreamPlayerError::FetchSegmentFail)
             // -> Buffer incoming data into larger chunks
-            .buffer_concat(VIDEO_DATA_BUFFER_SIZE)
+            .buffer_concat(video_chunks_size)
             // Now we need to split the head and the tail of the data to be able
             // to process the metadata that's in the head
             // -> convert the stream into a future
@@ -303,6 +298,10 @@ pub struct SegmentMetadata {
     transc_r: u64,
     transc_s: u64,
 }
+
+const MPEG_TS_SECTION_LENGTH: usize = 188;
+// The metadata packet seems to always be the 3rd one
+const PES_METADATA_OFFSET: usize = MPEG_TS_SECTION_LENGTH * 3;
 
 fn extract_metadata(data: &RawVideoData) -> Option<SegmentMetadata> {
     let pes_slice = &data[

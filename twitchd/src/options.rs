@@ -59,6 +59,9 @@ pub struct Options {
                 parse(try_from_str = "parse_duration"),
                 help = "Maximum time allowed to fetch video data from Twitch")]
     pub player_fetch_timeout: Duration,
+    #[structopt(long = "player-video-chunks-size", default_value = "131072",
+                help = "Size of the video chunks in bytes sent to each client")]
+    pub player_video_chunks_size: usize,
 }
 
 #[derive(Debug)]
