@@ -45,14 +45,18 @@ OptionsDialog::OptionsDialog(QWidget *parent):
         qDeleteAll(_ui->libvlcOptionsList->selectedItems());
     });
 
-    // Groupbox
     QObject::connect(_ui->daemonManagedGroupbox, &QGroupBox::toggled, [this](bool on) {
         _ui->daemonUnmanagedGroupbox->setChecked(!on);
+        QSettings settings;
+        settings.setValue(constants::settings::daemon::KEY_MANAGED, on);
+        update_daemon("Querying...", [] { });
     });
     QObject::connect(_ui->daemonUnmanagedGroupbox, &QGroupBox::toggled, [this](bool on) {
         _ui->daemonManagedGroupbox->setChecked(!on);
+        QSettings settings;
+        settings.setValue(constants::settings::daemon::KEY_MANAGED, !on);
+        update_daemon("Querying...", [] { });
     });
-    // Labels
     QObject::connect(_ui->daemonIndexCacheTimeout, &QSlider::valueChanged, [this](int value) {
         _ui->daemonIndexCacheTimeoutLabel->setText(QString("%1 seconds").arg(value));
     });
@@ -65,16 +69,13 @@ OptionsDialog::OptionsDialog(QWidget *parent):
     QObject::connect(_ui->daemonPlayerInactiveTimeout, &QSlider::valueChanged, [this](int value) {
         _ui->daemonPlayerInactiveTimeoutLabel->setText(QString("%1 seconds").arg(value));
     });
-    // Restart
-    QObject::connect(_ui->daemonRestart, &QPushButton::clicked, [this] {
-        _ui->daemonRestart->setEnabled(false);
-        _ui->daemonStatus->setText("Restarting...");
-        daemon_control::stop();
-        delayed(this, 1000, [this] {
-            daemon_control::start();
-            set_daemon_status();
-            _ui->daemonRestart->setEnabled(true);
-        });
+
+    QObject::connect(_ui->daemonStart, &QPushButton::clicked, [this] {
+        update_daemon("Starting...", [] { daemon_control::start(); });
+    });
+
+    QObject::connect(_ui->daemonStop, &QPushButton::clicked, [this] {
+        update_daemon("Stopping...", [] { daemon_control::stop(); });
     });
 
     load_settings();
@@ -125,18 +126,21 @@ void OptionsDialog::load_settings() {
     }
     _ui->keybindsFrame->widget()->setLayout(keybinds_layout);
 
-    set_daemon_status();
+    update_daemon("Querying...", [] { });
 
-    _ui->daemonManagedHost->setText(settings.value(KEY_HOST, DEFAULT_HOST).toString());
-    _ui->daemonManagedPort->setValue(settings.value(KEY_PORT, DEFAULT_PORT).value<quint16>());
+    _ui->daemonManagedHost->setText(settings.value(KEY_HOST_MANAGED, DEFAULT_HOST_MANAGED).toString());
+    _ui->daemonManagedPort->setValue(settings.value(KEY_PORT_MANAGED, DEFAULT_PORT_MANAGED).value<quint16>());
 
     _ui->daemonIndexCacheTimeout->setValue(settings.value(KEY_CACHE_TIMEOUT, DEFAULT_CACHE_TIMEOUT).toInt());
     _ui->daemonPlaylistFetchInterval->setValue(settings.value(KEY_PLAYLIST_FETCH_INTERVAL, DEFAULT_PLAYLIST_FETCH_INTERVAL).toInt());
     _ui->daemonPlayerFetchTimeout->setValue(settings.value(KEY_PLAYER_FETCH_TIMEOUT, DEFAULT_PLAYER_FETCH_TIMEOUT).toInt());
     _ui->daemonPlayerInactiveTimeout->setValue(settings.value(KEY_PLAYER_INACTIVE_TIMEOUT, DEFAULT_PLAYER_INACTIVE_TIMEOUT).toInt());
 
-    _ui->daemonUnmanagedHost->setText(settings.value(KEY_ADDRESS, DEFAULT_ADDRESS).toString());
-    _ui->daemonUnmanagedPort->setValue(settings.value(KEY_PORT, DEFAULT_PORT).value<quint16>());
+    _ui->daemonUnmanagedHost->setText(settings.value(KEY_HOST_UNMANAGED, DEFAULT_HOST_UNMANAGED).toString());
+    _ui->daemonUnmanagedPort->setValue(settings.value(KEY_PORT_UNMANAGED, DEFAULT_PORT_UNMANAGED).value<quint16>());
+
+    if (!settings.value(KEY_MANAGED, DEFAULT_MANAGED).toBool())
+        _ui->daemonUnmanagedGroupbox->setChecked(true);
 }
 
 void OptionsDialog::save_settings() {
@@ -158,36 +162,53 @@ void OptionsDialog::save_settings() {
     for (auto [setting_key, sequence_edit]: _keybind_edits)
         settings.setValue(setting_key, sequence_edit->keySequence().toString());
 
-    settings.setValue(KEY_HOST, _ui->daemonManagedHost->text());
-
-    if (_ui->daemonUnmanagedGroupbox->isChecked()){
-        settings.setValue(KEY_ADDRESS, _ui->daemonUnmanagedHost->text());
-        settings.setValue(KEY_PORT, _ui->daemonUnmanagedPort->value());
-    }
-    else {
-        settings.setValue(KEY_ADDRESS, DEFAULT_ADDRESS);
-        settings.setValue(KEY_PORT, _ui->daemonManagedPort->value());
-    }
+    settings.setValue(KEY_HOST_MANAGED, _ui->daemonManagedHost->text());
+    settings.setValue(KEY_PORT_MANAGED, _ui->daemonManagedPort->value());
 
     settings.setValue(KEY_CACHE_TIMEOUT, _ui->daemonIndexCacheTimeout->value());
     settings.setValue(KEY_PLAYLIST_FETCH_INTERVAL, _ui->daemonPlaylistFetchInterval->value());
     settings.setValue(KEY_PLAYER_FETCH_TIMEOUT, _ui->daemonPlayerFetchTimeout->value());
     settings.setValue(KEY_PLAYER_INACTIVE_TIMEOUT, _ui->daemonPlayerInactiveTimeout->value());
+
+    settings.setValue(KEY_HOST_UNMANAGED, _ui->daemonUnmanagedHost->text());
+    settings.setValue(KEY_PORT_UNMANAGED, _ui->daemonUnmanagedPort->value());
+
+    settings.setValue(KEY_MANAGED, _ui->daemonManagedGroupbox->isChecked());
 }
 
-void OptionsDialog::set_daemon_status() {
+void OptionsDialog::update_daemon(QString message, std::function<void ()> action) {
+    using namespace constants::settings::daemon;
+
+    _ui->daemonStart->setEnabled(false);
+    _ui->daemonStop->setEnabled(false);
+    _ui->daemonStatus->setText(message);
+
+    action();
+
     auto daemon_status = daemon_control::status();
 
-    if (daemon_status.running) {
-        _ui->daemonStatus->setText(QString("Running (%1)").arg(daemon_status.version));
-        QPalette palette;
-        palette.setColor(QPalette::WindowText, QColor(Qt::green));
-        _ui->daemonStatus->setPalette(palette);
-    }
-    else {
-        _ui->daemonStatus->setText("Not running");
-        QPalette palette;
-        palette.setColor(QPalette::WindowText, QColor(Qt::red));
-        _ui->daemonStatus->setPalette(palette);
-    }
+    QSettings settings;
+
+    auto managed = settings.value(KEY_MANAGED, DEFAULT_MANAGED).toBool();
+
+    auto [status, color] = [=]() -> std::pair<QString, QColor> {
+        if (daemon_status.running) {
+            return {
+                QString("Running (%1)").arg(daemon_status.version),
+                QColor(Qt::green)
+            };
+        }
+        else {
+            return { "Stopped", QColor(Qt::red) };
+        }
+    }();
+
+    status.prepend(managed ? "": "[remote] ");
+    _ui->daemonStatus->setText(status);
+    QPalette palette;
+    palette.setColor(QPalette::WindowText, color);
+    _ui->daemonStatus->setPalette(palette);
+
+    _ui->daemonStart->setEnabled(!daemon_status.running && managed);
+    _ui->daemonStop->setEnabled(daemon_status.running && managed);
 }

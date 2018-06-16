@@ -50,7 +50,7 @@ private:
     VLCEventWatcher *_event_watcher;
 
     int _vol;
-    bool _muted = false;
+    bool _muted;
 
     QPoint _last_drag_position;
 

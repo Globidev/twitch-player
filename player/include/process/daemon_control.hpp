@@ -5,6 +5,7 @@
 namespace daemon_control {
     struct Status {
         bool running = false;
+        bool managed = true;
         QString version;
     };
 

@@ -24,8 +24,8 @@ static DaemonSettings load_settings() {
     QSettings settings;
 
     return DaemonSettings {
-        settings.value(KEY_HOST, DEFAULT_HOST).toString(),
-        settings.value(KEY_PORT, DEFAULT_PORT).value<quint16>(),
+        settings.value(KEY_HOST_MANAGED, DEFAULT_HOST_MANAGED).toString(),
+        settings.value(KEY_PORT_MANAGED, DEFAULT_PORT_MANAGED).value<quint16>(),
 
         constants::TWITCHD_CLIENT_ID,
 
@@ -70,10 +70,13 @@ bool stop() {
 }
 
 Status status() {
-    auto settings = load_settings();
+    using namespace constants::settings::daemon;
+    QSettings settings;
 
     Status status;
     TwitchdAPI api;
+
+    status.managed = settings.value(KEY_MANAGED, DEFAULT_MANAGED).toBool();
 
     auto version_response = api.daemon_version()
         .tap([&](QString version) {

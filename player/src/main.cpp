@@ -108,6 +108,9 @@ static void handle_vlc_init_failure() {
 static bool init_daemon() {
     auto status = daemon_control::status();
 
+    if (!status.managed)
+        return true;
+
     auto start_daemon = [] {
         if (!daemon_control::start()) {
             auto error_message = QString(

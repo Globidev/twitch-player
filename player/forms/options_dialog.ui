@@ -262,9 +262,16 @@
           </spacer>
          </item>
          <item>
-          <widget class="QPushButton" name="daemonRestart">
+          <widget class="QPushButton" name="daemonStart">
            <property name="text">
-            <string>Restart</string>
+            <string>Start</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="daemonStop">
+           <property name="text">
+            <string>Stop</string>
            </property>
           </widget>
          </item>

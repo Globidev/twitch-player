@@ -66,10 +66,21 @@ static SegmentMetadata parse_metadata(const QByteArray &raw) {
 static QUrl endpoint(const QString &path) {
     using namespace constants::settings::daemon;
 
-    QSettings settings;
-
-    auto address = settings.value(KEY_ADDRESS, DEFAULT_ADDRESS).toString();
-    auto port = settings.value(KEY_PORT, DEFAULT_PORT).value<qint16>();
+    auto [address, port] = []() -> std::pair<QString, quint16> {
+        QSettings settings;
+        if (settings.value(KEY_MANAGED, DEFAULT_MANAGED).toBool()) {
+            return {
+                settings.value(KEY_HOST_MANAGED, DEFAULT_HOST_MANAGED).toString(),
+                settings.value(KEY_PORT_MANAGED, DEFAULT_PORT_MANAGED).value<quint16>()
+            };
+        }
+        else {
+            return {
+                settings.value(KEY_HOST_UNMANAGED, DEFAULT_HOST_UNMANAGED).toString(),
+                settings.value(KEY_PORT_UNMANAGED, DEFAULT_PORT_UNMANAGED).value<quint16>()
+            };
+        }
+    }();
 
     return QUrl { QString("http://%1:%2/%3").arg(address).arg(port).arg(path) };
 }

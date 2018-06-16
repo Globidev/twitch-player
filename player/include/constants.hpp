@@ -67,12 +67,16 @@ namespace constants {
         }
 
         namespace daemon {
-            Constant KEY_ADDRESS = "daemon/address";
-            Constant DEFAULT_ADDRESS = "127.0.0.1";
-            Constant KEY_HOST = "daemon/host";
-            Constant DEFAULT_HOST = "127.0.0.1";
-            Constant KEY_PORT = "daemon/port";
-            Constant DEFAULT_PORT = 7777;
+            Constant KEY_MANAGED = "daemon/managed";
+            Constant DEFAULT_MANAGED = true;
+            Constant KEY_HOST_MANAGED = "daemon/host";
+            Constant DEFAULT_HOST_MANAGED = "127.0.0.1";
+            Constant KEY_PORT_MANAGED = "daemon/port";
+            Constant DEFAULT_PORT_MANAGED = 7777;
+            Constant KEY_HOST_UNMANAGED = "daemon/host_unmanaged";
+            Constant DEFAULT_HOST_UNMANAGED = "twitch.glo.bi";
+            Constant KEY_PORT_UNMANAGED = "daemon/port_unmanaged";
+            Constant DEFAULT_PORT_UNMANAGED = 7777;
             Constant KEY_CACHE_TIMEOUT = "daemon/cache_timeout";
             Constant DEFAULT_CACHE_TIMEOUT = 60;
             Constant KEY_PLAYLIST_FETCH_INTERVAL = "daemon/playlist_fetch_interval";
