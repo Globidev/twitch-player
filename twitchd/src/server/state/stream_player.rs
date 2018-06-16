@@ -26,7 +26,7 @@ pub type MetaKey = String;
 pub struct StreamPlayer {
     opts: Options,
     client: HttpsClient,
-    sink_queue: Arc<Mutex<Vec<(MetaKey, PlayerSink)>>>,
+    sink_queue: Arc<RwLock<Vec<(MetaKey, PlayerSink)>>>,
     indexed_metadata: Arc<RwLock<HashMap<MetaKey, SegmentMetadata>>>,
 }
 
@@ -49,11 +49,10 @@ impl StreamPlayer {
             let indexed_metadata = Arc::clone(&self.indexed_metadata);
 
             move |data: &RawVideoData, senders: &mut Vec<_>| {
-                let mut sink_queue = sink_queue.lock().unwrap();
-
-                if sink_queue.is_empty() { return }
+                if sink_queue.read().unwrap().is_empty() { return }
 
                 if let Some(metadata) = extract_metadata(data) {
+                    let mut sink_queue = sink_queue.write().unwrap();
                     let mut indexed_metadata = indexed_metadata.write().unwrap();
 
                     sink_queue.drain(..).for_each(|(key, sink)| {
@@ -108,7 +107,7 @@ impl StreamPlayer {
     }
 
     pub fn queue_sink(&self, sink: ResponseSink, meta_key: MetaKey) {
-        self.sink_queue.lock().unwrap().push((meta_key, sink))
+        self.sink_queue.write().unwrap().push((meta_key, sink))
     }
 
     pub fn get_metadata(&self, meta_key: &MetaKey) -> Option<SegmentMetadata> {
