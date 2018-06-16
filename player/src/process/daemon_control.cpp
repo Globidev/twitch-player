@@ -64,7 +64,7 @@ bool stop() {
             stopped = true;
         });
 
-    quit_response.wait();
+    quit_response.timeout(2000).wait();
 
     return stopped;
 }
@@ -84,7 +84,7 @@ Status status() {
             status.version = version;
         });
 
-    version_response.wait();
+    version_response.timeout(2000).wait();
 
     return status;
 }
