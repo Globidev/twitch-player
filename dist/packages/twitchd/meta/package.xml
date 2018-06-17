@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitchd</DisplayName>
     <Description>Install the Twitch API daemon</Description>
-    <Version>1.1.0</Version>
-    <ReleaseDate>2018-06-09</ReleaseDate>
+    <Version>1.2.0</Version>
+    <ReleaseDate>2018-06-16</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Improved concurrency abilities and performance</UpdateText>
+    <UpdateText>Made streaming more reliable on high bandwidth servers. Further performance improvements</UpdateText>
 </Package>
