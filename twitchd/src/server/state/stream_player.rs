@@ -14,7 +14,7 @@ use twitch::api::ApiError;
 
 use options::Options;
 
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
