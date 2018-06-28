@@ -34,8 +34,10 @@ inside the `./twitchd` directory and that should be enough to build a native exe
 
 The UI aims at targetting all platforms. [Electron does not support embedding of foreign windows](https://github.com/electron/electron/issues/10547) in its current state and I couldn't find any other web based toolkit that fit my needs. I ended up picking Qt and the language of choice for that framework is C++
 
-With a recent version of [Qt](https://www.qt.io/download) (>= 5.10) and a C++17 compliant compiler you should be able to build the UI by running:
+With a recent version of [Qt](https://www.qt.io/download) (>= 5.10), a recent version of libVLC (> 3.0.0) and a C++17 compliant compiler you should be able to build the UI by running:
 ```sh
+export LIBVLC_INCLUDE_DIR="path/to/your/libvlc/include"
+export LIBVLC_LIB_DIR="path/to/your/libvlc/lib"
 mkdir target && cd target
 qmake ..
 make release # or nmake on Windows
