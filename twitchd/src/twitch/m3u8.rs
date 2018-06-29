@@ -133,9 +133,14 @@ named!(prefetch_segment_parser<Input, Segment>, do_parse!(
     (Segment { location })
 ));
 
-named!(playlist_segment_parser<Input, Segment>, alt!(
-    extinf_segment_parser |
-    prefetch_segment_parser
+named!(ext_program_date_parser<Input, ()>, do_parse!(
+    tag!("#EXT-X-PROGRAM-DATE-TIME:") >> take_until_and_consume!("\n") >> ()
+));
+
+named!(playlist_segment_parser<Input, Segment>, do_parse!(
+    opt!(ext_program_date_parser) >>
+    segment: alt!(extinf_segment_parser | prefetch_segment_parser) >>
+    (segment)
 ));
 
 named!(playlist_parser<Input, Playlist>, do_parse!(
@@ -338,6 +343,14 @@ mod tests {
         parse_test(
             super::playlist_parser,
             include_bytes!("../../test_samples/m3u8/playlist_with_prefetch_segments.m3u8")
+        );
+    }
+
+    #[test]
+    fn parse_playlist_with_program_date_time() {
+        parse_test(
+            super::playlist_parser,
+            include_bytes!("../../test_samples/m3u8/playlist_with_program_date_time.m3u8")
         );
     }
 
