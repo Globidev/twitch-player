@@ -5,6 +5,7 @@ use self::tokio::timer::Delay;
 
 use prelude::http::*;
 use prelude::futures::*;
+use prelude::runtime;
 
 use options::Options;
 
@@ -128,7 +129,7 @@ fn cache_expiry_scheduler<T, E>(cache: Cache, channel: &str, timeout: Duration)
                         Ok(())
                     });
 
-                hyper::rt::spawn(expire_cache_later);
+                runtime::spawn(expire_cache_later);
             }
         }
         result

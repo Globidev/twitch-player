@@ -1,7 +1,9 @@
 extern crate hyper;
+extern crate tokio;
 
 use prelude::http::{HttpsClient, http_client};
 use prelude::futures::*;
+use prelude::runtime;
 use options::Options;
 
 use super::stream_player::{StreamPlayer, PlayerSink, MetaKey, SegmentMetadata};
@@ -57,7 +59,7 @@ impl PlayerPool {
                 let player = StreamPlayer::new(self.opts.clone(), client);
                 let future = player.play(playlist)
                     .then(remove_player);
-                hyper::rt::spawn(future);
+                runtime::spawn(future);
                 player
             }
         };

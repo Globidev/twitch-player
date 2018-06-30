@@ -8,6 +8,7 @@ use self::tokio::timer::Interval;
 
 use prelude::futures::*;
 use prelude::http::*;
+use prelude::runtime;
 
 use twitch::types::{PlaylistInfo, Playlist, Segment};
 use twitch::api::ApiError;
@@ -61,7 +62,7 @@ impl StreamPlayer {
                         let (sender, stream) = sync::mpsc::channel(16);
                         senders.push(sender);
 
-                        hyper::rt::spawn(drain_stream(stream, sink, sink_size));
+                        runtime::spawn(drain_stream(stream, sink, sink_size));
                     });
                 }
             }

@@ -14,4 +14,6 @@ pub mod futures {
     pub use super::stream_ext::*;
 }
 
+pub mod runtime;
+
 pub mod http;
