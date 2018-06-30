@@ -3,31 +3,7 @@ extern crate nom;
 use std::time::Duration;
 use std::net::IpAddr;
 
-fn parse_duration(src: &str) -> Result<Duration, ParseDurationError> {
-    use std::str::FromStr;
-    use std::str::from_utf8;
-
-    named!(parse_u64<u64>, map_res!(
-        map_res!(nom::digit,from_utf8),
-        FromStr::from_str
-    ));
-
-    type DurationBuilder = fn(u64) -> Duration;
-    named!(parse_duration_builder<DurationBuilder>, alt!(
-        map!(tag!("s"),  |_| (Duration::from_secs) as DurationBuilder) |
-        map!(tag!("ms"), |_| (Duration::from_millis) as DurationBuilder)
-    ));
-
-    named!(parse_final<Duration>, do_parse!(
-        number: parse_u64 >>
-        build_duration: parse_duration_builder >>
-        (build_duration(number))
-    ));
-
-    parse_final(src.as_bytes())
-        .map(|(_remain, result)| result)
-        .map_err(|_error| ParseDurationError)
-}
+use prelude::runtime::RuntimeStrategy;
 
 #[derive(StructOpt, Debug, Clone)]
 #[structopt(name = "twitchd", about = "Twitch API daemon")]
@@ -65,10 +41,55 @@ pub struct Options {
     #[structopt(long = "player-max-sink-buffer-size", default_value = "10000000", // 10 MB ≅ 5 segments of 1080p60 source video
                 help = "Maximum size in bytes of buffered data per client waiting to be sent")]
     pub player_max_sink_buffer_size: usize,
+
+    #[structopt(long = "runtime", default_value = "single",
+                parse(try_from_str = "parse_runtime"),
+                help = "Runtime threading strategy: [single | multi]")]
+    pub runtime_strategy: RuntimeStrategy
+}
+
+fn parse_duration(src: &str) -> Result<Duration, ParseDurationError> {
+    use std::str::FromStr;
+    use std::str::from_utf8;
+
+    named!(parse_u64<u64>, map_res!(
+        map_res!(nom::digit,from_utf8),
+        FromStr::from_str
+    ));
+
+    type DurationBuilder = fn(u64) -> Duration;
+    named!(parse_duration_builder<DurationBuilder>, alt!(
+        map!(tag!("s"),  |_| (Duration::from_secs) as DurationBuilder) |
+        map!(tag!("ms"), |_| (Duration::from_millis) as DurationBuilder)
+    ));
+
+    named!(parse_final<Duration>, do_parse!(
+        number: parse_u64 >>
+        build_duration: parse_duration_builder >>
+        (build_duration(number))
+    ));
+
+    parse_final(src.as_bytes())
+        .map(|(_remain, result)| result)
+        .map_err(|_error| ParseDurationError)
+}
+
+fn parse_runtime(src: &str) -> Result<RuntimeStrategy, ParseRuntimeError> {
+    named!(parser<RuntimeStrategy>, alt!(
+        map!(tag!("single"), |_| RuntimeStrategy::Single) |
+        map!(tag!("multi"), |_| RuntimeStrategy::Multi)
+    ));
+
+    parser(src.as_bytes())
+        .map(|(_remain, result)| result)
+        .map_err(|_error| ParseRuntimeError)
 }
 
 #[derive(Debug)]
 pub struct ParseDurationError;
+
+#[derive(Debug)]
+pub struct ParseRuntimeError;
 
 use std::{error, fmt};
 
@@ -76,7 +97,17 @@ impl error::Error for ParseDurationError {
     fn description(&self) -> &str { "Failed to parse a duration" }
 }
 
+impl error::Error for ParseRuntimeError {
+    fn description(&self) -> &str { "Failed to parse a runtime" }
+}
+
 impl fmt::Display for ParseDurationError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl fmt::Display for ParseRuntimeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }

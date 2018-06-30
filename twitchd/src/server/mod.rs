@@ -1,4 +1,5 @@
 extern crate hyper;
+extern crate tokio;
 
 mod service;
 mod state;
@@ -13,14 +14,16 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 pub fn run(opts: Options) {
+    let mut runtime = opts.runtime_strategy.init_runtime();
+
     let addr = SocketAddr::new(opts.host, opts.port);
 
-    let (shutdown_sender, sutdown_receiver) = sync::oneshot::channel();
+    let (shutdown_sender, shutdown_receiver) = sync::oneshot::channel();
     let state = State::new(opts, shutdown_sender);
     let shared_state = Arc::new(state);
 
     let make_service = move || {
-        Ok(TwitchdApi::new(&shared_state)) as hyper::Result<TwitchdApi>
+        Ok::<_, hyper::Error>(TwitchdApi::new(&shared_state))
     };
 
     let server = hyper::Server::bind(&addr)
@@ -28,8 +31,9 @@ pub fn run(opts: Options) {
         .map_err(|e| eprintln!("server error: {}", e));
 
     let server_with_shutdown_signal = server
-        .select(sutdown_receiver.then(|_| Ok(())))
-        .then(|_| Ok(()));
+        .select2(shutdown_receiver)
+        .then(|_| Ok::<_, ()>(()));
 
-    hyper::rt::run(server_with_shutdown_signal);
+    runtime.block_on(server_with_shutdown_signal)
+        .expect("Failed to run server");
 }
