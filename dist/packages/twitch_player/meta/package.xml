@@ -2,8 +2,8 @@
 <Package>
     <DisplayName>Twitch Player</DisplayName>
     <Description>Install the end user interface</Description>
-    <Version>0.9.8</Version>
-    <ReleaseDate>2018-06-16</ReleaseDate>
+    <Version>0.9.9</Version>
+    <ReleaseDate>2018-06-30</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
     <UpdateText>Daemon bump</UpdateText>
