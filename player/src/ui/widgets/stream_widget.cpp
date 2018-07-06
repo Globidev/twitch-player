@@ -48,7 +48,7 @@ StreamWidget::StreamWidget(libvlc::Instance &inst, QWidget *parent):
     _chat_size = settings.value(
         ui::KEY_LAST_CHAT_SIZE_PERCENT,
         ui::DEFAULT_CHAT_SIZE_PERCENT
-    ).toInt() * 10;
+    ).toFloat() * 10;
     _chat_position = static_cast<ChatPosition>(settings.value(
         ui::KEY_LAST_CHAT_POSITION,
         ui::DEFAULT_CHAT_POSITION
@@ -87,7 +87,7 @@ StreamWidget::StreamWidget(libvlc::Instance &inst, QWidget *parent):
 
         auto chat_index = _splitter->indexOf(_chat);
         auto chat_size = static_cast<float>(_splitter->sizes()[chat_index]);
-        auto chat_size_percent = static_cast<int>(chat_size / _splitter->width() * 100);
+        auto chat_size_percent = static_cast<float>(chat_size) / _splitter->width() * 100;
 
         settings.setValue(ui::KEY_LAST_CHAT_SIZE_PERCENT, chat_size_percent);
     });
