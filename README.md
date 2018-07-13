@@ -7,7 +7,7 @@ When you use native video players like [vlc](https://www.videolan.org/vlc/index.
 
 Projects like [livestreamer](https://github.com/chrippa/livestreamer/releases) or [streamlink](https://github.com/streamlink/streamlink-twitch-gui) already exist but they lack an essential feature: a playback layout that includes chat.
 This project aims at solving this specific issue by "simply" embedding a native player and a chat window inside a shared layout so that it looks like this:
-![image](https://user-images.githubusercontent.com/2079561/41498552-b31a451c-7170-11e8-8b72-fb8f36bac433.png)
+![image](https://user-images.githubusercontent.com/2079561/42701761-bb731772-86c7-11e8-804a-13ec707cb3c4.png)
 
 You get basic resizing functionalities, with an adjustable splitter between the video player and the chat, some controls to enable fullscreen/toggle chat/...
 You also get multistream support and a bunch of cool playback features.
