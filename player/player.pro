@@ -1,7 +1,7 @@
 TARGET          =   twitch-player
 TEMPLATE        =   app
 
-QT              +=  core gui widgets network
+QT              +=  core gui widgets network websockets
 QTPLUGIN        +=  qsvg
 
 include(vendor/qtpromise-0.3.0/qtpromise.pri)
@@ -18,9 +18,10 @@ release:CONFIG  +=  static
 
 SOURCES         +=  src/main.cpp \
                     \
+                    src/api/oauth.cpp \
+                    src/api/pubsub.cpp \
                     src/api/twitch.cpp \
                     src/api/twitchd.cpp \
-                    src/api/oauth.cpp \
                     \
                     src/libvlc/bindings.cpp \
                     src/libvlc/event_watcher.cpp \
@@ -52,9 +53,10 @@ SOURCES         +=  src/main.cpp \
 
 HEADERS         +=  include/constants.hpp \
                     \
+                    include/api/oauth.hpp \
+                    include/api/pubsub.hpp \
                     include/api/twitch.hpp \
                     include/api/twitchd.hpp \
-                    include/api/oauth.hpp \
                     \
                     include/libvlc/bindings.hpp \
                     include/libvlc/event_watcher.hpp \
