@@ -31,6 +31,7 @@ SOURCES         +=  src/main.cpp \
                     \
                     src/ui/main_window.cpp \
                     src/ui/main_window_shortcuts.cpp \
+                    src/ui/tray.cpp \
                     \
                     src/ui/layouts/flow.cpp \
                     src/ui/layouts/splitter_grid.cpp \
@@ -73,6 +74,7 @@ HEADERS         +=  include/constants.hpp \
                     include/process/daemon_control.hpp \
                     \
                     include/ui/main_window.hpp \
+                    include/ui/tray.hpp \
                     \
                     include/ui/layouts/flow.hpp \
                     include/ui/layouts/splitter_grid.hpp \
