@@ -23,6 +23,7 @@ public:
 
 signals:
     void channel_went_live(QString);
+    void channel_went_offline(QString);
 
 private:
     void send_message(QJsonObject);
