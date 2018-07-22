@@ -5,7 +5,10 @@
 #include "process/daemon_control.hpp"
 
 #include "ui/main_window.hpp"
+#include "ui/tray.hpp"
 #include "ui/widgets/pane.hpp"
+
+#include "api/pubsub.hpp"
 
 #include <QApplication>
 #include <QSettings>
@@ -32,6 +35,8 @@ int main(int argc, char *argv[]) {
     app.setOrganizationName("GlobiCorp");
     app.setApplicationName("Twitch Player");
 
+    app.setQuitOnLastWindowClosed(false);
+
     libvlc::Instance video_context { load_vlc_args() };
 
     if (!video_context.init_success()) {
@@ -50,7 +55,24 @@ int main(int argc, char *argv[]) {
     if (options.initial_channel)
         pane->play(*options.initial_channel);
 
+    TwitchPubSub pubsub;
+    SystemTray tray { pubsub };
+
+    QObject::connect(&tray, &SystemTray::channel_open_requested, [&](auto channel) {
+        auto pane = main_window.add_pane(Position { 0, 0 });
+        pane->play(channel);
+    });
+
+    QObject::connect(&tray, &QSystemTrayIcon::activated, [&](auto reason) {
+        if (reason == QSystemTrayIcon::ActivationReason::Trigger ||
+            reason == QSystemTrayIcon::ActivationReason::DoubleClick)
+        {
+            main_window.show();
+        }
+    });
+
     main_window.show();
+    tray.show();
 
     return app.exec();
 }
