@@ -39,6 +39,7 @@ SOURCES         +=  src/main.cpp \
                     src/ui/overlays/video_controls.cpp \
                     src/ui/overlays/video_details.cpp \
                     \
+                    src/ui/tools/about_dialog.cpp \
                     src/ui/tools/options_dialog.cpp \
                     src/ui/tools/video_filters.cpp \
                     src/ui/tools/vlc_log_viewer.cpp \
@@ -84,6 +85,7 @@ HEADERS         +=  include/constants.hpp \
                     include/ui/overlays/video_controls.hpp \
                     include/ui/overlays/video_details.hpp \
                     \
+                    include/ui/tools/about_dialog.hpp \
                     include/ui/tools/options_dialog.hpp \
                     include/ui/tools/video_filters.hpp \
                     include/ui/tools/vlc_log_viewer.hpp \
@@ -109,6 +111,7 @@ unix:!macx:HEADERS    +=  include/ui/native/x11.hpp
 FORMS           +=  forms/main_window.ui \
                     forms/stream_picker.ui \
                     forms/vlc_log_viewer.ui \
+                    forms/about_dialog.ui \
                     forms/options_dialog.ui \
                     forms/stream_card.ui \
                     forms/filters_tool.ui \
