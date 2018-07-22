@@ -122,10 +122,18 @@ color: rgb(135, 109, 220);</string>
      <string>Playback</string>
     </property>
    </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+    <addaction name="actionChromeExtension"/>
+   </widget>
    <addaction name="menuView"/>
    <addaction name="menuPlayback"/>
    <addaction name="menuTools"/>
    <addaction name="menuPreferences"/>
+   <addaction name="menuHelp"/>
   </widget>
   <action name="actionLogs">
    <property name="text">
@@ -363,6 +371,16 @@ color: rgb(135, 109, 220);</string>
   <action name="actionLoginWithTwitch">
    <property name="text">
     <string>Login with Twitch</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="actionChromeExtension">
+   <property name="text">
+    <string>Get the Chrome extension</string>
    </property>
   </action>
  </widget>

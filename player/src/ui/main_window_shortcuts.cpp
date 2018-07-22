@@ -7,9 +7,10 @@
 #include "ui/widgets/stream_widget.hpp"
 #include "ui/widgets/video_widget.hpp"
 
-#include "ui/tools/vlc_log_viewer.hpp"
+#include "ui/tools/about_dialog.hpp"
 #include "ui/tools/options_dialog.hpp"
 #include "ui/tools/video_filters.hpp"
+#include "ui/tools/vlc_log_viewer.hpp"
 
 #include "constants.hpp"
 
@@ -17,6 +18,7 @@
 
 #include <QSettings>
 #include <QShortcut>
+#include <QDesktopServices>
 
 void MainWindow::setup_shortcuts() {
     using namespace constants::settings::shortcuts;
@@ -208,6 +210,16 @@ void MainWindow::setup_shortcuts() {
             remap_shortcuts();
         });
         options_dialog->show();
+    });
+    // Help
+    add_action(_ui->actionAbout, [this] {
+        auto about_dialog = new AboutDialog(this);
+        about_dialog->show();
+    });
+
+    add_action(_ui->actionChromeExtension, [] {
+        constexpr auto CHROME_EXTENSION_URL = "https://chrome.google.com/webstore/detail/open-in-twitch-player/cafdkpbjddldmaichnoonnhamnlapdhg";
+        QDesktopServices::openUrl(QUrl { CHROME_EXTENSION_URL });
     });
 }
 
