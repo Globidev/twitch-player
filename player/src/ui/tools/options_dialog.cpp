@@ -5,6 +5,8 @@
 
 #include "prelude/timer.hpp"
 
+#include "api/pubsub.hpp"
+
 #include "constants.hpp"
 
 #include <QFileDialog>
@@ -85,6 +87,17 @@ OptionsDialog::OptionsDialog(TwitchPubSub &pubsub, QWidget *parent):
         update_daemon("Stopping...", [] { daemon_control::stop(); });
     });
 
+    QObject::connect(_ui->pubsubChannelsListAdd, &QPushButton::clicked, [this] {
+        auto new_item = new QListWidgetItem("...", _ui->pubsubChannelsList);
+        new_item->setFlags(LIST_WIDGET_ITEM_FLAGS);
+        _ui->pubsubChannelsList->setCurrentItem(new_item);
+        _ui->pubsubChannelsList->editItem(new_item);
+    });
+
+    QObject::connect(_ui->pubsubChannelsListDel, &QPushButton::clicked, [this] {
+        qDeleteAll(_ui->pubsubChannelsList->selectedItems());
+    });
+
     load_settings();
 }
 
@@ -95,6 +108,7 @@ void OptionsDialog::load_settings() {
     using namespace constants::settings::vlc;
     using namespace constants::settings::shortcuts;
     using namespace constants::settings::daemon;
+    using namespace constants::settings::notifications;
 
     QSettings settings;
 
@@ -150,6 +164,14 @@ void OptionsDialog::load_settings() {
 
     if (!settings.value(KEY_MANAGED, DEFAULT_MANAGED).toBool())
         _ui->daemonUnmanagedGroupbox->setChecked(true);
+
+    auto pubsub_channels = settings
+        .value(KEY_PUBSUB_CHANNELS, DEFAULT_PUBSUB_CHANNELS)
+        .toStringList();
+    for (auto channel: pubsub_channels) {
+        auto item = new QListWidgetItem(channel, _ui->pubsubChannelsList);
+        item->setFlags(LIST_WIDGET_ITEM_FLAGS);
+    }
 }
 
 void OptionsDialog::save_settings() {
@@ -157,6 +179,7 @@ void OptionsDialog::save_settings() {
     using namespace constants::settings::vlc;
     using namespace constants::settings::shortcuts;
     using namespace constants::settings::daemon;
+    using namespace constants::settings::notifications;
 
     QSettings settings;
 
@@ -185,6 +208,24 @@ void OptionsDialog::save_settings() {
     settings.setValue(KEY_PORT_UNMANAGED, _ui->daemonUnmanagedPort->value());
 
     settings.setValue(KEY_MANAGED, _ui->daemonManagedGroupbox->isChecked());
+
+    auto previous_pubsub_channels = settings
+        .value(KEY_PUBSUB_CHANNELS, DEFAULT_PUBSUB_CHANNELS)
+        .toStringList();
+    for (auto channel: previous_pubsub_channels)
+        _pubsub.unlisten_to_channel(channel);
+
+    QStringList pubsub_channels;
+    for (auto i = 0; i < _ui->pubsubChannelsList->count(); ++i)
+        pubsub_channels << _ui->pubsubChannelsList->item(i)->text();
+    settings.setValue(KEY_PUBSUB_CHANNELS, pubsub_channels);
+
+    for (auto channel: pubsub_channels)
+        _pubsub.listen_to_channel(channel)
+            .fail([](QString error) {
+                // qDebug() << error;
+                // TODO: handle listen error
+            });
 }
 
 void OptionsDialog::update_daemon(QString message, std::function<void ()> action) {
