@@ -3,8 +3,6 @@
 #include <QWebSocket>
 #include <QTimer>
 
-#include <QDebug>
-
 #include <QJsonDocument>
 #include <QJsonArray>
 
@@ -143,13 +141,13 @@ void TwitchPubSub::unlisten_to_channel(QString channel) {
 }
 
 void TwitchPubSub::send_message(QJsonObject message) {
-    qDebug() << ">>" << message;
+    // qDebug() << ">>" << message;
 
     _ws->sendTextMessage(QJsonDocument(message).toJson());
 }
 
 void TwitchPubSub::process_message(QJsonObject message) {
-    qDebug() << "<<" << message;
+    // qDebug() << "<<" << message;
 
     auto type = message["type"].toString();
 
