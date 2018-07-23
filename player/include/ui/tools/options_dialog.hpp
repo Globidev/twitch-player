@@ -11,11 +11,13 @@ namespace Ui {
 
 class QKeySequenceEdit;
 
+class TwitchPubSub;
+
 class OptionsDialog: public QDialog {
     Q_OBJECT
 
 public:
-    OptionsDialog(QWidget * = nullptr);
+    OptionsDialog(TwitchPubSub &, QWidget * = nullptr);
     ~OptionsDialog();
 
 signals:
@@ -26,6 +28,8 @@ private:
     void save_settings();
 
     void update_daemon(QString, std::function<void ()>);
+
+    TwitchPubSub &_pubsub;
 
     std::unique_ptr<Ui::OptionsDialog> _ui;
     std::vector<std::pair<QString, QKeySequenceEdit *>> _keybind_edits;

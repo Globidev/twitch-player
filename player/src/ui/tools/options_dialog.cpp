@@ -15,8 +15,9 @@ constexpr auto LIST_WIDGET_ITEM_FLAGS = Qt::ItemIsEnabled
                                       | Qt::ItemIsEditable
                                       | Qt::ItemIsSelectable;
 
-OptionsDialog::OptionsDialog(QWidget *parent):
+OptionsDialog::OptionsDialog(TwitchPubSub &pubsub, QWidget *parent):
     QDialog(parent),
+    _pubsub(pubsub),
     _ui(std::make_unique<Ui::OptionsDialog>())
 {
     setModal(true);

@@ -48,15 +48,16 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    MainWindow main_window { video_context };
+    TwitchPubSub pubsub;
+
+    MainWindow main_window { video_context, pubsub };
+    SystemTray tray { pubsub };
+
     auto pane = main_window.add_pane(Position { 0, 0 });
 
     auto options = parse_options(app.arguments());
     if (options.initial_channel)
         pane->play(*options.initial_channel);
-
-    TwitchPubSub pubsub;
-    SystemTray tray { pubsub };
 
     QObject::connect(&tray, &SystemTray::channel_open_requested, [&](auto channel) {
         auto pane = main_window.add_pane(Position { 0, 0 });

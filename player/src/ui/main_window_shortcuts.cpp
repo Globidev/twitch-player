@@ -205,7 +205,7 @@ void MainWindow::setup_shortcuts() {
     });
     // Preferences
     add_action(_ui->actionOptions, [this] {
-        auto options_dialog = new OptionsDialog(this);
+        auto options_dialog = new OptionsDialog(_pubsub, this);
         QObject::connect(options_dialog, &OptionsDialog::settings_changed, [this] {
             remap_shortcuts();
         });

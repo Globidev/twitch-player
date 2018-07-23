@@ -19,10 +19,11 @@ static void focus_pane(QWidget *pane) {
     pane->repaint();
 }
 
-MainWindow::MainWindow(libvlc::Instance &video_context, QWidget *parent) :
+MainWindow::MainWindow(libvlc::Instance &video_context, TwitchPubSub &pubsub, QWidget *parent):
     QMainWindow(parent),
     _ui(std::make_unique<Ui::MainWindow>()),
     _video_context(video_context),
+    _pubsub(pubsub),
     _vlc_log_viewer(std::make_unique<VLCLogViewer>(video_context)),
     _grid(new SplitterGrid(this)),
     _central_widget(new QStackedWidget(this))

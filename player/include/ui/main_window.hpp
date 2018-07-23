@@ -21,9 +21,11 @@ class VLCLogViewer;
 class QStackedWidget;
 class QShortcut;
 
+class TwitchPubSub;
+
 class MainWindow : public QMainWindow {
 public:
-    MainWindow(libvlc::Instance &, QWidget * = nullptr);
+    MainWindow(libvlc::Instance &, TwitchPubSub &, QWidget * = nullptr);
     ~MainWindow();
 
     Pane *add_pane(Position);
@@ -37,6 +39,7 @@ private:
     std::unique_ptr<Ui::MainWindow> _ui;
 
     libvlc::Instance &_video_context;
+    TwitchPubSub &_pubsub;
 
     std::unique_ptr<VLCLogViewer> _vlc_log_viewer;
 
