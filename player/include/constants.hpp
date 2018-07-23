@@ -91,6 +91,11 @@ namespace constants {
             Constant DEFAULT_PLAYER_MAX_SINK_BUFFER_SIZE = 10000000;
         }
 
+        namespace notifications {
+            Constant KEY_PUBSUB_CHANNELS = "notifications/pubsub_channels";
+            Constant DEFAULT_PUBSUB_CHANNELS = QStringList();
+        }
+
         namespace shortcuts {
             struct ActionnableShortcutDescriptor {
                 QString action_text;
