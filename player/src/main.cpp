@@ -30,12 +30,19 @@ static void handle_vlc_init_failure();
 static bool init_daemon();
 
 int main(int argc, char *argv[]) {
+    using namespace constants::settings::ui;
+
     QApplication app { argc, argv };
 
     app.setOrganizationName("GlobiCorp");
     app.setApplicationName("Twitch Player");
 
-    app.setQuitOnLastWindowClosed(false);
+    QSettings settings;
+
+    auto always_minimize_to_tray = settings
+        .value(KEY_ALWAYS_MINIMIZE_TO_TRAY, DEFAULT_ALWAYS_MINIMIZE_TO_TRAY)
+        .toBool();
+    app.setQuitOnLastWindowClosed(!always_minimize_to_tray);
 
     libvlc::Instance video_context { load_vlc_args() };
 

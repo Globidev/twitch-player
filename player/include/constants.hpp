@@ -58,6 +58,9 @@ namespace constants {
             Constant DEFAULT_CHAT_SIZE_PERCENT = 25.f;
             Constant KEY_LAST_CHAT_POSITION = "ui/last_chat_position";
             Constant DEFAULT_CHAT_POSITION = 1; // Right
+
+            Constant KEY_ALWAYS_MINIMIZE_TO_TRAY = "ui/always_minimize_to_tray";
+            Constant DEFAULT_ALWAYS_MINIMIZE_TO_TRAY = true;
         }
 
         namespace vlc {

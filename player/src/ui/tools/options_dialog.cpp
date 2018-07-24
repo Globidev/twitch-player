@@ -108,6 +108,7 @@ void OptionsDialog::load_settings() {
     using namespace constants::settings::vlc;
     using namespace constants::settings::shortcuts;
     using namespace constants::settings::daemon;
+    using namespace constants::settings::ui;
     using namespace constants::settings::notifications;
 
     QSettings settings;
@@ -129,6 +130,11 @@ void OptionsDialog::load_settings() {
         auto item = new QListWidgetItem(option, _ui->libvlcOptionsList);
         item->setFlags(LIST_WIDGET_ITEM_FLAGS);
     }
+
+    auto always_minimize_to_tray = settings
+        .value(KEY_ALWAYS_MINIMIZE_TO_TRAY, DEFAULT_ALWAYS_MINIMIZE_TO_TRAY)
+        .toBool();
+    _ui->alwaysMinimizeToTray->setChecked(always_minimize_to_tray);
 
     auto keybinds_layout = new QVBoxLayout(_ui->keybindsFrame->widget());
     for (auto sh_desc: ALL_SHORTCUTS) {
@@ -179,6 +185,7 @@ void OptionsDialog::save_settings() {
     using namespace constants::settings::vlc;
     using namespace constants::settings::shortcuts;
     using namespace constants::settings::daemon;
+    using namespace constants::settings::ui;
     using namespace constants::settings::notifications;
 
     QSettings settings;
@@ -190,6 +197,10 @@ void OptionsDialog::save_settings() {
     for (auto i = 0; i < _ui->libvlcOptionsList->count(); ++i)
         libvlc_options << _ui->libvlcOptionsList->item(i)->text();
     settings.setValue(KEY_VLC_ARGS, libvlc_options);
+
+    auto always_minimize_to_tray = _ui->alwaysMinimizeToTray->isChecked();
+    settings.setValue(KEY_ALWAYS_MINIMIZE_TO_TRAY, always_minimize_to_tray);
+    qApp->setQuitOnLastWindowClosed(!always_minimize_to_tray);
 
     for (auto [setting_key, sequence_edit]: _keybind_edits)
         settings.setValue(setting_key, sequence_edit->keySequence().toString());
