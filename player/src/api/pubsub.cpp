@@ -172,7 +172,7 @@ void TwitchPubSub::process_message(QJsonObject message) {
         auto raw_data_message = data["message"].toString().toLocal8Bit();
         auto data_message = QJsonDocument::fromJson(raw_data_message).object();
         auto data_message_type = data_message["type"].toString();
-        auto channel = topic.right(QString("video-playback.").length());
+        auto channel = topic.right(topic.length() - QString("video-playback.").length());
 
         if (data_message_type == "stream-up") {
             emit channel_went_live(channel);
