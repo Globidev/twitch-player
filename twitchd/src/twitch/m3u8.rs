@@ -121,6 +121,10 @@ named!(playlist_twitch_total_secs_parser<Input, f64>, preceded!(
     map_opt!(take_until!("\n"), from_raw::<f64>)
 ));
 
+named!(playlist_map<Input, ()>, do_parse!(
+    tag!("#EXT-X-MAP:") >> take_until_and_consume!("\n") >> ()
+));
+
 named!(extinf_segment_parser<Input, Segment>, do_parse!(
     tag!("#EXTINF:") >> take_until_and_consume!("\n") >>
     location:  map_res!(take_until_and_consume!("\n"), to_string) >>
@@ -150,6 +154,7 @@ named!(playlist_parser<Input, Playlist>, do_parse!(
     media_sequence:      playlist_media_sequence_parser      >> tag!("\n") >>
     twitch_elapsed_secs: playlist_twitch_elapsed_secs_parser >> tag!("\n") >>
     twitch_total_secs:   playlist_twitch_total_secs_parser   >> tag!("\n") >>
+    _map:                opt!(playlist_map)                  >>
     segments:            many1!(playlist_segment_parser)     >>
     (Playlist {
         version,
@@ -215,8 +220,15 @@ fn extract_media_info(raw_info: RawInfoMap) -> Result<MediaInfo, ExtractInfoErro
 }
 
 fn extract_stream_info(raw_info: RawInfoMap) -> Result<StreamInfo, ExtractInfoError> {
+    let program_id = match raw_info.get("PROGRAM-ID") {
+        Some(value) => Extractable::extract(value)
+            .map(Some)
+            .map_err(ExtractInfoError::BadValue)?,
+        None => None
+    };
+
     let stream_info = StreamInfo {
-        program_id: extract_raw(&raw_info, "PROGRAM-ID")?,
+        program_id: program_id,
         bandwidth:  extract_raw(&raw_info, "BANDWIDTH")?,
         resolution: extract_raw(&raw_info, "RESOLUTION")?,
         codecs:     extract_raw(&raw_info, "CODECS")?,
@@ -355,6 +367,14 @@ mod tests {
     }
 
     #[test]
+    fn parse_playlist_with_map() {
+        parse_test(
+            super::playlist_parser,
+            include_bytes!("../../test_samples/m3u8/playlist_with_map.m3u8")
+        );
+    }
+
+    #[test]
     fn parse_simple_index() {
         parse_test(
             super::stream_index_parser,
@@ -367,6 +387,14 @@ mod tests {
         parse_test(
             super::stream_index_parser,
             include_bytes!("../../test_samples/m3u8/index_with_restricted_playlist.m3u8")
+        );
+    }
+
+    #[test]
+    fn parse_index_without_program_id() {
+        parse_test(
+            super::stream_index_parser,
+            include_bytes!("../../test_samples/m3u8/index_without_program_id.m3u8")
         );
     }
 }

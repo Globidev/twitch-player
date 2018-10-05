@@ -65,6 +65,7 @@ fn stream_index_url(channel: &str, token: &AccessToken) -> String {
         .append_pair("sig",          &token.signature)
         .append_pair("allow_source", "true")
         .append_pair("fast_bread",   "true")
+        .append_pair("cdm",          "wv")
         .finish();
 
     format!(

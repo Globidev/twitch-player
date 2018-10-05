@@ -54,7 +54,7 @@ pub enum MediaType {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct StreamInfo {
-    pub program_id: u32,
+    pub program_id: Option<u32>,
     pub bandwidth: u64,
     pub resolution: Resolution,
     pub codecs: String,
