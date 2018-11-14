@@ -9,7 +9,7 @@ futures = "0.1"
 http = "0.1"
 mime = "0.3"
 hyper = "0.12"
-hyper-tls = "0.2"
+hyper-tls = "0.3"
 url = "1.7"
 
 tokio = "0.1"
