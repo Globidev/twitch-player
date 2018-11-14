@@ -2,6 +2,8 @@
 
 #include <QWidget>
 
+#include <memory>
+
 class QHBoxLayout;
 class StreamPicker;
 class StreamWidget;

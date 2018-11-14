@@ -43,7 +43,7 @@ static QString generate_meta_key()
     return key;
 }
 
-static const auto OVERLAY_INVALIDATING_EVENTS = {
+static const std::initializer_list<QEvent::Type> OVERLAY_INVALIDATING_EVENTS = {
     QEvent::Move,
     QEvent::KeyRelease,
 };

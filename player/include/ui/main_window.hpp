@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <tuple>
+#include <memory>
 
 #include "ui/layouts/splitter_grid.hpp"
 

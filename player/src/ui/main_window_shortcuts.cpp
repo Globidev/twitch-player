@@ -71,7 +71,7 @@ void MainWindow::setup_shortcuts() {
         return action;
     };
 
-    auto add_action = [](auto action, auto slot) {
+    auto add_action = [this](auto action, auto slot) {
         QObject::connect(action, &QAction::triggered, slot);
     };
 

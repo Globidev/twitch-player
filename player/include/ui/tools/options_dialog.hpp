@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <functional>
+#include <memory>
 
 namespace Ui {
     class OptionsDialog;

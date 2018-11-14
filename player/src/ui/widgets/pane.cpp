@@ -16,7 +16,7 @@
 
 constexpr auto border_width = 1;
 
-static const auto FOCUS_INVALIDATING_EVENTS = {
+static const std::initializer_list<QEvent::Type> FOCUS_INVALIDATING_EVENTS = {
     QEvent::MouseButtonRelease,
     QEvent::KeyRelease
 };
