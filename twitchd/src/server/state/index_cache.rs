@@ -16,7 +16,10 @@ type FutureStreamIndex = BoxFuture<StreamIndex, IndexError>;
 type ChannelIndexes = HashMap<Channel, future::Shared<FutureStreamIndex>>;
 type Cache = Arc<Mutex<ChannelIndexes>>;
 
+// Bug with type aliases used in associated types of impl traits return types
+#[allow(dead_code)]
 type SharedIndex = future::SharedItem<StreamIndex>;
+#[allow(dead_code)]
 type SharedError = future::SharedError<IndexError>;
 
 pub struct IndexCache {
