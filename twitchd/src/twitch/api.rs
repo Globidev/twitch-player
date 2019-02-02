@@ -1,9 +1,5 @@
-extern crate hyper;
-extern crate serde_json;
-extern crate url;
-
-use prelude::http::*;
-use prelude::futures::*;
+use crate::prelude::http::*;
+use crate::prelude::futures::*;
 
 use super::types::{AccessToken, StreamIndex, Playlist};
 
@@ -58,7 +54,7 @@ fn access_token_url(channel: &str) -> String {
 }
 
 fn stream_index_url(channel: &str, token: &AccessToken) -> String {
-    use self::url::form_urlencoded;
+    use url::form_urlencoded;
 
     let query_string = form_urlencoded::Serializer::new(String::new())
         .append_pair("token",        &token.token)
@@ -76,7 +72,7 @@ fn stream_index_url(channel: &str, token: &AccessToken) -> String {
 }
 
 fn parse_token(chunk: hyper::Chunk) -> ParseResult<AccessToken> {
-    use self::serde_json::from_slice as json_decode;
+    use serde_json::from_slice as json_decode;
 
     json_decode(&chunk)
         .map_err(|error| ApiError::FormatError(error.to_string()))

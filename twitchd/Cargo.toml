@@ -2,6 +2,7 @@
 name = "twitchd"
 version = "0.1.0"
 authors = ["Guillaume Depardon <guillaume.depardon@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 futures = "0.1"
@@ -25,3 +26,7 @@ nom = "4.0"
 bytes = "0.4"
 
 structopt = "0.2"
+
+[profile.release]
+lto = true
+panic = "abort"

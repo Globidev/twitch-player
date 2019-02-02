@@ -1,13 +1,9 @@
-extern crate hyper;
-extern crate tokio;
-
-use prelude::http::{HttpsClient, http_client};
-use prelude::futures::*;
-use prelude::runtime;
-use options::Options;
-
+use crate::prelude::http::{HttpsClient, http_client};
+use crate::prelude::futures::*;
+use crate::prelude::runtime;
+use crate::options::Options;
+use crate::twitch::types::{PlaylistInfo, Stream};
 use super::stream_player::{StreamPlayer, PlayerSink, MetaKey, SegmentMetadata};
-use twitch::types::{PlaylistInfo, Stream};
 
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;

@@ -1,20 +1,15 @@
-extern crate hyper;
-extern crate tokio;
-
-use self::tokio::timer::Delay;
-
-use prelude::http::*;
-use prelude::futures::*;
-use prelude::runtime;
-
-use options::Options;
-
-use twitch::api::ApiError;
-use twitch::types::StreamIndex;
+use crate::prelude::http::*;
+use crate::prelude::futures::*;
+use crate::prelude::runtime;
+use crate::options::Options;
+use crate::twitch::api::ApiError;
+use crate::twitch::types::StreamIndex;
 
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
+
+use tokio::timer::Delay;
 
 type Channel = String;
 type FutureStreamIndex = BoxFuture<StreamIndex, IndexError>;
@@ -93,7 +88,7 @@ impl IndexCache {
 fn fetch_stream_index(client: &HttpsClient, channel: &str, client_id: &str)
     -> impl Future<Item = StreamIndex, Error = IndexError>
 {
-    use twitch::api::{access_token, stream_index};
+    use crate::twitch::api::{access_token, stream_index};
 
     let fetch_token = access_token(client, &channel, client_id);
 
@@ -146,7 +141,7 @@ impl From<ApiError> for IndexError {
     fn from(error: ApiError) -> Self {
         use self::ApiError::*;
         use self::HttpError::BadStatus;
-        use self::hyper::StatusCode;
+        use hyper::StatusCode;
 
         match error {
             HttpError(BadStatus(StatusCode::NOT_FOUND)) => IndexError::NotFound,

@@ -1,14 +1,7 @@
-extern crate hyper;
-extern crate url;
-extern crate mime;
-extern crate serde;
-extern crate serde_json;
-
-use prelude::futures::*;
-use prelude::http::*;
-
-use twitch::types::{StreamIndex, Quality, Stream};
-use twitch::utils::find_playlist;
+use crate::prelude::futures::*;
+use crate::prelude::http::*;
+use crate::twitch::types::{StreamIndex, Quality, Stream};
+use crate::twitch::utils::find_playlist;
 
 use super::state::{State, index_cache::IndexError};
 
@@ -170,7 +163,7 @@ fn server_error(detail: &str) -> ApiResponse {
 }
 
 fn json_response(value: impl serde::Serialize) -> ApiResponse {
-    use self::serde_json::to_vec as encode;
+    use serde_json::to_vec as encode;
 
     let reply_with_data = |data: Vec<u8>| {
         hyper::Response::builder()

@@ -1,14 +1,13 @@
-extern crate nom;
+use crate::twitch::types::*;
 
 use std::str::{from_utf8, Utf8Error};
 use std::iter::FromIterator;
-
 use std::collections::HashMap;
-type RawInfoMap = HashMap<String, String>;
-
-use twitch::types::*;
 
 use nom::types::CompleteByteSlice as Input;
+use nom::*;
+
+type RawInfoMap = HashMap<String, String>;
 
 #[derive(Debug)]
 pub struct ParseError(pub String);
@@ -331,7 +330,7 @@ impl Extractable for MediaType {
 #[cfg(test)]
 mod tests {
     use super::Input;
-    use super::nom::IResult;
+    use nom::IResult;
 
     fn parse_test<T>(parser: fn(Input) -> IResult<Input, T>, data: &[u8]) {
         let parsed_sucessfully = match parser(Input(data)) {

@@ -1,18 +1,11 @@
-extern crate url;
-extern crate http;
-extern crate hyper;
-extern crate hyper_tls;
-extern crate num_cpus;
-
-pub use self::http::method::Method;
-pub use self::http::header;
-
-use self::hyper::client::HttpConnector;
-use self::hyper_tls::{HttpsConnector, Error as TlsError};
-
 use super::futures::*;
 
 use std::collections::HashMap;
+
+pub use http::method::Method;
+pub use http::header;
+use hyper::client::HttpConnector;
+use hyper_tls::{HttpsConnector, Error as TlsError};
 
 pub type Request = hyper::Request<hyper::Body>;
 pub type Response = hyper::Response<hyper::Body>;
@@ -30,7 +23,7 @@ pub fn http_client() -> Result<HttpsClient, TlsError> {
 }
 
 pub fn parse_query_params(query: &str) -> QueryParams {
-    use self::url::form_urlencoded::parse as parse_query;
+    use url::form_urlencoded::parse as parse_query;
 
     parse_query(query.as_bytes())
         .map(|(k, v)| (String::from(k), String::from(v)))

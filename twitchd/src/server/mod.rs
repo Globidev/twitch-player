@@ -1,14 +1,11 @@
-extern crate hyper;
-extern crate tokio;
-
 mod service;
 mod state;
 
 use self::service::TwitchdApi;
 use self::state::State;
 
-use prelude::futures::*;
-use options::Options;
+use crate::prelude::futures::*;
+use crate::options::Options;
 
 use std::net::SocketAddr;
 use std::sync::Arc;

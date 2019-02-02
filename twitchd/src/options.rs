@@ -1,9 +1,10 @@
-extern crate nom;
+use crate::prelude::runtime::RuntimeStrategy;
 
 use std::time::Duration;
 use std::net::IpAddr;
 
-use prelude::runtime::RuntimeStrategy;
+use nom::*;
+use structopt::StructOpt;
 
 #[derive(StructOpt, Debug, Clone)]
 #[structopt(name = "twitchd", about = "Twitch API daemon")]

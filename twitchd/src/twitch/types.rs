@@ -1,5 +1,7 @@
 use std::net::IpAddr;
 
+use serde_derive::{Serialize, Deserialize};
+
 #[derive(Debug, Deserialize)]
 pub struct AccessToken {
     pub token: String,

@@ -1,17 +1,15 @@
 mod stream_ext;
 
 pub mod futures {
-    extern crate futures;
+    pub use super::stream_ext::*;
 
-    pub use self::futures::prelude::*;
-    pub use self::futures::future;
-    pub use self::futures::stream;
-    pub use self::futures::sync;
+    pub use futures::prelude::*;
+    pub use futures::future;
+    pub use futures::stream;
+    pub use futures::sync;
 
     pub type BoxFuture<T, E> = Box<Future<Item = T, Error = E> + Send + 'static>;
     pub type BoxStream<T, E> = Box<Stream<Item = T, Error = E> + Send + 'static>;
-
-    pub use super::stream_ext::*;
 }
 
 pub mod runtime;

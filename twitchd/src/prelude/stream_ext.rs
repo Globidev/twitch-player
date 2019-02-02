@@ -1,11 +1,9 @@
-extern crate tokio;
-extern crate bytes;
-
-use self::tokio::timer;
-use self::bytes::Bytes;
 use super::futures::*;
 
 use std::time::{Duration, Instant};
+
+use tokio::timer;
+use bytes::Bytes;
 
 pub trait StreamExtTimeout {
     fn timeout(self, duration: Duration) -> TimeoutStream<Self>

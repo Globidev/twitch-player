@@ -1,13 +1,11 @@
-extern crate tokio;
-
 use super::futures::Future;
 
-use self::tokio::runtime::{
+use tokio::runtime::{
     current_thread::Runtime as SingleRuntime,
     Runtime as MultiRuntime,
 };
 
-pub use self::tokio::executor::spawn;
+pub use tokio::executor::spawn;
 
 #[derive(Debug, Clone)]
 pub enum RuntimeStrategy { Single, Multi }

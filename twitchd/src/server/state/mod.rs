@@ -1,12 +1,11 @@
-use prelude::futures::*;
-
-use options::Options;
-
-use std::sync::Mutex;
-
 pub mod index_cache;
 pub mod player_pool;
 pub mod stream_player;
+
+use crate::prelude::futures::*;
+use crate::options::Options;
+
+use std::sync::Mutex;
 
 type ShutdownSignal = sync::oneshot::Sender<()>;
 

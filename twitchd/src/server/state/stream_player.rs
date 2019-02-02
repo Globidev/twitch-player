@@ -1,23 +1,17 @@
-extern crate hyper;
-extern crate tokio;
-extern crate bytes;
-extern crate serde_json;
-
-use self::hyper::Chunk;
-use self::tokio::timer::Interval;
-
-use prelude::futures::*;
-use prelude::http::*;
-use prelude::runtime;
-
-use twitch::types::{PlaylistInfo, Playlist, Segment};
-use twitch::api::ApiError;
-
-use options::Options;
+use crate::prelude::futures::*;
+use crate::prelude::http::*;
+use crate::prelude::runtime;
+use crate::twitch::types::{PlaylistInfo, Playlist, Segment};
+use crate::twitch::api::ApiError;
+use crate::options::Options;
 
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
+
+use hyper::Chunk;
+use tokio::timer::Interval;
+use serde_derive::{Serialize, Deserialize};
 
 type RawVideoData = bytes::Bytes;
 
@@ -119,7 +113,7 @@ impl StreamPlayer {
 fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interval: Duration, video_chunks_size: usize)
     -> impl Stream<Item = SegmentChunk, Error = StreamPlayerError>
 {
-    use twitch::api::playlist;
+    use crate::twitch::api::playlist;
 
     let origin = playlist_info.url
         .rsplitn(2, '/')
