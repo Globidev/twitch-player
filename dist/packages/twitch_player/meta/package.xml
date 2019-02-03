@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitch Player</DisplayName>
     <Description>Install the end user interface</Description>
-    <Version>0.9.13</Version>
-    <ReleaseDate>2018-07-25</ReleaseDate>
+    <Version>0.9.14</Version>
+    <ReleaseDate>2019-02-02</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Made minimizing to tray optional</UpdateText>
+    <UpdateText>Made drag to move optional</UpdateText>
 </Package>
