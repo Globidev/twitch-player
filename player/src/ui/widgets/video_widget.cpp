@@ -275,10 +275,19 @@ void VideoWidget::mousePressEvent(QMouseEvent *event) {
 }
 
 void VideoWidget::mouseMoveEvent(QMouseEvent *event) {
+    using namespace constants::settings::ui;
     _controls->appear();
     _details->show_stream_details();
 
     if (event->buttons().testFlag(Qt::MouseButton::LeftButton)) {
+        QSettings settings;
+
+        auto drag_to_move = settings.value(KEY_DRAG_TO_MOVE, DEFAULT_DRAG_TO_MOVE)
+            .toBool();
+
+        if (!drag_to_move)
+            return;
+
         auto delta = event->globalPos() - _last_drag_position;
         if (delta.manhattanLength() > 10) {
             window()->move(window()->pos() + delta);

@@ -61,6 +61,8 @@ namespace constants {
 
             Constant KEY_ALWAYS_MINIMIZE_TO_TRAY = "ui/always_minimize_to_tray";
             Constant DEFAULT_ALWAYS_MINIMIZE_TO_TRAY = true;
+            Constant KEY_DRAG_TO_MOVE = "ui/drag_to_move";
+            Constant DEFAULT_DRAG_TO_MOVE = true;
         }
 
         namespace vlc {

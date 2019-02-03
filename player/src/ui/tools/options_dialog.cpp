@@ -136,6 +136,11 @@ void OptionsDialog::load_settings() {
         .toBool();
     _ui->alwaysMinimizeToTray->setChecked(always_minimize_to_tray);
 
+    auto drag_to_move = settings
+        .value(KEY_DRAG_TO_MOVE, DEFAULT_DRAG_TO_MOVE)
+        .toBool();
+    _ui->dragToMove->setChecked(drag_to_move);
+
     auto keybinds_layout = new QVBoxLayout(_ui->keybindsFrame->widget());
     for (auto sh_desc: ALL_SHORTCUTS) {
         auto sequence_str = settings
@@ -201,6 +206,9 @@ void OptionsDialog::save_settings() {
     auto always_minimize_to_tray = _ui->alwaysMinimizeToTray->isChecked();
     settings.setValue(KEY_ALWAYS_MINIMIZE_TO_TRAY, always_minimize_to_tray);
     qApp->setQuitOnLastWindowClosed(!always_minimize_to_tray);
+
+    auto drag_to_move = _ui->dragToMove->isChecked();
+    settings.setValue(KEY_DRAG_TO_MOVE, drag_to_move);
 
     for (auto [setting_key, sequence_edit]: _keybind_edits)
         settings.setValue(setting_key, sequence_edit->keySequence().toString());
