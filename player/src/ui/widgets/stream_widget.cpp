@@ -17,8 +17,17 @@
 #include <QMessageBox>
 
 static auto find_chat_windows(QString renderer_path) {
+    using namespace constants::settings::chat_renderer;
+
     auto normalized_path = renderer_path.replace("/", "\\").toStdString();
-    return find_windows_by_title_and_pname("Twitch", normalized_path);
+
+    QSettings settings;
+    auto title_hint = settings
+        .value(KEY_CHAT_RENDERER_TITLE_HINT,DEFAULT_CHAT_RENDERER_TITLE_HINT)
+        .toString();
+    auto title_hint_pattern = std::regex { title_hint.toLocal8Bit().data() };
+
+    return find_windows_by_title_and_pname(title_hint_pattern, normalized_path);
 }
 
 static auto find_new_chat_windows(QString renderer_path,

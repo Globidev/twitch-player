@@ -41,6 +41,9 @@ namespace constants {
             Constant KEY_CHAT_RENDERER_ARGS = "chat-renderer/args";
             Constant DEFAULT_CHAT_RENDERER_ARGS = QStringList()
                 << "--app=https://www.twitch.tv/popout/${channel}/chat?popout=";
+
+            Constant KEY_CHAT_RENDERER_TITLE_HINT = "chat-renderer/title-hint";
+            Constant DEFAULT_CHAT_RENDERER_TITLE_HINT = "Twitch";
         }
 
         namespace streams {

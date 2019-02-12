@@ -50,17 +50,17 @@ static std::string window_process_name(HWND handle) {
     }
 }
 
-FindWindowResult find_windows_by_title_and_pname(std::string title,
+FindWindowResult find_windows_by_title_and_pname(std::regex title_pattern,
                                                  std::string pname)
 {
     auto predicate = [&](HWND handle) {
         auto handle_title = window_title(handle);
         auto handle_pname = window_process_name(handle);
-        // no starts_with until c++20...
-        return (
-            handle_title.compare(0, title.size(), title) == 0 &&
-            handle_pname.compare(0, pname.size(), pname) == 0
-        );
+
+        auto pname_matches = handle_pname.compare(0, pname.size(), pname) == 0;
+        auto title_matches = std::regex_search(handle_title, title_pattern);
+
+        return pname_matches && title_matches;
     };
 
     return find_windows_by(predicate);

@@ -123,6 +123,11 @@ void OptionsDialog::load_settings() {
         .toStringList();
     _ui->chatRendererArgs->setText(chat_renderer_args.join(';'));
 
+    auto chat_renderer_window_title_hint = settings
+        .value(KEY_CHAT_RENDERER_TITLE_HINT, DEFAULT_CHAT_RENDERER_TITLE_HINT)
+        .toString();
+    _ui->chatRendererWindowTitleHint->setText(chat_renderer_window_title_hint);
+
     auto libvlc_options = settings
         .value(KEY_VLC_ARGS, DEFAULT_VLC_ARGS)
         .toStringList();
@@ -197,6 +202,7 @@ void OptionsDialog::save_settings() {
 
     settings.setValue(KEY_CHAT_RENDERER_PATH, _ui->chatRendererPath->text());
     settings.setValue(KEY_CHAT_RENDERER_ARGS, _ui->chatRendererArgs->text().split(';'));
+    settings.setValue(KEY_CHAT_RENDERER_TITLE_HINT, _ui->chatRendererWindowTitleHint->text());
 
     QStringList libvlc_options;
     for (auto i = 0; i < _ui->libvlcOptionsList->count(); ++i)
