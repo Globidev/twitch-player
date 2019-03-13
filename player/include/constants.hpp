@@ -26,6 +26,9 @@ namespace constants {
         }
 
         namespace chat_renderer {
+            Constant KEY_CHAT_RENDERER_ALWAYS_OPEN = "chat-renderer/always-open";
+            Constant DEFAULT_CHAT_RENDERER_ALWAYS_OPEN = true;
+
             Constant KEY_CHAT_RENDERER_PATH = "chat-renderer/paths";
             // TODO: Improve default chat renderer path logic
             Constant CHROME_PATH =

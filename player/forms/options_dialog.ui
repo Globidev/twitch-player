@@ -37,6 +37,17 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_17">
+            <item>
+             <widget class="QCheckBox" name="chatRendererAlwaysOpen">
+              <property name="text">
+               <string>Always open alongside streams</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
            <layout class="QHBoxLayout" name="horizontalLayout">
             <item>
              <widget class="QLabel" name="label">
@@ -277,8 +288,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>80</width>
-            <height>16</height>
+            <width>408</width>
+            <height>354</height>
            </rect>
           </property>
          </widget>

@@ -110,6 +110,16 @@ void StreamWidget::play(QString channel, QString quality) {
     _video->play(channel, quality);
 
     QSettings settings;
+
+    auto renderer_always_open = settings
+        .value(KEY_CHAT_RENDERER_ALWAYS_OPEN, DEFAULT_CHAT_RENDERER_ALWAYS_OPEN)
+        .toBool();
+
+    if (!renderer_always_open) {
+        _chat->hide();
+        return ;
+    }
+
     auto renderer_path = settings
         .value(KEY_CHAT_RENDERER_PATH, DEFAULT_CHAT_RENDERER_PATH)
         .toString();

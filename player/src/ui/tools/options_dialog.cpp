@@ -113,6 +113,11 @@ void OptionsDialog::load_settings() {
 
     QSettings settings;
 
+    auto chat_renderer_always_open = settings
+        .value(KEY_CHAT_RENDERER_ALWAYS_OPEN, DEFAULT_CHAT_RENDERER_ALWAYS_OPEN)
+        .toBool();
+    _ui->chatRendererAlwaysOpen->setChecked(chat_renderer_always_open);
+
     auto chat_renderer_path = settings
         .value(KEY_CHAT_RENDERER_PATH, DEFAULT_CHAT_RENDERER_PATH)
         .toString();
@@ -200,6 +205,7 @@ void OptionsDialog::save_settings() {
 
     QSettings settings;
 
+    settings.setValue(KEY_CHAT_RENDERER_ALWAYS_OPEN, _ui->chatRendererAlwaysOpen->isChecked());
     settings.setValue(KEY_CHAT_RENDERER_PATH, _ui->chatRendererPath->text());
     settings.setValue(KEY_CHAT_RENDERER_ARGS, _ui->chatRendererArgs->text().split(';'));
     settings.setValue(KEY_CHAT_RENDERER_TITLE_HINT, _ui->chatRendererWindowTitleHint->text());
