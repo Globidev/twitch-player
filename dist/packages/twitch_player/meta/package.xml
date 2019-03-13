@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitch Player</DisplayName>
     <Description>Install the end user interface</Description>
-    <Version>0.9.14</Version>
-    <ReleaseDate>2019-02-02</ReleaseDate>
+    <Version>0.9.16</Version>
+    <ReleaseDate>2019-03-13</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Made drag to move optional</UpdateText>
+    <UpdateText>Added chat only panes</UpdateText>
 </Package>
