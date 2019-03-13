@@ -1,4 +1,4 @@
-#include "ui/widgets/pane.hpp"
+#include "ui/widgets/stream_pane.hpp"
 
 #include "ui/widgets/stream_picker.hpp"
 #include "ui/widgets/stream_widget.hpp"
@@ -21,7 +21,7 @@ static const std::initializer_list<QEvent::Type> FOCUS_INVALIDATING_EVENTS = {
     QEvent::KeyRelease
 };
 
-Pane::Pane(libvlc::Instance &video_ctx, QWidget *parent):
+StreamPane::StreamPane(libvlc::Instance &video_ctx, QWidget *parent):
     QWidget(parent),
     _video_ctx(video_ctx),
     _layout(new QHBoxLayout(this)),
@@ -50,9 +50,9 @@ Pane::Pane(libvlc::Instance &video_ctx, QWidget *parent):
     setAutoFillBackground(true);
 }
 
-Pane::~Pane() = default;
+StreamPane::~StreamPane() = default;
 
-void Pane::play(QString channel, QString quality) {
+void StreamPane::play(QString channel, QString quality) {
     _picker->hide();
 
     _layout->removeWidget(_picker.get());
@@ -65,11 +65,11 @@ void Pane::play(QString channel, QString quality) {
     repaint();
 }
 
-StreamWidget *Pane::stream() const {
+StreamWidget *StreamPane::stream() const {
     return _stream.get();
 }
 
-void Pane::paintEvent(QPaintEvent *event) {
+void StreamPane::paintEvent(QPaintEvent *event) {
     if (isAncestorOf(qApp->focusWidget())) {
         QPainter painter(this);
 
@@ -88,19 +88,19 @@ void Pane::paintEvent(QPaintEvent *event) {
     QWidget::paintEvent(event);
 }
 
-void Pane::focusOutEvent(QFocusEvent *event) {
+void StreamPane::focusOutEvent(QFocusEvent *event) {
     QWidget::focusOutEvent(event);
     repaint();
 }
 
-void Pane::focusInEvent(QFocusEvent *event) {
+void StreamPane::focusInEvent(QFocusEvent *event) {
     QWidget::focusInEvent(event);
     if (auto item = _layout->itemAt(0); item)
         item->widget()->setFocus();
     repaint();
 }
 
-void Pane::setup_picker() {
+void StreamPane::setup_picker() {
     auto play_stream = [=](QString channel, QString quality) {
         play(channel, quality);
     };
@@ -108,7 +108,7 @@ void Pane::setup_picker() {
     QObject::connect( _picker.get(), &StreamPicker::stream_picked, play_stream);
 }
 
-void Pane::setup_stream() {
+void StreamPane::setup_stream() {
     auto on_browse = [=] {
         // For some unknown reasons, the foreign widget doesn't get properly
         // released unless we schedule the removing for later...

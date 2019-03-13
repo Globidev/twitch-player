@@ -6,7 +6,7 @@
 
 #include "ui/main_window.hpp"
 #include "ui/tray.hpp"
-#include "ui/widgets/pane.hpp"
+#include "ui/widgets/stream_pane.hpp"
 
 #include "api/pubsub.hpp"
 
@@ -60,14 +60,14 @@ int main(int argc, char *argv[]) {
     MainWindow main_window { video_context, pubsub };
     SystemTray tray { pubsub };
 
-    auto pane = main_window.add_pane(Position { 0, 0 });
+    auto pane = main_window.add_stream_pane(Position { 0, 0 });
 
     auto options = parse_options(app.arguments());
     if (options.initial_channel)
         pane->play(*options.initial_channel);
 
     QObject::connect(&tray, &SystemTray::channel_open_requested, [&](auto channel) {
-        auto pane = main_window.add_pane(Position { 0, 0 });
+        auto pane = main_window.add_stream_pane(Position { 0, 0 });
         pane->play(channel);
     });
 

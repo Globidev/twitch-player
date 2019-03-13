@@ -12,12 +12,12 @@ namespace libvlc {
     struct Instance;
 }
 
-class Pane: public QWidget {
+class StreamPane: public QWidget {
     Q_OBJECT
 
 public:
-    Pane(libvlc::Instance &, QWidget * = nullptr);
-    ~Pane();
+    StreamPane(libvlc::Instance &, QWidget * = nullptr);
+    ~StreamPane();
 
     void play(QString, QString = QString());
 

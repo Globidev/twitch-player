@@ -3,7 +3,8 @@
 
 #include "ui/native/capabilities.hpp"
 
-#include "ui/widgets/pane.hpp"
+#include "ui/widgets/chat_pane.hpp"
+#include "ui/widgets/stream_pane.hpp"
 #include "ui/widgets/stream_widget.hpp"
 #include "ui/widgets/video_widget.hpp"
 
@@ -15,6 +16,8 @@
 #include "constants.hpp"
 
 #include "api/oauth.hpp"
+
+#include "prelude/variant.hpp"
 
 #include <QSettings>
 #include <QShortcut>
@@ -76,7 +79,12 @@ void MainWindow::setup_shortcuts() {
     };
 
     auto active_pos = [this] {
-        return _grid->widget_position(focused_pane());
+        auto pane = focused_pane();
+        if (pane) {
+            return match(*pane, [this](auto pane) { return _grid->widget_position(pane); });
+        } else {
+            return Position { 0, 0 };
+        }
     };
 
     auto window_handle = [this] {
@@ -90,8 +98,12 @@ void MainWindow::setup_shortcuts() {
     auto down  = [=](auto pos) { return pos.down(_grid->orientation()); };
 
     auto with_active_stream = [=](auto action) {
-        if (auto active_pane = focused_pane(); active_pane)
-            action(active_pane->stream());
+        if (auto active_pane = focused_pane(); active_pane) {
+            match(*active_pane,
+                [=](StreamPane *pane) { action(pane->stream()); },
+                [](auto) { }
+            );
+        }
     };
 
     // View
@@ -106,8 +118,12 @@ void MainWindow::setup_shortcuts() {
     };
     auto toggle_stream_zoon = [=](bool on) {
         if (on) {
-            if (auto active_pane = focused_pane(); active_pane)
-                zoom(active_pane);
+            if (auto active_pane = focused_pane(); active_pane) {
+                match(*active_pane,
+                    [=](StreamPane *pane) { zoom(pane); },
+                    [](auto) { }
+                );
+            }
             else
                 _action_stream_zoom->setChecked(false);
         }
@@ -123,15 +139,30 @@ void MainWindow::setup_shortcuts() {
     _action_stream_zoom = add_toggle(_ui->menuView, TOGGLE_STREAM_ZOOM,   toggle_stream_zoon);
         //
     _ui->menuView->addSeparator();
-    auto add_pane_at  = [=](auto dpos) {
-        return [=] { unzoom(); add_pane(dpos(active_pos())); };
+    auto add_pane_at = [=](auto dpos) {
+        return [=] { unzoom(); add_stream_pane(dpos(active_pos())); };
     };
     add_shortcut(_ui->menuView, ADD_PANE_LEFT,  add_pane_at(still));
     add_shortcut(_ui->menuView, ADD_PANE_RIGHT, add_pane_at(right));
     add_shortcut(_ui->menuView, ADD_PANE_UP,    add_pane_at(up));
     add_shortcut(_ui->menuView, ADD_PANE_DOWN,  add_pane_at(down));
-
-    auto remove_active_pane = [=] { unzoom(); remove_pane(focused_pane()); };
+        //
+    _ui->menuView->addSeparator();
+    auto add_chat_pane_at = [=](auto dpos) {
+        return [=] { unzoom(); add_chat_pane(dpos(active_pos())); };
+    };
+    add_shortcut(_ui->menuView, ADD_CHAT_PANE_LEFT,  add_chat_pane_at(still));
+    add_shortcut(_ui->menuView, ADD_CHAT_PANE_RIGHT, add_chat_pane_at(right));
+    add_shortcut(_ui->menuView, ADD_CHAT_PANE_UP,    add_chat_pane_at(up));
+    add_shortcut(_ui->menuView, ADD_CHAT_PANE_DOWN,  add_chat_pane_at(down));
+        //
+    _ui->menuView->addSeparator();
+    auto remove_active_pane = [=] {
+        unzoom();
+        if (auto active_pane = focused_pane(); active_pane) {
+            match(*active_pane, [this](auto pane) { remove_pane(pane); });
+        }
+    };
     add_shortcut(_ui->menuView, REMOVE_ACTIVE_PANE, remove_active_pane);
         //
     _ui->menuView->addSeparator();
@@ -182,9 +213,14 @@ void MainWindow::setup_shortcuts() {
     });
     add_shortcut(_ui->menuPlayback, FILTERS_TOOL, [=] {
         if (auto active_pane = focused_pane(); active_pane) {
-            auto & mp = active_pane->stream()->video()->media_player();
-            auto tool = new VideoFilters(mp, this);
-            tool->show();
+            match(*active_pane,
+                [this](StreamPane *pane) {
+                    auto & mp = pane->stream()->video()->media_player();
+                    auto tool = new VideoFilters(mp, this);
+                    tool->show();
+                },
+                [](auto) { }
+            );
         }
     });
     // Tools

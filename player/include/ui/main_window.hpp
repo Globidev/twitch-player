@@ -5,6 +5,8 @@
 
 #include <vector>
 #include <tuple>
+#include <variant>
+#include <optional>
 #include <memory>
 
 #include "ui/layouts/splitter_grid.hpp"
@@ -17,20 +19,27 @@ namespace libvlc {
 struct Instance;
 }
 
-class Pane;
+class StreamPane;
+class ChatPane;
 class VLCLogViewer;
 class QStackedWidget;
 class QShortcut;
 
 class TwitchPubSub;
 
+using MPane = std::variant<
+    StreamPane *,
+    ChatPane *
+>;
+
 class MainWindow : public QMainWindow {
 public:
     MainWindow(libvlc::Instance &, TwitchPubSub &, QWidget * = nullptr);
     ~MainWindow();
 
-    Pane *add_pane(Position);
-    void remove_pane(Pane *);
+    StreamPane *add_stream_pane(Position);
+    ChatPane *add_chat_pane(Position);
+    void remove_pane(MPane);
 
 protected:
     void changeEvent(QEvent *) override;
@@ -44,20 +53,20 @@ private:
 
     std::unique_ptr<VLCLogViewer> _vlc_log_viewer;
 
-    std::vector<Pane *> _panes;
+    std::vector<MPane> _panes;
     SplitterGrid *_grid;
     QStackedWidget *_central_widget;
 
     Position _zoomed_position;
 
-    Pane *focused_pane();
+    std::optional<MPane> focused_pane();
 
     void move_focus(Position);
     void move_pane(Position, Position);
 
     void set_fullscreen(bool);
     bool is_zoomed();
-    void zoom(Pane *);
+    void zoom(StreamPane *);
     void unzoom();
 
     std::vector<std::pair<QString, std::pair<QShortcut *, QAction*>>> _shortcuts;

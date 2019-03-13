@@ -1,7 +1,8 @@
 #include "ui/main_window.hpp"
 #include "ui_main_window.h"
 
-#include "ui/widgets/pane.hpp"
+#include "ui/widgets/chat_pane.hpp"
+#include "ui/widgets/stream_pane.hpp"
 #include "ui/widgets/stream_widget.hpp"
 #include "ui/widgets/video_widget.hpp"
 #include "ui/widgets/foreign_widget.hpp"
@@ -9,6 +10,7 @@
 #include "ui/tools/vlc_log_viewer.hpp"
 
 #include "prelude/timer.hpp"
+#include "prelude/variant.hpp"
 
 #include <QStackedWidget>
 #include <QKeyEvent>
@@ -54,12 +56,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     QMainWindow::keyPressEvent(event);
 }
 
-Pane * MainWindow::add_pane(Position pos) {
-    auto pane = new Pane(_video_context, this);
+StreamPane * MainWindow::add_stream_pane(Position pos) {
+    auto pane = new StreamPane(_video_context, this);
 
     QObject::connect(
         pane,
-        &Pane::remove_requested,
+        &StreamPane::remove_requested,
         [=] {
             // For some unknown reasons, the foreign widget doesn't get properly
             // released unless we schedule the removing for later...
@@ -69,13 +71,13 @@ Pane * MainWindow::add_pane(Position pos) {
 
     QObject::connect(
         pane,
-        &Pane::zoom_requested,
+        &StreamPane::zoom_requested,
         [=](bool on) { on ? zoom(pane) : unzoom(); }
     );
 
     QObject::connect(
         pane,
-        &Pane::fullscreen_requested,
+        &StreamPane::fullscreen_requested,
         [=](bool on) { set_fullscreen(on); }
     );
 
@@ -87,33 +89,48 @@ Pane * MainWindow::add_pane(Position pos) {
     return pane;
 }
 
-void MainWindow::remove_pane(Pane *pane) {
+ChatPane *MainWindow::add_chat_pane(Position pos) {
+    auto pane = new ChatPane(this);
+
+    _grid->insert_widget(pos, pane);
+    pane->setFocus();
+    pane->activateWindow();
+    _panes.push_back(pane);
+
+    return pane;
+}
+
+void MainWindow::remove_pane(MPane pane) {
     auto pane_it = std::find(_panes.begin(), _panes.end(), pane);
 
     if (pane_it != _panes.end()) {
-        _grid->remove_widget(pane);
-        pane->deleteLater();
+        match(pane, [this](auto pane) {
+            _grid->remove_widget(pane);
+            pane->deleteLater();
+        });
         auto next_pane = _panes.erase(pane_it);
 
         if (!_panes.empty()) {
             auto focus_target_it = next_pane == _panes.begin()
                                  ? next_pane : std::prev(next_pane);
-            focus_pane(*focus_target_it);
+            match(pane, [](auto pane) { focus_pane(pane); });
         }
     }
 }
 
-Pane * MainWindow::focused_pane() {
+std::optional<MPane> MainWindow::focused_pane() {
     auto focusedWidget = qApp->focusWidget();
 
     auto pane_it = std::find_if(_panes.begin(), _panes.end(), [=](auto pane) {
-        return pane->isAncestorOf(focusedWidget);
+        return match(pane, [=](auto pane) {
+            return pane->isAncestorOf(focusedWidget);
+        });
     });
 
     if (pane_it != _panes.end())
         return *pane_it;
     else
-        return nullptr;
+        return std::nullopt;
 }
 
 void MainWindow::move_focus(Position pos) {
@@ -121,29 +138,35 @@ void MainWindow::move_focus(Position pos) {
     if (focus_target)
         focus_pane(focus_target);
     for (auto pane: _panes)
-        pane->repaint();
+        match(pane, [](auto pane) { pane->repaint(); });
 }
 
 void MainWindow::move_pane(Position from, Position to) {
     auto focused = focused_pane();
     _grid->swap(from, to);
-    focus_pane(focused);
+    if (focused)
+        match(*focused, [](auto pane) { focus_pane(pane); });
     for (auto pane: _panes)
-        pane->repaint();
+        match(pane, [](auto pane) { pane->repaint(); });
 }
 
 void MainWindow::set_fullscreen(bool on) {
     setWindowState(windowState().setFlag(Qt::WindowFullScreen, on));
     _action_fullscreen->setChecked(on);
-    for (auto pane: _panes)
-        pane->stream()->video()->controls().set_fullscreen(on);
+    for (auto pane: _panes) {
+        match(pane,
+            [=](StreamPane *pane) { pane->stream()->video()->controls().set_fullscreen(on); },
+            [](auto) { }
+        );
+    }
+
 }
 
 bool MainWindow::is_zoomed() {
     return _central_widget->currentWidget() != _grid;
 }
 
-void MainWindow::zoom(Pane *pane) {
+void MainWindow::zoom(StreamPane *pane) {
     if (is_zoomed()) {
         _action_stream_zoom->setChecked(true);
         return ;
@@ -155,8 +178,13 @@ void MainWindow::zoom(Pane *pane) {
     _action_stream_zoom->setChecked(true);
 
     for (auto pane: _panes) {
-        pane->stream()->video()->controls().set_zoomed(true);
-        pane->stream()->video()->hint_layout_change();
+        match(pane,
+            [=](StreamPane *pane) {
+                pane->stream()->video()->controls().set_zoomed(true);
+                pane->stream()->video()->hint_layout_change();
+            },
+            [](auto) { }
+        );
     }
 }
 
@@ -174,11 +202,18 @@ void MainWindow::unzoom() {
 
     // Windows workaround for weird display issues
     if (auto active_pane = focused_pane(); active_pane)
-        active_pane->stream()->chat()->redraw();
+        match(*active_pane,
+            [](StreamPane *pane) { pane->stream()->chat()->redraw(); },
+            [](auto) { }
+        );
 
     _action_stream_zoom->setChecked(false);
-    for (auto pane: _panes)
-        pane->stream()->video()->controls().set_zoomed(false);
+    for (auto pane: _panes) {
+        match(pane,
+            [](StreamPane *pane) { pane->stream()->video()->controls().set_zoomed(false); },
+            [](auto) { }
+        );
+    }
 }
 
 void MainWindow::setup_audio_devices() {
@@ -187,21 +222,26 @@ void MainWindow::setup_audio_devices() {
     if (!active_pane)
         return ;
 
-    _audio_devices_menu->clear();
-    auto & mp = active_pane->stream()->video()->media_player();
-    auto current_device_id = mp.get_current_device_id();
-    for (auto device: mp.audio_devices()) {
-        auto description = QString::fromStdString(device.description);
-        auto action = _audio_devices_menu->addAction(description);
-        if (device.id == current_device_id) {
-            action->setCheckable(true);
-            action->setChecked(true);
-        }
-        QObject::connect(action, &QAction::triggered, [=] {
-            if (auto active_pane = focused_pane(); active_pane) {
-                active_pane->stream()->video()->media_player()
-                    .set_audio_device(device.id);
+    match(*active_pane,
+        [this](StreamPane *pane) {
+            _audio_devices_menu->clear();
+            auto & mp = pane->stream()->video()->media_player();
+            auto current_device_id = mp.get_current_device_id();
+            for (auto device: mp.audio_devices()) {
+                auto description = QString::fromStdString(device.description);
+                auto action = _audio_devices_menu->addAction(description);
+                if (device.id == current_device_id) {
+                    action->setCheckable(true);
+                    action->setChecked(true);
+                }
+                QObject::connect(action, &QAction::triggered, [=] {
+                    if (auto active_pane = focused_pane(); active_pane) {
+                        pane->stream()->video()->media_player()
+                            .set_audio_device(device.id);
+                    }
+                });
             }
-        });
-    }
+        },
+        [](auto) { }
+    );
 }

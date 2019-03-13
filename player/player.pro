@@ -46,9 +46,10 @@ SOURCES         +=  src/main.cpp \
                     \
                     src/ui/utils/event_notifier.cpp \
                     \
+                    src/ui/widgets/chat_pane.cpp \
                     src/ui/widgets/foreign_widget.cpp \
-                    src/ui/widgets/pane.cpp \
                     src/ui/widgets/stream_card.cpp \
+                    src/ui/widgets/stream_pane.cpp \
                     src/ui/widgets/stream_picker.cpp \
                     src/ui/widgets/stream_widget.cpp \
                     src/ui/widgets/video_widget.cpp \
@@ -92,9 +93,10 @@ HEADERS         +=  include/constants.hpp \
                     \
                     include/ui/utils/event_notifier.hpp \
                     \
+                    include/ui/widgets/chat_pane.hpp \
                     include/ui/widgets/foreign_widget.hpp \
-                    include/ui/widgets/pane.hpp \
                     include/ui/widgets/stream_card.hpp \
+                    include/ui/widgets/stream_pane.hpp \
                     include/ui/widgets/stream_picker.hpp \
                     include/ui/widgets/stream_widget.hpp \
                     include/ui/widgets/video_widget.hpp \

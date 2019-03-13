@@ -124,6 +124,10 @@ namespace constants {
             Shortcut ADD_PANE_RIGHT        { "Add Pane right",        "Ctrl+Alt+Right",       "shortcuts/add_pane_right" };
             Shortcut ADD_PANE_UP           { "Add Pane up",           "Ctrl+Alt+Up",          "shortcuts/add_pane_up" };
             Shortcut ADD_PANE_DOWN         { "Add Pane down",         "Ctrl+Alt+Down",        "shortcuts/add_pane_down" };
+            Shortcut ADD_CHAT_PANE_LEFT    { "Add Chat Pane left",    "Shift+Alt+Left",       "shortcuts/add_chat_pane_left" };
+            Shortcut ADD_CHAT_PANE_RIGHT   { "Add Chat Pane right",   "Shift+Alt+Right",      "shortcuts/add_chat_pane_right" };
+            Shortcut ADD_CHAT_PANE_UP      { "Add Chat Pane up",      "Shift+Alt+Up",         "shortcuts/add_chat_pane_up" };
+            Shortcut ADD_CHAT_PANE_DOWN    { "Add Chat Pane down",    "Shift+Alt+Down",       "shortcuts/add_chat_pane_down" };
             Shortcut REMOVE_ACTIVE_PANE    { "Remove Active Pane",    "Ctrl+Del",             "shortcuts/remove_active_pane" };
             Shortcut MOVE_FOCUS_LEFT       { "Move Focus Left",       "Left",                 "shortcuts/move_focus_left" };
             Shortcut MOVE_FOCUS_RIGHT      { "Move Focus Right",      "Right",                "shortcuts/move_focus_right" };
@@ -147,6 +151,7 @@ namespace constants {
             Constant ALL_SHORTCUTS = std::vector<ActionnableShortcutDescriptor> {
                 TOGGLE_FULL_SCREEN, TOGGLE_WINDOW_BORDERS, TOGGLE_ALWAYS_ON_TOP, TOGGLE_STREAM_ZOOM,
                 ADD_PANE_LEFT, ADD_PANE_RIGHT, ADD_PANE_UP, ADD_PANE_DOWN,
+                ADD_CHAT_PANE_LEFT, ADD_CHAT_PANE_RIGHT, ADD_CHAT_PANE_UP, ADD_CHAT_PANE_DOWN,
                 REMOVE_ACTIVE_PANE, MOVE_FOCUS_LEFT, MOVE_FOCUS_RIGHT, MOVE_FOCUS_UP,
                 MOVE_FOCUS_DOWN, TOGGLE_CHAT_LEFT, TOGGLE_CHAT_RIGHT, RESIZE_CHAT_LEFT,
                 RESIZE_CHAT_RIGHT, MOVE_PANE_LEFT, MOVE_PANE_RIGHT, MOVE_PANE_UP,
