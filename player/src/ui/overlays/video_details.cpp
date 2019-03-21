@@ -165,10 +165,15 @@ void VideoDetails::fetch_channel_details() {
         if (_stream_details_ui->channelLogo->pixmap()->isNull())
             fetch_channel_logo(data.channel.logo_url);
 
+        auto uptime_secs = data.created_at.secsTo(QDateTime::currentDateTime());
+        auto uptime_hours = uptime_secs / 3600;
+        auto uptime_minutes = (uptime_secs - uptime_hours * 3600) / 60;
+
         _stream_details_ui->labelChannel->setText(_channel.toUpper());
         _stream_details_ui->labelTitle->setText(data.channel.title);
         _stream_details_ui->labelPlaying->setText(data.current_game);
         _stream_details_ui->labelViewcount->setText(QString::number(data.viewcount));
+        _stream_details_ui->labelUptime->setText(QString("%1:%2").arg(uptime_hours).arg(uptime_minutes, 2, 10, QChar('0')));
 
         _has_valid_stream_details = true;
         repaint();

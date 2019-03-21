@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icons">
+    <file>clock.svg</file>
     <file>dashboard.png</file>
     <file>unzoom.png</file>
     <file>zoom.png</file>
