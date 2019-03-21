@@ -14,6 +14,7 @@ struct StreamData {
     QString preview;
     QString current_game;
     uint32_t viewcount;
+    QDateTime created_at;
 };
 
 struct TwitchAPI: APIClient {

@@ -27,7 +27,8 @@ static StreamData extract_stream(const QJsonObject & stream_obj) {
         channel_data,
         stream_obj["preview"].toObject()["medium"].toString(),
         stream_obj["game"].toString(),
-        static_cast<uint32_t>(stream_obj["viewers"].toInt())
+        static_cast<uint32_t>(stream_obj["viewers"].toInt()),
+        QDateTime::fromString(stream_obj["created_at"].toString(), Qt::ISODate),
     };
 }
 
