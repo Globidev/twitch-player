@@ -86,10 +86,17 @@ static QUrl endpoint(const QString &path) {
 }
 
 TwitchdAPI::stream_index_response_t TwitchdAPI::stream_index(QString channel) {
+    using namespace constants::settings::oauth;
+
     auto url = endpoint("stream_index");
+
+    QSettings settings;
+    auto oauth = settings.value(ACCESS_TOKEN_KEY).toString();
 
     QUrlQuery url_query;
     url_query.addQueryItem("channel", channel);
+    if (!oauth.isEmpty())
+        url_query.addQueryItem("oauth", oauth);
     url.setQuery(url_query);
 
     QNetworkRequest request { url };
@@ -132,12 +139,19 @@ TwitchdAPI::daemon_quit_response_t TwitchdAPI::daemon_quit() {
 }
 
 QString TwitchdAPI::playback_url(QString channel, QString quality, QString meta_key) {
+    using namespace constants::settings::oauth;
+
     auto url = endpoint("play");
+
+    QSettings settings;
+    auto oauth = settings.value(ACCESS_TOKEN_KEY).toString();
 
     QUrlQuery url_query;
     url_query.addQueryItem("channel", channel);
     if (!quality.isEmpty())
         url_query.addQueryItem("quality", quality);
+    if (!oauth.isEmpty())
+        url_query.addQueryItem("oauth", oauth);
     url_query.addQueryItem("meta_key", meta_key);
     url.setQuery(url_query);
 
