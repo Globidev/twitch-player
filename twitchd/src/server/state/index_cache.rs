@@ -37,7 +37,7 @@ impl IndexCache {
         }
     }
 
-    pub fn get(&self, channel: &str)
+    pub fn get(&self, channel: &str, oauth: Option<&str>)
         -> impl Future<Item = StreamIndex, Error = IndexError>
     {
         let channel_lc = channel.to_lowercase();
@@ -52,7 +52,8 @@ impl IndexCache {
             None => {
                 let shared_index = self.create_new_shared_index(
                     &mut cache,
-                    &channel_lc
+                    &channel_lc,
+                    oauth
                 );
 
                 Box::new(shared_index)
@@ -64,13 +65,14 @@ impl IndexCache {
             .map_err(|shared_err| (*shared_err).clone())
     }
 
-    fn create_new_shared_index(&self, cache: &mut ChannelIndexes, channel: &str)
+    fn create_new_shared_index(&self, cache: &mut ChannelIndexes, channel: &str, oauth: Option<&str>)
         -> impl Future<Item = SharedIndex, Error = SharedError>
     {
         let future_index = fetch_stream_index(
             &self.client,
             channel,
-            &self.opts.client_id
+            &self.opts.client_id,
+            oauth
         );
 
         let shared_index = (Box::new(future_index) as BoxFuture<_, _>)
@@ -88,12 +90,12 @@ impl IndexCache {
     }
 }
 
-fn fetch_stream_index(client: &HttpsClient, channel: &str, client_id: &str)
+fn fetch_stream_index(client: &HttpsClient, channel: &str, client_id: &str, oauth: Option<&str>)
     -> impl Future<Item = StreamIndex, Error = IndexError>
 {
     use crate::twitch::api::{access_token, stream_index};
 
-    let fetch_token = access_token(client, &channel, client_id);
+    let fetch_token = access_token(client, &channel, client_id, oauth);
 
     let fetch_index = {
         let client = client.clone();

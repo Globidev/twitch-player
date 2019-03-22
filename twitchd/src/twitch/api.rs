@@ -7,10 +7,10 @@ use url::form_urlencoded;
 
 type ParseResult<T> = Result<T, ApiError>;
 
-pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str)
+pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str, oauth: Option<&str>)
     -> impl Future<Item = AccessToken, Error = ApiError>
 {
-    let request = hyper::Request::get(access_token_url(channel))
+    let request = hyper::Request::get(access_token_url(channel, oauth))
         .header("Client-ID", client_id)
         .body(hyper::Body::default())
         .expect("Request Building error: Access Token");
@@ -48,10 +48,27 @@ where
         .and_then(parse)
 }
 
-fn access_token_url(channel: &str) -> String {
+fn access_token_url(channel: &str, oauth: Option<&str>) -> String {
+    let query_string = match form_urlencoded::Serializer::new(String::new()) {
+        mut query => {
+            query
+                .append_pair("need_https", "true")
+                .append_pair("platform", "_")
+                .append_pair("player_backend", "mediaplayer")
+                .append_pair("player_type", "site");
+
+            if let Some(token) = oauth {
+                query.append_pair("oauth_token", token);
+            }
+
+            query.finish()
+        }
+    };
+
     format!(
-        "https://api.twitch.tv/api/channels/{}/access_token",
-        channel.to_lowercase()
+        "https://api.twitch.tv/api/channels/{}/access_token?{}",
+        channel.to_lowercase(),
+        query_string
     )
 }
 

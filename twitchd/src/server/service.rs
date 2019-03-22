@@ -28,7 +28,10 @@ impl TwitchdApi {
         match params.get("channel") {
             None          => respond(bad_request("Missing channel")),
             Some(channel) => {
-                let response = self.state.index_cache.get(channel)
+                let oauth = params.get("oauth")
+                    .map(String::as_str);
+
+                let response = self.state.index_cache.get(channel, oauth)
                     .map(json_response)
                     .or_else(|error| Ok(index_error_response(error)));
 
@@ -53,7 +56,8 @@ impl TwitchdApi {
                     self.state.player_pool.add_sink(&stream, sink, meta_key);
                     respond(response)
                 } else {
-                    self.fetch_and_play(stream, meta_key)
+                    let oauth = params.get("oauth").map(String::as_str);
+                    self.fetch_and_play(stream, meta_key, oauth)
                 }
             }
         }
@@ -90,7 +94,7 @@ impl TwitchdApi {
         respond(response)
     }
 
-    fn fetch_and_play(&self, stream: Stream, meta_key: Option<String>) -> ApiFuture {
+    fn fetch_and_play(&self, stream: Stream, meta_key: Option<String>, oauth: Option<&str>) -> ApiFuture {
         let (channel, quality) = stream.clone();
 
         let stream_response = {
@@ -108,7 +112,7 @@ impl TwitchdApi {
             }
         };
 
-        let response = self.state.index_cache.get(&channel)
+        let response = self.state.index_cache.get(&channel, oauth)
             .map(stream_response)
             .or_else(|error| Ok(index_error_response(error)));
 
