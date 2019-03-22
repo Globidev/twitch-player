@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitchd</DisplayName>
     <Description>Install the Twitch API daemon</Description>
-    <Version>1.3.1</Version>
+    <Version>1.4.1</Version>
     <ReleaseDate>2019-03-22</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Parse twitch "stitched-ads" correctly</UpdateText>
+    <UpdateText>Now handles OAuth tokens from clients</UpdateText>
 </Package>

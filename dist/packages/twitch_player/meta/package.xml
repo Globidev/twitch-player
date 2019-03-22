@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitch Player</DisplayName>
     <Description>Install the end user interface</Description>
-    <Version>0.9.18</Version>
+    <Version>0.9.20</Version>
     <ReleaseDate>2019-03-22</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Bump daemon version for ads</UpdateText>
+    <UpdateText>Forwards OAuth tokens to the daemon</UpdateText>
 </Package>

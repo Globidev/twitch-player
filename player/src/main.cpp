@@ -16,7 +16,7 @@
 
 #include <optional>
 
-constexpr auto EXPECTED_DAEMON_VERSION = "1.3.1";
+constexpr auto EXPECTED_DAEMON_VERSION = "1.4.1";
 
 struct Options {
     std::optional<QString> initial_channel;
