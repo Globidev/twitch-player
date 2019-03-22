@@ -374,6 +374,14 @@ mod tests {
     }
 
     #[test]
+    fn parse_playlist_with_stiched_ads() {
+        parse_test(
+            super::playlist_parser,
+            include_bytes!("../../test_samples/m3u8/playlist_with_stitched_ads.m3u8")
+        );
+    }
+
+    #[test]
     fn parse_simple_index() {
         parse_test(
             super::stream_index_parser,
