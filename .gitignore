@@ -1,3 +1,4 @@
 dist/packages/**/data/*
 dist/*.exe
 dist/twitch-player_*
+.vscode/settings.json
