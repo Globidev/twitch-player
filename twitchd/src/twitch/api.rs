@@ -3,6 +3,8 @@ use crate::prelude::futures::*;
 
 use super::types::{AccessToken, StreamIndex, Playlist};
 
+use url::form_urlencoded;
+
 type ParseResult<T> = Result<T, ApiError>;
 
 pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str)
@@ -54,14 +56,22 @@ fn access_token_url(channel: &str) -> String {
 }
 
 fn stream_index_url(channel: &str, token: &AccessToken) -> String {
-    use url::form_urlencoded;
-
     let query_string = form_urlencoded::Serializer::new(String::new())
-        .append_pair("token",        &token.token)
-        .append_pair("sig",          &token.signature)
-        .append_pair("allow_source", "true")
-        .append_pair("fast_bread",   "true")
-        .append_pair("cdm",          "wv")
+        .append_pair("token",                      &token.token)
+        .append_pair("sig",                        &token.signature)
+        .append_pair("allow_source",               "true")
+        .append_pair("fast_bread",                 "true")
+        .append_pair("baking_bread",               "true")
+        .append_pair("baking_brownies",            "true")
+        .append_pair("baking_brownies_timeout",    "1050")
+        .append_pair("playlist_include_framerate", "true")
+        .append_pair("reassignments_supported",    "true")
+        .append_pair("cdm",                        "wv")
+        .append_pair("player_backend",             "mediaplayer")
+        .append_pair("rtqos",                      "control")
+        .append_pair("preferred_codecs",           "avc1")
+        // TODO: figure out that parameter's meaning
+        // .append_pair("p",                          "7036871")
         .finish();
 
     format!(
