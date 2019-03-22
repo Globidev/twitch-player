@@ -52,7 +52,6 @@ fn access_token_url(channel: &str, oauth: Option<&str>) -> String {
     let query_string = match form_urlencoded::Serializer::new(String::new()) {
         mut query => {
             query
-                .append_pair("need_https", "true")
                 .append_pair("platform", "_")
                 .append_pair("player_backend", "mediaplayer")
                 .append_pair("player_type", "site");
