@@ -124,10 +124,16 @@ named!(playlist_map<Input, ()>, do_parse!(
     tag!("#EXT-X-MAP:") >> take_until_and_consume!("\n") >> ()
 ));
 
-named!(playlist_stiched_ads<Input, ()>, do_parse!(
+named!(playlist_stiched_ads_begin<Input, ()>, do_parse!(
     tag!("#EXT-X-DATERANGE:") >> take_until_and_consume!("\n") >>
     tag!("#EXT-X-DISCONTINUITY") >> take_until_and_consume!("\n") >>
     tag!("#EXT-X-SCTE35-OUT:") >> take_until_and_consume!("\n") >>
+    ()
+));
+
+named!(playlist_stiched_ads_end<Input, ()>, do_parse!(
+    tag!("#EXT-X-DISCONTINUITY") >> take_until_and_consume!("\n") >>
+    tag!("#EXT-X-SCTE35-IN") >> take_until_and_consume!("\n") >>
     ()
 ));
 
@@ -148,6 +154,7 @@ named!(ext_program_date_parser<Input, ()>, do_parse!(
 ));
 
 named!(playlist_segment_parser<Input, Segment>, do_parse!(
+    opt!(playlist_stiched_ads_end) >>
     opt!(ext_program_date_parser) >>
     segment: alt!(extinf_segment_parser | prefetch_segment_parser) >>
     (segment)
@@ -161,7 +168,7 @@ named!(playlist_parser<Input, Playlist>, do_parse!(
     twitch_elapsed_secs: playlist_twitch_elapsed_secs_parser >> tag!("\n") >>
     twitch_total_secs:   playlist_twitch_total_secs_parser   >> tag!("\n") >>
     _map:                opt!(playlist_map)                  >>
-    _stitched_ads:       opt!(playlist_stiched_ads)          >>
+    _stitched_ads:       opt!(playlist_stiched_ads_begin)    >>
     segments:            many1!(playlist_segment_parser)     >>
     (Playlist {
         version,
