@@ -81,7 +81,7 @@ fn stream_index_url(channel: &str, token: &AccessToken) -> String {
         .append_pair("baking_brownies",            "true")
         .append_pair("baking_brownies_timeout",    "1050")
         .append_pair("playlist_include_framerate", "true")
-        .append_pair("reassignments_supported",    "true")
+        // .append_pair("reassignments_supported",    "true")
         .append_pair("cdm",                        "wv")
         .append_pair("player_backend",             "mediaplayer")
         .append_pair("rtqos",                      "control")

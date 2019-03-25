@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitchd</DisplayName>
     <Description>Install the Twitch API daemon</Description>
-    <Version>1.4.1</Version>
-    <ReleaseDate>2019-03-22</ReleaseDate>
+    <Version>1.4.2</Version>
+    <ReleaseDate>2019-03-25</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Now handles OAuth tokens from clients</UpdateText>
+    <UpdateText>Avoid sending some shady parameters to get stream indexes</UpdateText>
 </Package>
