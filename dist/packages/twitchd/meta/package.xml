@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitchd</DisplayName>
     <Description>Install the Twitch API daemon</Description>
-    <Version>1.4.2</Version>
-    <ReleaseDate>2019-03-25</ReleaseDate>
+    <Version>1.4.3</Version>
+    <ReleaseDate>2019-03-27</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Avoid sending some shady parameters to get stream indexes</UpdateText>
+    <UpdateText>Bump version</UpdateText>
 </Package>

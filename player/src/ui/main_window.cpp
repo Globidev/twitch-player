@@ -12,9 +12,12 @@
 #include "prelude/timer.hpp"
 #include "prelude/variant.hpp"
 
+#include "constants.hpp"
+
 #include <QStackedWidget>
 #include <QKeyEvent>
 #include <QShortcut>
+#include <QSettings>
 
 static void focus_pane(QWidget *pane) {
     pane->setFocus();
@@ -36,6 +39,16 @@ MainWindow::MainWindow(libvlc::Instance &video_context, TwitchPubSub &pubsub, QW
     _central_widget->addWidget(_grid);
 
     setup_shortcuts();
+
+    using namespace constants::settings::ui;
+
+    QSettings settings;
+    auto main_geometry = settings
+        .value(KEY_MAIN_WINDOW_GEOMETRY, DEFAULT_MAIN_WINDOW_GEOMETRY)
+        .toByteArray();
+
+    if (!main_geometry.isEmpty())
+        restoreGeometry(main_geometry);
 }
 
 MainWindow::~MainWindow() = default;
@@ -54,6 +67,15 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         }
     }
     QMainWindow::keyPressEvent(event);
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+    using namespace constants::settings::ui;
+
+    QSettings settings;
+    settings.setValue(KEY_MAIN_WINDOW_GEOMETRY, saveGeometry());
+
+    QMainWindow::closeEvent(event);
 }
 
 StreamPane * MainWindow::add_stream_pane(Position pos) {

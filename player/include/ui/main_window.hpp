@@ -45,6 +45,8 @@ protected:
     void changeEvent(QEvent *) override;
     void keyPressEvent(QKeyEvent *) override;
 
+    void closeEvent(QCloseEvent *) override;
+
 private:
     std::unique_ptr<Ui::MainWindow> _ui;
 
