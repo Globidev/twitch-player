@@ -147,6 +147,7 @@ namespace constants {
             Shortcut TOGGLE_MUTE           { "Toggle Mute",           "M",                    "shortcuts/toggle_mute" };
             Shortcut FAST_FORWARD          { "Fast Forward",          "F",                    "shortcuts/fast_forward" };
             Shortcut FILTERS_TOOL          { "Filters",               "Ctrl+E",               "shortcuts/effects_and_filters" };
+            Shortcut TOGGLE_MENU_BAR       { "Toggle menu bar",       "F9",                   "shortcuts/toggle_menu_bar" };
 
             #undef Shortcut
 
@@ -157,7 +158,8 @@ namespace constants {
                 REMOVE_ACTIVE_PANE, MOVE_FOCUS_LEFT, MOVE_FOCUS_RIGHT, MOVE_FOCUS_UP,
                 MOVE_FOCUS_DOWN, TOGGLE_CHAT_LEFT, TOGGLE_CHAT_RIGHT, RESIZE_CHAT_LEFT,
                 RESIZE_CHAT_RIGHT, MOVE_PANE_LEFT, MOVE_PANE_RIGHT, MOVE_PANE_UP,
-                MOVE_PANE_DOWN, ROTATE_LAYOUT, TOGGLE_MUTE, FAST_FORWARD, FILTERS_TOOL
+                MOVE_PANE_DOWN, ROTATE_LAYOUT, TOGGLE_MUTE, FAST_FORWARD, FILTERS_TOOL,
+                TOGGLE_MENU_BAR
             };
         }
     }

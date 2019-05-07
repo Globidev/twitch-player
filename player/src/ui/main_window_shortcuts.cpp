@@ -113,6 +113,13 @@ void MainWindow::setup_shortcuts() {
     auto toggle_window_borders = [=](bool on) {
         ::toggle_window_borders(window_handle(), on);
     };
+    auto toggle_menu_bar = [=](bool on) {
+        _ui->menuBar->setVisible(on);
+        for (auto [_key, pair]: _shortcuts) {
+            auto [shortcut, _action] = pair;
+            shortcut->setEnabled(!on);
+        }
+    };
     auto toggle_always_on_top = [=](bool on) {
         ::toggle_always_on_top(window_handle(), on);
     };
@@ -134,6 +141,8 @@ void MainWindow::setup_shortcuts() {
 
     _action_fullscreen = add_toggle(_ui->menuView, TOGGLE_FULL_SCREEN,    toggle_fullscreen);
     add_toggle(_ui->menuView, TOGGLE_WINDOW_BORDERS, toggle_window_borders)
+        ->setChecked(true);
+    add_toggle(_ui->menuView, TOGGLE_MENU_BAR, toggle_menu_bar)
         ->setChecked(true);
     add_toggle(_ui->menuView, TOGGLE_ALWAYS_ON_TOP, toggle_always_on_top);
     _action_stream_zoom = add_toggle(_ui->menuView, TOGGLE_STREAM_ZOOM,   toggle_stream_zoon);

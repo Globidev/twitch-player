@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitch Player</DisplayName>
     <Description>Install the end user interface</Description>
-    <Version>0.9.22</Version>
-    <ReleaseDate>2019-04-06</ReleaseDate>
+    <Version>0.9.23</Version>
+    <ReleaseDate>2019-05-08</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Now saving and restoring main window geometry</UpdateText>
+    <UpdateText>Changed the menu bar toggle default and made it configurable</UpdateText>
 </Package>
