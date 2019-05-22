@@ -124,10 +124,15 @@ named!(playlist_map<Input, ()>, do_parse!(
     tag!("#EXT-X-MAP:") >> take_until_and_consume!("\n") >> ()
 ));
 
-named!(playlist_stiched_ads_begin<Input, ()>, do_parse!(
-    tag!("#EXT-X-DATERANGE:") >> take_until_and_consume!("\n") >>
+named!(playlist_discontinuity_sct35<Input, ()>, do_parse!(
     tag!("#EXT-X-DISCONTINUITY") >> take_until_and_consume!("\n") >>
     tag!("#EXT-X-SCTE35-OUT:") >> take_until_and_consume!("\n") >>
+    ()
+));
+
+named!(playlist_stiched_ads_begin<Input, ()>, do_parse!(
+    tag!("#EXT-X-DATERANGE:") >> take_until_and_consume!("\n") >>
+    opt!(playlist_discontinuity_sct35) >>
     ()
 ));
 
@@ -417,6 +422,14 @@ mod tests {
         parse_test(
             super::stream_index_parser,
             include_bytes!("../../test_samples/m3u8/index_without_program_id.m3u8")
+        );
+    }
+
+    #[test]
+    fn parse_faulty_playlist_22_may_2019() {
+        parse_test(
+            super::playlist_parser,
+            include_bytes!("../../test_samples/m3u8/faulty_playlist_22_may_2019.m3u8")
         );
     }
 }
