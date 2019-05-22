@@ -2,7 +2,7 @@
 
 #include "ui_about_dialog.h"
 
-constexpr auto VERSION = "0.9.23";
+constexpr auto VERSION = "0.9.24";
 
 AboutDialog::AboutDialog(QWidget *parent):
     QDialog(parent),

@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitchd</DisplayName>
     <Description>Install the Twitch API daemon</Description>
-    <Version>1.4.3</Version>
-    <ReleaseDate>2019-03-27</ReleaseDate>
+    <Version>1.4.4</Version>
+    <ReleaseDate>2019-05-22</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Bump version</UpdateText>
+    <UpdateText>Adapted playlist parsing to recent twitch backend changes</UpdateText>
 </Package>
