@@ -305,16 +305,24 @@ fn extract_metadata(data: &RawVideoData) -> Option<SegmentMetadata> {
     let pes_slice = &data[
         PES_METADATA_OFFSET
         ..
-        PES_METADATA_OFFSET + MPEG_TS_SECTION_LENGTH
+        PES_METADATA_OFFSET + MPEG_TS_SECTION_LENGTH * 2
     ];
+
+    // println!("{:?}", std::str::from_utf8(pes_slice));
 
     let json_start_offset = pes_slice.iter()
         .position(|&c| c == b'{')?;
     let unbounded_json_slice = &pes_slice[json_start_offset..];
 
+    // println!("start {:?}", json_start_offset);
+
     let json_end_offset = unbounded_json_slice.iter()
         .position(|&c| c == b'}')?;
     let json_slice = &unbounded_json_slice[..=json_end_offset];
+
+    // println!("end {:?}", json_end_offset);
+
+    // println!("{:?}", std::str::from_utf8(json_slice));
 
     serde_json::from_slice(json_slice).ok()
 }
@@ -374,6 +382,13 @@ mod tests {
     fn extract_encoded_low_quality_segment_metadata() {
         extract_metadata_test(
             include_bytes!("../../../test_samples/mpeg_ts/encoded_160p.ts")
+        );
+    }
+
+    #[test]
+    fn extract_faulty() {
+        extract_metadata_test(
+            include_bytes!("../../../test_samples/mpeg_ts/faulty.ts")
         );
     }
 
