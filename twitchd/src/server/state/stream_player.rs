@@ -301,32 +301,45 @@ pub struct SegmentMetadata {
 
 const MPEG_TS_SECTION_LENGTH: usize = 188;
 // The metadata packet seems to always be the 3rd one
-const PES_METADATA_OFFSET: usize = MPEG_TS_SECTION_LENGTH * 3;
+const FIRST_PES_METADATA_OFFSET: usize = MPEG_TS_SECTION_LENGTH * 3;
+const SECOND_PES_METADATA_OFFSET: usize = FIRST_PES_METADATA_OFFSET + MPEG_TS_SECTION_LENGTH;
 
 fn extract_metadata(data: &RawVideoData) -> Option<SegmentMetadata> {
-    let pes_slice = &data[
-        PES_METADATA_OFFSET
-        ..
-        PES_METADATA_OFFSET + MPEG_TS_SECTION_LENGTH * 2
-    ];
+    let first_pes_slice = &data[FIRST_PES_METADATA_OFFSET..SECOND_PES_METADATA_OFFSET];
 
-    // println!("{:?}", std::str::from_utf8(pes_slice));
-
-    let json_start_offset = pes_slice.iter()
+    let json_start_offset = first_pes_slice.iter()
         .position(|&c| c == b'{')?;
-    let unbounded_json_slice = &pes_slice[json_start_offset..];
+    let unbounded_json_slice = &first_pes_slice[json_start_offset..];
 
-    // println!("start {:?}", json_start_offset);
+    if let Some(json_end_offset) = unbounded_json_slice.iter()
+        .position(|&c| c == b'}')
+    {
+        let json_slice = &unbounded_json_slice[..=json_end_offset];
+        serde_json::from_slice(json_slice).ok()
+    } else {
+        // The JSON data does not fit in a single PES slice
+        // Twitch uses a second one and seems to align it to the end
+        let json_initial_slice = unbounded_json_slice;
+        let second_pes_slice = &data[
+            SECOND_PES_METADATA_OFFSET
+            ..
+            SECOND_PES_METADATA_OFFSET + MPEG_TS_SECTION_LENGTH
+        ];
+        let json_continuity_end_offset = second_pes_slice.iter()
+            .position(|&c| c == b'}')?;
+        let json_continuity_start_offset = (0..json_continuity_end_offset)
+            .rev()
+            .find(|&idx| second_pes_slice[idx] == 0xFF)? + 1;
 
-    let json_end_offset = unbounded_json_slice.iter()
-        .position(|&c| c == b'}')?;
-    let json_slice = &unbounded_json_slice[..=json_end_offset];
+        let json_continuity_slice = &second_pes_slice[
+            json_continuity_start_offset
+            ..=
+            json_continuity_end_offset
+        ];
 
-    // println!("end {:?}", json_end_offset);
-
-    // println!("{:?}", std::str::from_utf8(json_slice));
-
-    serde_json::from_slice(json_slice).ok()
+        let json_slice = [json_initial_slice, json_continuity_slice].concat();
+        serde_json::from_slice(&json_slice).ok()
+    }
 }
 
 #[derive(Debug)]
@@ -388,9 +401,9 @@ mod tests {
     }
 
     #[test]
-    fn extract_faulty() {
+    fn extract_source_faulty_22_may_2019() {
         extract_metadata_test(
-            include_bytes!("../../../test_samples/mpeg_ts/faulty.ts")
+            include_bytes!("../../../test_samples/mpeg_ts/source_faulty_22_may_2019.ts")
         );
     }
 
