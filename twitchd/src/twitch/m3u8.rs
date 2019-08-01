@@ -173,7 +173,7 @@ named!(playlist_parser<Input, Playlist>, do_parse!(
     twitch_elapsed_secs: playlist_twitch_elapsed_secs_parser >> tag!("\n") >>
     twitch_total_secs:   playlist_twitch_total_secs_parser   >> tag!("\n") >>
     _map:                opt!(playlist_map)                  >>
-    _stitched_ads:       opt!(playlist_stiched_ads_begin)    >>
+    _stitched_ads:       many0!(playlist_stiched_ads_begin)    >>
     segments:            many1!(playlist_segment_parser)     >>
     (Playlist {
         version,
@@ -432,4 +432,14 @@ mod tests {
             include_bytes!("../../test_samples/m3u8/faulty_playlist_22_may_2019.m3u8")
         );
     }
+
+    #[test]
+    fn parse_faulty_playlist_01_august_2019() {
+        parse_test(
+            super::playlist_parser,
+            include_bytes!("../../test_samples/m3u8/faulty_playlist_01_august_2019.m3u8")
+        );
+    }
+
+
 }
