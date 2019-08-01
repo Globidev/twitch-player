@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitchd</DisplayName>
     <Description>Install the Twitch API daemon</Description>
-    <Version>1.4.5</Version>
-    <ReleaseDate>2019-07-19</ReleaseDate>
+    <Version>1.4.7</Version>
+    <ReleaseDate>2019-08-01</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Made metadata optional following recent twitch backend changes</UpdateText>
+    <UpdateText>Fixed latency to broadcaster computation</UpdateText>
 </Package>

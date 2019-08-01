@@ -7,7 +7,7 @@ use super::state::{State, index_cache::IndexError};
 
 use std::sync::Arc;
 
-const DAEMON_VERSION: &str = "1.4.6";
+const DAEMON_VERSION: &str = "1.4.7";
 
 type ApiRequest = Request;
 type ApiResponse = Response;
