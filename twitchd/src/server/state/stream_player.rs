@@ -46,19 +46,21 @@ impl StreamPlayer {
             move |data: &RawVideoData, senders: &mut Vec<_>| {
                 if sink_queue.read().unwrap().is_empty() { return }
 
-                if let Some(metadata) = extract_metadata(data) {
-                    let mut sink_queue = sink_queue.write().unwrap();
-                    let mut indexed_metadata = indexed_metadata.write().unwrap();
+                let opt_metadata = extract_metadata(data);
 
-                    sink_queue.drain(..).for_each(|(key, sink)| {
+                let mut sink_queue = sink_queue.write().unwrap();
+                let mut indexed_metadata = indexed_metadata.write().unwrap();
+
+                sink_queue.drain(..).for_each(|(key, sink)| {
+                    if let Some(metadata) = opt_metadata.as_ref() {
                         indexed_metadata.insert(key, metadata.clone());
+                    }
 
-                        let (sender, stream) = sync::mpsc::channel(16);
-                        senders.push(sender);
+                    let (sender, stream) = sync::mpsc::channel(16);
+                    senders.push(sender);
 
-                        runtime::spawn(drain_stream(stream, sink, sink_size));
-                    });
-                }
+                    runtime::spawn(drain_stream(stream, sink, sink_size));
+                });
             }
         };
 
