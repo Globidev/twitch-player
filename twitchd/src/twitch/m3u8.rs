@@ -136,6 +136,10 @@ named!(playlist_stiched_ads_begin<Input, ()>, do_parse!(
     ()
 ));
 
+named!(playlist_daterange_assignment<Input, ()>, do_parse!(
+    tag!("#EXT-X-DATERANGE:") >> take_until_and_consume!("\n") >> ()
+));
+
 named!(playlist_stiched_ads_end<Input, ()>, do_parse!(
     tag!("#EXT-X-DISCONTINUITY") >> take_until_and_consume!("\n") >>
     tag!("#EXT-X-SCTE35-IN") >> take_until_and_consume!("\n") >>
@@ -160,6 +164,7 @@ named!(ext_program_date_parser<Input, ()>, do_parse!(
 
 named!(playlist_segment_parser<Input, Segment>, do_parse!(
     opt!(playlist_stiched_ads_end) >>
+    opt!(playlist_daterange_assignment) >>
     opt!(ext_program_date_parser) >>
     segment: alt!(extinf_segment_parser | prefetch_segment_parser) >>
     (segment)
@@ -441,5 +446,11 @@ mod tests {
         );
     }
 
-
+    #[test]
+    fn parse_faulty_playlist_11_october_2019() {
+        parse_test(
+            super::playlist_parser,
+            include_bytes!("../../test_samples/m3u8/faulty_playlist_11_october_2019.m3u8")
+        );
+    }
 }
