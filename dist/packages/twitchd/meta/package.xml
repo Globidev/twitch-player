@@ -2,9 +2,9 @@
 <Package>
     <DisplayName>Twitchd</DisplayName>
     <Description>Install the Twitch API daemon</Description>
-    <Version>1.4.7</Version>
-    <ReleaseDate>2019-08-01</ReleaseDate>
+    <Version>1.4.8</Version>
+    <ReleaseDate>2019-10-11</ReleaseDate>
     <Default>true</Default>
     <ForcedInstallation>true</ForcedInstallation>
-    <UpdateText>Fixed latency to broadcaster computation</UpdateText>
+    <UpdateText>Handled new playlist format changes</UpdateText>
 </Package>
