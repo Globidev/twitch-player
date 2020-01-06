@@ -2,11 +2,12 @@
 
 #include <string>
 #include <set>
+#include <regex>
 
 using WindowHandle = unsigned long;
 using FindWindowResult = std::set<WindowHandle>;
 
-FindWindowResult find_windows_by_title_and_pname(std::string, std::string);
+FindWindowResult find_windows_by_title_and_pname(std::regex, std::string);
 
 void toggle_window_borders(WindowHandle, bool);
 

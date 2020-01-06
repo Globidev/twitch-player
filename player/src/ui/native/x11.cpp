@@ -5,7 +5,7 @@
 
 #include <deque>
 
-FindWindowResult find_windows_by_title_and_pname(std::string title, std::string pname) {
+FindWindowResult find_windows_by_title_and_pname(std::regex title_pattern, std::string pname) {
     auto matches = FindWindowResult { };
 
     auto display = XOpenDisplay(nullptr);
@@ -27,7 +27,8 @@ FindWindowResult find_windows_by_title_and_pname(std::string title, std::string 
             XTextProperty property;
             XGetWMName(display, child, &property);
             if (property.value) {
-                if (title.compare(reinterpret_cast<char *>(property.value)) == 0)
+                auto handle_title = reinterpret_cast<char *>(property.value);
+                if (std::regex_search(handle_title, title_pattern) == 0)
                     matches.insert(child);
             }
 
