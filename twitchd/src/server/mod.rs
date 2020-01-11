@@ -1,15 +1,18 @@
 mod service;
 mod state;
 
-use self::service::TwitchdApi;
-use self::state::State;
+use service::TwitchdApi;
+use state::State;
 
 use crate::prelude::futures::*;
 use crate::options::Options;
 
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::convert::Infallible;
+
 use hyper::service::{make_service_fn, service_fn};
+use thiserror::Error;
 
 use futures::channel::oneshot;
 
@@ -25,26 +28,36 @@ pub fn run(opts: Options) {
     let make_service = make_service_fn(move |_| {
         let shared_state = shared_state.clone();
         async move {
-            Ok::<_, hyper::Error>(service_fn(move |req| {
+            Ok::<_, Infallible>(service_fn(move |req| {
                 let shared_state = shared_state.clone();
                 async move {
                     let mut api = TwitchdApi::new(&shared_state);
-                    api.call(req).await
+                    Ok::<_, Infallible>(api.call(req).await)
                 }
             }))
         }
     });
 
-    runtime.block_on(async {
-        let server = hyper::Server::bind(&addr)
-            .serve(make_service)
-            .map_err(|e| eprintln!("server error: {}", e));
+    runtime
+        .block_on(async {
+            let server = hyper::Server::bind(&addr)
+                .serve(make_service);
 
-        let server_with_shutdown_signal = future::select(
-            server,
-            shutdown_receiver
-        ).map(|_| Ok::<_, ()>(()));
+            let server_with_shutdown = future::select(
+                server.map_err(ServerError::Hyper),
+                shutdown_receiver.map_err(ServerError::ShutdownCanceled)
+            );
 
-        server_with_shutdown_signal.await
-    }).expect("Failed to run server");
+            let (serve_result, _) = server_with_shutdown.await.factor_first();
+            serve_result
+        })
+        .expect("Failed to run server");
+}
+
+#[derive(Debug, Error)]
+enum ServerError {
+    #[error("Lost shutdown capability somwhow")]
+    ShutdownCanceled(oneshot::Canceled),
+    #[error("Server error: {0}")]
+    Hyper(hyper::Error)
 }

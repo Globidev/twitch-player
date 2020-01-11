@@ -1,4 +1,3 @@
-use crate::prelude::futures::*;
 use crate::prelude::http::*;
 use crate::twitch::types::{StreamIndex, Quality, Stream};
 use crate::twitch::utils::find_playlist;
@@ -9,16 +8,6 @@ use std::sync::Arc;
 
 const DAEMON_VERSION: &str = "1.4.8";
 
-type ApiBody = hyper::Body;
-type ApiRequest = hyper::Request<ApiBody>;
-type ApiResponse = hyper::Response<ApiBody>;
-type ResponseResult = Result<ApiResponse, hyper::Error>;
-
-// type ApiResponse = Response;
-// type ApiBody = hyper::Body;
-// type ApiError = hyper::Error;
-// pub type ApiFuture = BoxFuture<ApiResponse, ApiError>;
-
 pub struct TwitchdApi {
     state: Arc<State>
 }
@@ -28,7 +17,7 @@ impl TwitchdApi {
         Self { state: Arc::clone(state) }
     }
 
-    pub async fn call(&mut self, req: ApiRequest) -> ResponseResult {
+    pub async fn call(&mut self, req: Request) -> Response {
         let params = req.uri().query()
             .map(parse_query_params)
             .unwrap_or_default();
@@ -39,16 +28,16 @@ impl TwitchdApi {
             (&Method::GET, "/play")          => self.get_video_stream(params).await,
             (&Method::GET, "/meta")          => self.get_metadata(params).await,
             // Utilities
-            (&Method::GET,  "/version")      => Ok(self.get_version()),
+            (&Method::GET,  "/version")      => self.get_version(),
             (&Method::POST, "/quit")         => self.quit().await,
             // Default => 404
-            _ => Ok(not_found())
+            _ => not_found()
         }
     }
 
-    async fn get_stream_index(&self, params: QueryParams) -> ResponseResult {
+    async fn get_stream_index(&self, params: QueryParams) -> Response {
         match params.get("channel") {
-            None => Ok(bad_request("Missing channel")),
+            None => bad_request("Missing channel"),
             Some(channel) => {
                 let oauth = params.get("oauth").map(String::as_str);
 
@@ -56,14 +45,14 @@ impl TwitchdApi {
                     .map(json_response)
                     .unwrap_or_else(index_error_response);
 
-                Ok(response)
+                response
             }
         }
     }
 
-    async fn get_video_stream(&self, params: QueryParams) -> ResponseResult {
+    async fn get_video_stream(&self, params: QueryParams) -> Response {
         match params.get("channel") {
-            None => Ok(bad_request("Missing channel")),
+            None => bad_request("Missing channel"),
             Some(channel) => {
                 let quality = params.get("quality")
                     .map(|raw_quality| Quality::from(raw_quality.clone()))
@@ -75,7 +64,7 @@ impl TwitchdApi {
                 if self.state.player_pool.is_playing(&stream) {
                     let (sink, response) = streaming_response();
                     self.state.player_pool.add_sink(&stream, sink, meta_key);
-                    Ok(response)
+                    response
                 } else {
                     let oauth = params.get("oauth").map(String::as_str);
                     self.fetch_and_play(stream, meta_key, oauth).await
@@ -84,10 +73,10 @@ impl TwitchdApi {
         }
     }
 
-    async fn get_metadata(&self, params: QueryParams) -> ResponseResult {
+    async fn get_metadata(&self, params: QueryParams) -> Response {
         match (params.get("channel"), params.get("key")) {
-            (None, _) => Ok(bad_request("Missing channel")),
-            (_, None) => Ok(bad_request("Missing key")),
+            (None, _) => bad_request("Missing channel"),
+            (_, None) => bad_request("Missing key"),
             (Some(channel), Some(key)) => {
                 let quality = params.get("quality")
                     .map(|raw_quality| Quality::from(raw_quality.clone()))
@@ -95,8 +84,8 @@ impl TwitchdApi {
                 let stream = (channel.clone(), quality);
 
                 match self.state.player_pool.get_metadata(&stream, key) {
-                    Some(metadata) => Ok(json_response(metadata)),
-                    None => Ok(not_found())
+                    Some(metadata) => json_response(metadata),
+                    None => not_found()
                 }
             }
         }
@@ -106,15 +95,15 @@ impl TwitchdApi {
         Response::new(hyper::Body::from(DAEMON_VERSION))
     }
 
-    async fn quit(&self) -> ResponseResult {
-        if let Some(signal) = (*self.state.shutdown_signal.lock().unwrap()).take() {
+    async fn quit(&self) -> Response {
+        if let Some(signal) = (*self.state.shutdown_signal.lock().await).take() {
             signal.send(()).unwrap_or_default();
         }
-        Ok(Response::default())
+        Response::default()
     }
 
     async fn fetch_and_play(&self, stream: Stream, meta_key: Option<String>, oauth: Option<&str>)
-        -> ResponseResult
+        -> Response
     {
         let (channel, quality) = stream.clone();
 
@@ -138,39 +127,39 @@ impl TwitchdApi {
             .map(stream_response)
             .unwrap_or_else(index_error_response);
 
-        Ok(response)
+        response
     }
 }
 
-fn not_found() -> ApiResponse {
+fn not_found() -> Response {
     hyper::Response::builder()
         .status(hyper::StatusCode::NOT_FOUND)
-        .body(ApiBody::default())
+        .body(Default::default())
         .expect("Response building error: Not Found")
 }
 
-fn bad_request(detail: &str) -> ApiResponse {
+fn bad_request(detail: &str) -> Response {
     hyper::Response::builder()
         .status(hyper::StatusCode::BAD_REQUEST)
-        .body(ApiBody::from(Vec::from(detail)))
+        .body(Vec::from(detail).into())
         .expect("Response building error: Bad request")
 }
 
-fn server_error(detail: &str) -> ApiResponse {
+fn server_error(detail: &str) -> Response {
     hyper::Response::builder()
         .status(hyper::StatusCode::INTERNAL_SERVER_ERROR)
-        .body(ApiBody::from(Vec::from(detail)))
+        .body(Vec::from(detail).into())
         .expect("Response building error: Server Error")
 }
 
-fn json_response(value: impl serde::Serialize) -> ApiResponse {
+fn json_response(value: impl serde::Serialize) -> Response {
     use serde_json::to_vec as encode;
 
     let reply_with_data = |data: Vec<u8>| {
         hyper::Response::builder()
             .header(header::CONTENT_LENGTH, data.len().to_string().as_str())
             .header(header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-            .body(ApiBody::from(data))
+            .body(data.into())
             .expect("Response building error: Json Data")
     };
 
@@ -184,7 +173,7 @@ fn json_response(value: impl serde::Serialize) -> ApiResponse {
         .unwrap_or_else(reply_with_error)
 }
 
-fn index_error_response(error: IndexError) -> ApiResponse {
+fn index_error_response(error: IndexError) -> Response {
     match error {
         IndexError::NotFound          => not_found(),
         IndexError::Unexpected(error) => server_error(&error)
