@@ -5,22 +5,16 @@ use crate::options::Options;
 use crate::twitch::api::ApiError;
 use crate::twitch::types::StreamIndex;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use futures::lock::Mutex;
 use std::collections::HashMap;
-use std::time::{Instant, Duration};
 
-use tokio::timer::Delay;
+use tokio::time::delay_for;
 
 type Channel = String;
-type FutureStreamIndex = BoxFuture<StreamIndex, IndexError>;
+type FutureStreamIndex = future::BoxFuture<'static, Arc<Result<StreamIndex, IndexError>>>;
 type ChannelIndexes = HashMap<Channel, future::Shared<FutureStreamIndex>>;
 type Cache = Arc<Mutex<ChannelIndexes>>;
-
-// Bug with type aliases used in associated types of impl traits return types
-#[allow(dead_code)]
-type SharedIndex = future::SharedItem<StreamIndex>;
-#[allow(dead_code)]
-type SharedError = future::SharedError<IndexError>;
 
 pub struct IndexCache {
     opts: Options,
@@ -31,109 +25,83 @@ pub struct IndexCache {
 impl IndexCache {
     pub fn new(opts: Options) -> Self {
         Self {
-            opts: opts,
-            client: http_client().expect("Failed to initialize HTTP client"),
+            opts,
+            client: http_client(),
             cache: Default::default(),
         }
     }
 
-    pub fn get(&self, channel: &str, oauth: Option<&str>)
-        -> impl Future<Item = StreamIndex, Error = IndexError>
+    pub async fn get(&self, channel: &str, oauth: Option<&str>)
+        -> Result<StreamIndex, IndexError>
     {
         let channel_lc = channel.to_lowercase();
 
-        let mut cache = self.cache.lock().unwrap();
-
-        let opt_index = cache.get(&channel_lc)
+        let opt_index = self.cache.lock().await.get(&channel_lc)
             .cloned();
 
-        let future_shared_index: BoxFuture<_, _> = match opt_index {
-            Some(shared_index) => Box::new(shared_index),
+        match opt_index {
+            Some(shared_index) => (*shared_index.await).clone(),
             None => {
                 let shared_index = self.create_new_shared_index(
-                    &mut cache,
                     &channel_lc,
                     oauth
                 );
 
-                Box::new(shared_index)
+                shared_index.await
             }
-        };
-
-        future_shared_index
-            .map(|shared_item| (*shared_item).clone())
-            .map_err(|shared_err| (*shared_err).clone())
+        }
     }
 
-    fn create_new_shared_index(&self, cache: &mut ChannelIndexes, channel: &str, oauth: Option<&str>)
-        -> impl Future<Item = SharedIndex, Error = SharedError>
+    async fn create_new_shared_index(&self, channel: &str, oauth: Option<&str>)
+        -> Result<StreamIndex, IndexError>
     {
+        let channel = channel.to_string();
+        let client = self.client.clone();
+        let client_id = self.opts.client_id.to_string();
+        let oauth = oauth.map(String::from);
+
         let future_index = fetch_stream_index(
-            &self.client,
-            channel,
-            &self.opts.client_id,
+            client,
+            channel.clone(),
+            client_id,
             oauth
         );
 
-        let shared_index = (Box::new(future_index) as BoxFuture<_, _>)
+        let shared_index = future_index
+            .map(Arc::new)
+            .boxed()
             .shared();
 
-        let schedule_cache_expiry = cache_expiry_scheduler(
-            Arc::clone(&self.cache),
-            channel,
-            self.opts.index_cache_timeout
-        );
+        self.cache.lock().await.insert(channel.clone(), shared_index.clone());
 
-        cache.insert(String::from(channel), shared_index.clone());
+        let index = (*shared_index.await).clone();
 
-        shared_index.then(schedule_cache_expiry)
+        match index {
+            Err(_) => {
+                self.cache.lock().await.remove(&channel);
+            },
+            Ok(_) => {
+                let timeout = self.opts.index_cache_timeout;
+                let cache = self.cache.clone();
+                runtime::spawn(async move {
+                    delay_for(timeout).await;
+                    cache.lock().await.remove(&channel);
+                });
+            }
+        }
+
+        index
     }
 }
 
-fn fetch_stream_index(client: &HttpsClient, channel: &str, client_id: &str, oauth: Option<&str>)
-    -> impl Future<Item = StreamIndex, Error = IndexError>
+async fn fetch_stream_index(client: HttpsClient, channel: String, client_id: String, oauth: Option<String>)
+    -> Result<StreamIndex, IndexError>
 {
     use crate::twitch::api::{access_token, stream_index};
 
-    let fetch_token = access_token(client, &channel, client_id, oauth);
+    let token = access_token(&client, &channel, &client_id, oauth.as_deref()).await?;
 
-    let fetch_index = {
-        let client = client.clone();
-        let channel = String::from(channel);
-        move |token| stream_index(&client, &channel, &token)
-    };
-
-    fetch_token
-        .and_then(fetch_index)
-        .map_err(IndexError::from)
-}
-
-fn cache_expiry_scheduler<T, E>(cache: Cache, channel: &str, timeout: Duration)
-    -> impl FnOnce(Result<T, E>) -> Result<T, E>
-{
-    let expire_cache = {
-        let channel = String::from(channel);
-        move || {
-            cache.lock().unwrap().remove(&channel);
-        }
-    };
-
-    move |result| {
-        match result {
-            Err(_) => expire_cache(),
-            Ok(_)  => {
-                let expire_at = Instant::now() + timeout;
-                let expire_cache_later = Delay::new(expire_at)
-                    .then(move |_| {
-                        expire_cache();
-                        Ok(())
-                    });
-
-                runtime::spawn(expire_cache_later);
-            }
-        }
-        result
-    }
+    stream_index(&client, &channel, &token).err_into().await
 }
 
 #[derive(Clone)]

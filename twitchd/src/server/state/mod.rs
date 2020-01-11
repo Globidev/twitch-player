@@ -7,7 +7,7 @@ use crate::options::Options;
 
 use std::sync::Mutex;
 
-type ShutdownSignal = sync::oneshot::Sender<()>;
+type ShutdownSignal = futures::channel::oneshot::Sender<()>;
 
 pub struct State {
     pub index_cache: index_cache::IndexCache,

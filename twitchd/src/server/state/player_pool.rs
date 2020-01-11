@@ -17,8 +17,8 @@ pub struct PlayerPool {
 impl PlayerPool {
     pub fn new(opts: Options) -> Self {
         Self {
-            opts: opts,
-            client: http_client().expect("Failed to initialize HTTP client"),
+            opts,
+            client: http_client(),
             players: Default::default(),
         }
     }
@@ -45,7 +45,7 @@ impl PlayerPool {
             move |result| {
                 println!("{:?}", result);
                 players.write().unwrap().remove(&stream);
-                Ok(())
+                // Ok(())
             }
         };
 
@@ -54,8 +54,12 @@ impl PlayerPool {
             move || {
                 let player = StreamPlayer::new(self.opts.clone(), client);
                 let future = player.play(playlist)
-                    .then(remove_player);
+                    .map(remove_player);
                 runtime::spawn(future);
+                // runtime::spawn(async {
+                //     let r = player.play(playlist).await;
+                //     remove_player(r);
+                // });
                 player
             }
         };

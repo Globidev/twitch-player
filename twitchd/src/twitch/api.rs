@@ -5,47 +5,48 @@ use super::types::{AccessToken, StreamIndex, Playlist};
 
 use url::form_urlencoded;
 
-type ParseResult<T> = Result<T, ApiError>;
+type ApiResult<T> = Result<T, ApiError>;
 
-pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str, oauth: Option<&str>)
-    -> impl Future<Item = AccessToken, Error = ApiError>
+pub async fn access_token(client: &HttpsClient, channel: &str, client_id: &str, oauth: Option<&str>)
+    -> ApiResult<AccessToken>
 {
     let request = hyper::Request::get(access_token_url(channel, oauth))
         .header("Client-ID", client_id)
         .body(hyper::Body::default())
         .expect("Request Building error: Access Token");
 
-    api_call(client, request, parse_token)
+    api_call(client, request, parse_token).await
 }
 
-pub fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
-    -> impl Future<Item = StreamIndex, Error = ApiError>
+pub async fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
+    -> ApiResult<StreamIndex>
 {
     let request = hyper::Request::get(stream_index_url(channel, token))
         .body(hyper::Body::default())
         .expect("Request Building error: Stream Index");
 
-    api_call(client, request, parse_index)
+    api_call(client, request, parse_index).await
 }
 
-pub fn playlist(client: &HttpsClient, url: &str)
-    -> impl Future<Item = Playlist, Error = ApiError>
+pub async fn playlist(client: &HttpsClient, url: &str)
+    -> ApiResult<Playlist>
 {
     let request = hyper::Request::get(url)
         .body(hyper::Body::default())
         .expect("Request Building error: Playlist");
 
-    api_call(client, request, parse_playlist)
+    api_call(client, request, parse_playlist).await
 }
 
-fn api_call<F, T>(client: &HttpsClient, request: Request, parse: F)
-    -> impl Future<Item = T, Error = ApiError>
+async fn api_call<F, T>(client: &HttpsClient, request: Request, parse: F)
+    -> ApiResult<T>
 where
-    F: FnOnce(hyper::Chunk) -> ParseResult<T>
+    F: FnOnce(&[u8]) -> ApiResult<T>
 {
-    fetch(client, request)
-        .map_err(ApiError::HttpError)
-        .and_then(parse)
+    let data = fetch(client, request).await
+        .map_err(ApiError::HttpError)?;
+
+    parse(&data)
 }
 
 fn access_token_url(channel: &str, oauth: Option<&str>) -> String {
@@ -97,25 +98,25 @@ fn stream_index_url(channel: &str, token: &AccessToken) -> String {
     )
 }
 
-fn parse_token(chunk: hyper::Chunk) -> ParseResult<AccessToken> {
+fn parse_token(data: &[u8]) -> ApiResult<AccessToken> {
     use serde_json::from_slice as json_decode;
 
-    json_decode(&chunk)
+    json_decode(data)
         .map_err(|error| ApiError::FormatError(error.to_string()))
 }
 
 
-fn parse_index(chunk: hyper::Chunk) -> ParseResult<StreamIndex> {
+fn parse_index(data: &[u8]) -> ApiResult<StreamIndex> {
     use super::m3u8::{ParseError, parse_stream_index};
 
-    parse_stream_index(&chunk)
+    parse_stream_index(data)
         .map_err(|ParseError(error)| ApiError::FormatError(error))
 }
 
-fn parse_playlist(chunk: hyper::Chunk) -> ParseResult<Playlist> {
+fn parse_playlist(data: &[u8]) -> ApiResult<Playlist> {
     use super::m3u8::{ParseError, parse_playlist};
 
-    parse_playlist(&chunk)
+    parse_playlist(data)
         .map_err(|ParseError(error)| ApiError::FormatError(error))
 }
 

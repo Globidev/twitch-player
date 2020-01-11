@@ -2,10 +2,9 @@ use super::futures::*;
 
 use std::collections::HashMap;
 
-pub use http::method::Method;
-pub use http::header;
-use hyper::client::HttpConnector;
-use hyper_tls::{HttpsConnector, Error as TlsError};
+pub use http::{header, method::Method};
+use hyper::{body::Bytes, client::HttpConnector};
+use hyper_tls::HttpsConnector;
 
 pub type Request = hyper::Request<hyper::Body>;
 pub type Response = hyper::Response<hyper::Body>;
@@ -13,13 +12,10 @@ pub type HttpsClient = hyper::Client<HttpsConnector<HttpConnector>>;
 pub type QueryParams = HashMap<String, String>;
 pub type ResponseSink = hyper::body::Sender;
 
-pub fn http_client() -> Result<HttpsClient, TlsError> {
-    let connector = HttpsConnector::new(num_cpus::get())?;
+pub fn http_client() -> HttpsClient {
+    let connector = HttpsConnector::new();
 
-    let client = hyper::Client::builder()
-        .build(connector);
-
-    Ok(client)
+    hyper::Client::builder().build(connector)
 }
 
 pub fn parse_query_params(query: &str) -> QueryParams {
@@ -30,20 +26,29 @@ pub fn parse_query_params(query: &str) -> QueryParams {
         .collect()
 }
 
-pub fn fetch(client: &HttpsClient, request: Request)
-    -> impl Future<Item = hyper::Chunk, Error = HttpError>
-{
-    fetch_streamed(client, request)
-        .concat2()
+pub async fn fetch(
+    client: &HttpsClient,
+    request: Request,
+) -> Result<Vec<u8>, HttpError> {
+    let mut chunks = fetch_streamed(client, request);
+    let mut concat = Vec::new();
+
+    while let Some(chunk) = chunks.next().await {
+        concat.extend(chunk?);
+    }
+
+    Ok(concat)
 }
 
-pub fn fetch_streamed(client: &HttpsClient, request: Request)
-    -> impl Stream<Item = hyper::Chunk, Error = HttpError>
-{
-    client.request(request)
+pub fn fetch_streamed(
+    client: &HttpsClient,
+    request: Request,
+) -> impl Stream<Item = Result<Bytes, HttpError>> + Unpin {
+    client
+        .request(request)
         .map_err(HttpError::NetworkError)
-        .map(stream_response)
-        .flatten_stream()
+        .and_then(|resp| future::ready(stream_response(resp)))
+        .try_flatten_stream()
 }
 
 pub fn streaming_response() -> (ResponseSink, Response) {
@@ -53,17 +58,14 @@ pub fn streaming_response() -> (ResponseSink, Response) {
     (sink, response)
 }
 
-fn stream_response(response: Response) -> BoxStream<hyper::Chunk, HttpError> {
+fn stream_response(
+    response: Response,
+) -> Result<impl Stream<Item = Result<Bytes, HttpError>> + Unpin, HttpError> {
     match response.status() {
         hyper::StatusCode::OK => {
-            let streamed_body = response.into_body()
-                .map_err(HttpError::NetworkError);
-            Box::new(streamed_body)
-        },
-        status => {
-            let error = future::err(HttpError::BadStatus(status));
-            Box::new(error.into_stream())
+            Ok(response.into_body().map_err(HttpError::NetworkError))
         }
+        status => Err(HttpError::BadStatus(status)),
     }
 }
 
@@ -76,7 +78,9 @@ pub enum HttpError {
 use std::{error, fmt};
 
 impl error::Error for HttpError {
-    fn description(&self) -> &str { "Http Error" }
+    fn description(&self) -> &str {
+        "Http Error"
+    }
 }
 
 impl fmt::Display for HttpError {
