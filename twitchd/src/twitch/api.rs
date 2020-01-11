@@ -1,6 +1,4 @@
 use crate::prelude::http::*;
-use crate::prelude::futures::*;
-
 use super::types::{AccessToken, StreamIndex, Playlist};
 
 use url::form_urlencoded;
