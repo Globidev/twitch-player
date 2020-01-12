@@ -57,7 +57,7 @@ impl StreamPlayer {
                         indexed_metadata.insert(key, metadata.clone());
                     }
 
-                    let (sender, stream) = futures::channel::mpsc::channel(16);
+                    let (sender, stream) = mpsc::channel(16);
                     senders.push(sender);
 
                     runtime::spawn(drain_stream(stream, sink, sink_size));
@@ -187,10 +187,12 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
             // `SegmentChunk`s and concatenate them into a stream
             // -> map the (Option<T>, S) to a Stream<T, S::E> chained to S
             .map(|(opt_head, tail_stream)| {
+                use future::Either;
+
                 let head_chunk = match opt_head {
                     Some(Ok(h)) => h,
-                    Some(Err(e)) => return stream::once(future::err(e)).boxed(),
-                    None => return stream::once(future::err(StreamPlayerError::EmptySegment)).boxed(),
+                    Some(Err(e)) => return Either::Left(stream::once(future::err(e))),
+                    None => return Either::Left(stream::once(future::err(StreamPlayerError::EmptySegment))),
                 };
 
                 // let head_chunk = opt_head
@@ -199,9 +201,8 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
 
                 let tail_chunks = tail_stream.map_ok(SegmentChunk::Tail);
 
-                stream::once(future::ok(SegmentChunk::Head(head_chunk)))
-                    .chain(tail_chunks)
-                    .boxed()
+                Either::Right(stream::once(future::ok(SegmentChunk::Head(head_chunk)))
+                    .chain(tail_chunks))
             })
             // Flattens our future of stream F<S<...>> to the stream S<...>
             .flatten_stream();
@@ -232,7 +233,7 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
 
 // Helper function that pretty much combines a `drain_filter` algorithm
 // with a fan out style data dispatching
-fn fanout_and_filter(senders: &mut Vec<futures::channel::mpsc::Sender<RawVideoData>>, data: RawVideoData) {
+fn fanout_and_filter(senders: &mut Vec<mpsc::Sender<RawVideoData>>, data: RawVideoData) {
     if senders.is_empty() { return }
 
     let mut i = 0;
