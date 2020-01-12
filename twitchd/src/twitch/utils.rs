@@ -38,9 +38,9 @@ fn find_playlist_approx(mut index: StreamIndex, quality: &ApproxQuality)
     playlist_ref.cloned()
 }
 
-impl From<String> for Quality {
-    fn from(value: String) -> Quality {
-        match &value.to_lowercase() as &str {
+impl<T: AsRef<str>> From<T> for Quality {
+    fn from(value: T) -> Quality {
+        match value.as_ref().to_lowercase().as_str() {
             "best"  => Quality::Approx(ApproxQuality::Best),
             "worst" => Quality::Approx(ApproxQuality::Worst),
             quality => Quality::Exact(String::from(quality)),
