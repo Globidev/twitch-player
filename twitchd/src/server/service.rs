@@ -1,135 +1,167 @@
 use crate::prelude::http::*;
-use crate::twitch::types::{StreamIndex, Quality, Stream};
+use crate::twitch::types::{Quality, Stream};
 use crate::twitch::utils::find_playlist;
 
 use super::state::{State, index_cache::IndexError};
 
-use std::sync::Arc;
-
 const DAEMON_VERSION: &str = "1.4.8";
 
-pub struct TwitchdApi {
-    state: Arc<State>
+pub struct TwitchdApi<'st> {
+    state: &'st State
 }
 
-impl TwitchdApi {
-    pub fn new(state: &Arc<State>) -> Self {
-        Self { state: Arc::clone(state) }
+impl TwitchdApi<'_> {
+    pub fn new(state: &State) -> TwitchdApi<'_> {
+        TwitchdApi { state }
     }
 
-    pub async fn call(&mut self, req: Request) -> Response {
-        let params = req.uri().query()
-            .map(parse_query_params)
-            .unwrap_or_default();
+    pub async fn call(&self, req: Request) -> Response {
+        let params = {
+            let query_params = req.uri().query()
+                .map(parse_query_params)
+                .unwrap_or_default();
 
-        match (req.method(), req.uri().path()) {
+            ApiParams(query_params)
+        };
+
+        let result = match (req.method(), req.uri().path()) {
             // Capabilities
             (&Method::GET, "/stream_index")  => self.get_stream_index(params).await,
             (&Method::GET, "/play")          => self.get_video_stream(params).await,
             (&Method::GET, "/meta")          => self.get_metadata(params).await,
             // Utilities
-            (&Method::GET,  "/version")      => self.get_version(),
-            (&Method::POST, "/quit")         => self.quit().await,
+            (&Method::GET,  "/version")      => Ok(Self::get_version()),
+            (&Method::POST, "/quit")         => Ok(self.post_quit().await),
             // Default => 404
-            _ => not_found()
+            _ => Err(ApiError::NotFound)
+        };
+
+        result.into_response()
+    }
+
+    async fn get_stream_index(&self, params: ApiParams) -> ApiResponse {
+        let channel = params.get("channel")?;
+        let oauth = params.get_opt("oauth");
+
+        let index = self.state.index_cache.get(channel, oauth).await?;
+
+        Ok(json_response(index))
+    }
+
+    async fn get_video_stream(&self, params: ApiParams) -> ApiResponse {
+        let channel = params.get("channel")?;
+
+        let quality = params.get_opt("quality")
+            .map(Quality::from)
+            .unwrap_or_default();
+
+        let meta_key = params.get_opt("meta_key")
+            .map(|s| s.to_owned());
+
+        let stream = (channel.to_string(), quality);
+
+        // let player = self.state.player_pool
+
+        // let (sink, response) = streaming_response();
+        // player.add_sink(sink);
+        // Ok(response)
+
+        if self.state.player_pool.is_playing(&stream) {
+            let (sink, response) = streaming_response();
+            self.state.player_pool.add_sink(&stream, sink, meta_key);
+            Ok(response)
+        } else {
+            let oauth = params.get_opt("oauth");
+            self.fetch_and_play(stream, meta_key, oauth).await
         }
     }
 
-    async fn get_stream_index(&self, params: QueryParams) -> Response {
-        match params.get("channel") {
-            None => bad_request("Missing channel"),
-            Some(channel) => {
-                let oauth = params.get("oauth").map(String::as_str);
+    async fn get_metadata(&self, params: ApiParams) -> ApiResponse {
+        let channel = params.get("channel")?;
+        let key = params.get("key")?;
 
-                let response = self.state.index_cache.get(channel, oauth).await
-                    .map(json_response)
-                    .unwrap_or_else(index_error_response);
+        let quality = params.get("quality")
+            .map(Quality::from)
+            .unwrap_or_default();
 
-                response
-            }
-        }
+        let stream = (channel.to_string(), quality);
+
+        let metadata = self.state.player_pool.get_metadata(&stream, &key.to_owned())
+            .ok_or(ApiError::NotFound)?;
+
+        Ok(json_response(metadata))
     }
 
-    async fn get_video_stream(&self, params: QueryParams) -> Response {
-        match params.get("channel") {
-            None => bad_request("Missing channel"),
-            Some(channel) => {
-                let quality = params.get("quality")
-                    .map(|raw_quality| Quality::from(raw_quality.clone()))
-                    .unwrap_or_default();
-                let meta_key = params.get("meta_key")
-                    .cloned();
-                let stream = (channel.clone(), quality);
-
-                if self.state.player_pool.is_playing(&stream) {
-                    let (sink, response) = streaming_response();
-                    self.state.player_pool.add_sink(&stream, sink, meta_key);
-                    response
-                } else {
-                    let oauth = params.get("oauth").map(String::as_str);
-                    self.fetch_and_play(stream, meta_key, oauth).await
-                }
-            }
-        }
+    fn get_version() -> Response {
+        Response::new(DAEMON_VERSION.into())
     }
 
-    async fn get_metadata(&self, params: QueryParams) -> Response {
-        match (params.get("channel"), params.get("key")) {
-            (None, _) => bad_request("Missing channel"),
-            (_, None) => bad_request("Missing key"),
-            (Some(channel), Some(key)) => {
-                let quality = params.get("quality")
-                    .map(|raw_quality| Quality::from(raw_quality.clone()))
-                    .unwrap_or_default();
-                let stream = (channel.clone(), quality);
+    async fn post_quit(&self) -> Response {
+        let mut signal_guard = self.state.shutdown_signal.lock().await;
 
-                match self.state.player_pool.get_metadata(&stream, key) {
-                    Some(metadata) => json_response(metadata),
-                    None => not_found()
-                }
-            }
-        }
-    }
-
-    fn get_version(&self) -> Response {
-        Response::new(hyper::Body::from(DAEMON_VERSION))
-    }
-
-    async fn quit(&self) -> Response {
-        if let Some(signal) = (*self.state.shutdown_signal.lock().await).take() {
+        if let Some(signal) = signal_guard.take() {
             signal.send(()).unwrap_or_default();
         }
+
         Response::default()
     }
 
     async fn fetch_and_play(&self, stream: Stream, meta_key: Option<String>, oauth: Option<&str>)
-        -> Response
+        -> Result<Response, ApiError>
     {
-        let (channel, quality) = stream.clone();
+        let (channel, quality) = &stream;
 
-        let stream_response = {
-            let state = Arc::clone(&self.state);
-            move |index: StreamIndex| {
-                match find_playlist(index, &quality) {
-                    None           => not_found(),
-                    Some(playlist) => {
-                        let (sink, response) = streaming_response();
-                        state.player_pool
-                            .add_player(stream, playlist, sink, meta_key);
-                        response
-                    }
-                }
-            }
-        };
+        let index = self.state.index_cache.get(channel, oauth).await?;
 
-        let response = self.state.index_cache.get(&channel, oauth)
-            .await
-            .map(stream_response)
-            .unwrap_or_else(index_error_response);
+        let playlist = find_playlist(index, quality).ok_or(ApiError::NotFound)?;
 
-        response
+        let (sink, response) = streaming_response();
+        self.state.player_pool
+            .add_player(stream, playlist, sink, meta_key);
+
+        Ok(response)
     }
 }
+
+struct ApiParams(QueryParams);
+
+impl ApiParams {
+    fn get(&self, key: &str) -> Result<&str, ApiError> {
+        self.get_opt(key)
+            .ok_or_else(|| ApiError::BadRequest(format!("Missing {}", key)))
+    }
+
+    fn get_opt(&self, key: &str) -> Option<&str> {
+        self.0.get(key).map(String::as_str)
+    }
+}
+
+#[derive(Debug)]
+enum ApiError {
+    NotFound,
+    Index(IndexError),
+    BadRequest(String),
+}
+
+impl From<IndexError> for ApiError {
+    fn from(err: IndexError) -> Self { Self::Index(err) }
+}
+
+trait IntoResponse {
+    fn into_response(self) -> Response;
+}
+
+impl IntoResponse for Result<Response, ApiError> {
+    fn into_response(self) -> Response {
+        self.unwrap_or_else(|err| match err {
+            ApiError::NotFound => not_found(),
+            ApiError::Index(err) => index_error_response(err),
+            ApiError::BadRequest(detail) => bad_request(&detail),
+        })
+    }
+}
+
+type ApiResponse = Result<Response, ApiError>;
 
 fn not_found() -> Response {
     hyper::Response::builder()
@@ -175,7 +207,7 @@ fn json_response(value: impl serde::Serialize) -> Response {
 
 fn index_error_response(error: IndexError) -> Response {
     match error {
-        IndexError::NotFound          => not_found(),
+        IndexError::NotFound => not_found(),
         IndexError::Unexpected(error) => server_error(&error)
     }
 }
