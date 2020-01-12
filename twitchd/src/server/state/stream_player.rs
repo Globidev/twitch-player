@@ -1,4 +1,4 @@
-use crate::prelude::futures::*;
+// use crate::prelude::futures::*;
 use crate::prelude::http::*;
 use crate::prelude::runtime;
 use crate::twitch::types::{PlaylistInfo, Playlist, Segment};
@@ -9,9 +9,10 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
-// use hyper::Chunk;
-use tokio::time::{interval};
+use tokio::time::interval;
 use serde::{Serialize, Deserialize};
+
+use futures::{prelude::*, channel::mpsc};
 
 type RawVideoData = hyper::body::Bytes;
 

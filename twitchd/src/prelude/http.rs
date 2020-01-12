@@ -1,4 +1,4 @@
-use super::futures::*;
+use futures::prelude::*;
 
 use std::collections::HashMap;
 

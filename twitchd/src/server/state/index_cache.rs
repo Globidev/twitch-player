@@ -1,5 +1,4 @@
 use crate::prelude::http::*;
-use crate::prelude::futures::*;
 use crate::prelude::runtime;
 use crate::options::Options;
 use crate::twitch::api::ApiError;
@@ -7,6 +6,7 @@ use crate::twitch::types::StreamIndex;
 
 use std::sync::Arc;
 use futures::lock::Mutex;
+use futures::prelude::*;
 use std::collections::HashMap;
 
 use tokio::time::delay_for;

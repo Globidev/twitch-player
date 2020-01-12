@@ -1,5 +1,5 @@
 use crate::prelude::http::{HttpsClient, http_client};
-use crate::prelude::futures::*;
+// use crate::prelude::futures::*;
 use crate::prelude::runtime;
 use crate::options::Options;
 use crate::twitch::types::{PlaylistInfo, Stream};
@@ -7,6 +7,8 @@ use super::stream_player::{StreamPlayer, PlayerSink, MetaKey, SegmentMetadata};
 
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
+
+use futures::prelude::*;
 
 pub struct PlayerPool {
     opts: Options,
@@ -56,10 +58,6 @@ impl PlayerPool {
                 let future = player.play(playlist)
                     .map(remove_player);
                 runtime::spawn(future);
-                // runtime::spawn(async {
-                //     let r = player.play(playlist).await;
-                //     remove_player(r);
-                // });
                 player
             }
         };

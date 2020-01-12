@@ -4,7 +4,6 @@ mod state;
 use service::TwitchdApi;
 use state::State;
 
-use crate::prelude::futures::*;
 use crate::options::Options;
 
 use std::net::SocketAddr;
@@ -14,7 +13,7 @@ use std::convert::Infallible;
 use hyper::service::{make_service_fn, service_fn};
 use thiserror::Error;
 
-use futures::channel::oneshot;
+use futures::{prelude::*, channel::oneshot};
 
 pub fn run(opts: Options) {
     let mut runtime = opts.runtime_strategy.init_runtime();
