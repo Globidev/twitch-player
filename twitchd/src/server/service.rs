@@ -56,24 +56,22 @@ impl TwitchdApi<'_> {
             .unwrap_or_default();
 
         let meta_key = params.get_opt("meta_key")
-            .map(|s| s.to_owned());
+            .map_or_else(Default::default, ToOwned::to_owned);
 
-        let stream = (channel.to_string(), quality);
+        let stream = (channel.to_string(), quality.clone());
 
-        // let player = self.state.player_pool
+        let (sink, response) = streaming_response();
 
-        // let (sink, response) = streaming_response();
-        // player.add_sink(sink);
-        // Ok(response)
+        self.state.player_pool.entry(stream)
+            .or_try_insert_with(|| async {
+                let oauth = params.get_opt("oauth");
+                let index = self.state.index_cache.get(channel, oauth).await?;
+                find_playlist(index, &quality).ok_or(ApiError::NotFound)
+            })
+            .play(sink, meta_key)
+            .await?;
 
-        if self.state.player_pool.is_playing(&stream) {
-            let (sink, response) = streaming_response();
-            self.state.player_pool.add_sink(&stream, sink, meta_key);
-            Ok(response)
-        } else {
-            let oauth = params.get_opt("oauth");
-            self.fetch_and_play(stream, meta_key, oauth).await
-        }
+        Ok(response)
     }
 
     async fn get_metadata(&self, params: ApiParams) -> ApiResponse {
@@ -87,6 +85,7 @@ impl TwitchdApi<'_> {
         let stream = (channel.to_string(), quality);
 
         let metadata = self.state.player_pool.get_metadata(&stream, &key.to_owned())
+            .await
             .ok_or(ApiError::NotFound)?;
 
         Ok(json_response(metadata))
@@ -104,22 +103,6 @@ impl TwitchdApi<'_> {
         }
 
         Response::default()
-    }
-
-    async fn fetch_and_play(&self, stream: Stream, meta_key: Option<String>, oauth: Option<&str>)
-        -> Result<Response, ApiError>
-    {
-        let (channel, quality) = &stream;
-
-        let index = self.state.index_cache.get(channel, oauth).await?;
-
-        let playlist = find_playlist(index, quality).ok_or(ApiError::NotFound)?;
-
-        let (sink, response) = streaming_response();
-        self.state.player_pool
-            .add_player(stream, playlist, sink, meta_key);
-
-        Ok(response)
     }
 }
 
