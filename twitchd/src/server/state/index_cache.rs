@@ -1,7 +1,7 @@
 use crate::prelude::http::*;
 use crate::prelude::runtime;
 use crate::options::Options;
-use crate::twitch::api::ApiError;
+use crate::twitch::api::{ApiError, access_token, stream_index};
 use crate::twitch::types::StreamIndex;
 
 use std::sync::Arc;
@@ -14,12 +14,11 @@ use tokio::time::delay_for;
 type Channel = String;
 type FutureStreamIndex = future::BoxFuture<'static, Arc<Result<StreamIndex, IndexError>>>;
 type ChannelIndexes = HashMap<Channel, future::Shared<FutureStreamIndex>>;
-type Cache = Arc<Mutex<ChannelIndexes>>;
 
 pub struct IndexCache {
     opts: Options,
     client: HttpsClient,
-    cache: Cache,
+    cache: Arc<Mutex<ChannelIndexes>>,
 }
 
 impl IndexCache {
@@ -31,7 +30,7 @@ impl IndexCache {
         }
     }
 
-    pub async fn get(&self, channel: &str, oauth: Option<&str>)
+    pub async fn get(&self, channel: &str, oauth: Option<impl AsRef<str>>)
         -> Result<StreamIndex, IndexError>
     {
         let channel_lc = channel.to_lowercase();
@@ -44,7 +43,7 @@ impl IndexCache {
             None => {
                 let shared_index = self.create_new_shared_index(
                     &channel_lc,
-                    oauth
+                    oauth.as_ref().map(AsRef::as_ref)
                 );
 
                 shared_index.await
@@ -60,12 +59,14 @@ impl IndexCache {
         let client_id = self.opts.client_id.to_string();
         let oauth = oauth.map(String::from);
 
-        let future_index = fetch_stream_index(
-            client,
-            channel.clone(),
-            client_id,
-            oauth
-        );
+        let future_index = {
+            let channel = channel.clone();
+            async move {
+                let token = access_token(&client, &channel, &client_id, oauth.as_deref()).await?;
+
+                stream_index(&client, &channel, &token).err_into().await
+            }
+        };
 
         let shared_index = future_index
             .map(Arc::new)
@@ -76,17 +77,20 @@ impl IndexCache {
 
         let index = (*shared_index.await).clone();
 
+        let expire_cache = {
+            let cache = self.cache.clone();
+            async move {
+                cache.lock().await.remove(&channel);
+            }
+        };
+
         match index {
-            Err(_) => {
-                self.cache.lock().await.remove(&channel);
-            },
+            Err(_) => expire_cache.await,
             Ok(_) => {
-                let timeout = self.opts.index_cache_timeout;
-                let cache = self.cache.clone();
-                runtime::spawn(async move {
-                    delay_for(timeout).await;
-                    cache.lock().await.remove(&channel);
-                });
+                let expire_later = delay_for(self.opts.index_cache_timeout)
+                    .then(|_| expire_cache);
+
+                runtime::spawn(expire_later);
             }
         }
 
@@ -94,17 +98,7 @@ impl IndexCache {
     }
 }
 
-async fn fetch_stream_index(client: HttpsClient, channel: String, client_id: String, oauth: Option<String>)
-    -> Result<StreamIndex, IndexError>
-{
-    use crate::twitch::api::{access_token, stream_index};
-
-    let token = access_token(&client, &channel, &client_id, oauth.as_deref()).await?;
-
-    stream_index(&client, &channel, &token).err_into().await
-}
-
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum IndexError {
     NotFound,
     Unexpected(String)
