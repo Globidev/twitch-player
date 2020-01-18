@@ -91,7 +91,7 @@ fn parse_byte_size(src: &str) -> Result<usize, InvalidByteSize> {
     named!(parse_modifier<Input, SizeModifier>, alt!(
         map!(tag_no_case!("b"), |_| (|x| x)              as SizeModifier) |
         map!(tag_no_case!("k"), |_| (|x| x * 1_000)      as SizeModifier) |
-        map!(tag_no_case!("m"), |_| (|x| x * 1_000_0000) as SizeModifier)
+        map!(tag_no_case!("m"), |_| (|x| x * 1_000_000)  as SizeModifier)
     ));
 
     named!(parse_final<Input, usize>, exact!(do_parse!(
