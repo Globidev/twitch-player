@@ -1,19 +1,19 @@
-use crate::prelude::futures::*;
 use crate::prelude::http::*;
 use crate::prelude::runtime;
+use crate::prelude::stream_ext::StreamExtChunkConcat;
 use crate::twitch::types::{PlaylistInfo, Playlist, Segment};
-use crate::twitch::api::ApiError;
+use crate::twitch::api::{self, ApiError};
 use crate::options::Options;
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
-use hyper::Chunk;
-use tokio::timer::Interval;
-use serde_derive::{Serialize, Deserialize};
+use tokio::time::{interval, timeout};
 
-type RawVideoData = bytes::Bytes;
+use futures::{prelude::*, channel::mpsc, lock::Mutex};
+
+type RawVideoData = Vec<u8>;
 
 pub type PlayerSink = ResponseSink;
 pub type MetaKey = String;
@@ -21,101 +21,96 @@ pub type MetaKey = String;
 pub struct StreamPlayer {
     opts: Options,
     client: HttpsClient,
-    sink_queue: Arc<RwLock<Vec<(MetaKey, PlayerSink)>>>,
-    indexed_metadata: Arc<RwLock<HashMap<MetaKey, SegmentMetadata>>>,
+    sink_queue: Arc<Mutex<Vec<(MetaKey, PlayerSink)>>>,
+    indexed_metadata: Arc<Mutex<HashMap<MetaKey, SegmentMetadata>>>,
 }
 
 impl StreamPlayer {
     pub fn new(opts: Options, client: HttpsClient) -> Self {
         Self {
-            opts: opts,
-            client: client,
+            opts,
+            client,
             sink_queue: Default::default(),
             indexed_metadata: Default::default(),
         }
     }
 
     pub fn play(&self, playlist_info: PlaylistInfo)
-        -> impl Future<Item = (), Error = StreamPlayerError>
+        -> impl Future<Output = Result<(), StreamPlayerError>>
     {
-        let process_meta_data = {
-            let sink_size = self.opts.player_max_sink_buffer_size;
-            let sink_queue = Arc::clone(&self.sink_queue);
-            let indexed_metadata = Arc::clone(&self.indexed_metadata);
+        let opts = self.opts.clone();
+        let client = self.client.clone();
+        let sink_queue = Arc::clone(&self.sink_queue);
+        let indexed_metadata = Arc::clone(&self.indexed_metadata);
 
-            move |data: &RawVideoData, senders: &mut Vec<_>| {
-                if sink_queue.read().unwrap().is_empty() { return }
-
-                let opt_metadata = extract_metadata(data);
-
-                let mut sink_queue = sink_queue.write().unwrap();
-                let mut indexed_metadata = indexed_metadata.write().unwrap();
-
-                sink_queue.drain(..).for_each(|(key, sink)| {
-                    if let Some(metadata) = opt_metadata.as_ref() {
-                        indexed_metadata.insert(key, metadata.clone());
-                    }
-
-                    let (sender, stream) = sync::mpsc::channel(16);
-                    senders.push(sender);
-
-                    runtime::spawn(drain_stream(stream, sink, sink_size));
-                });
-            }
-        };
-
-        let process_segment_chunk = {
-            let inactive_timeout = self.opts.player_inactive_timeout;
-
+        async move {
             let mut last_active = Instant::now();
             let mut senders = Vec::new();
 
-            move |chunk: SegmentChunk| {
-                let raw_data = match chunk {
-                    SegmentChunk::Tail(data) => data,
-                    SegmentChunk::Head(data) => {
-                        process_meta_data(&data, &mut senders);
-                        data
-                    }
+            let mut video_data_stream = segment_stream(
+                client,
+                playlist_info,
+                opts.player_playlist_fetch_interval,
+                opts.player_video_chunks_size,
+            ).boxed();
+
+            loop {
+                let timed_fetch_segment = timeout(opts.player_fetch_timeout, video_data_stream.next());
+
+                let segment_chunk = match timed_fetch_segment.await {
+                    Err(_elapsed) => break Err(StreamPlayerError::TooLongToFetch),
+                    Ok(None) => break Ok(()),
+                    Ok(Some(segment_chunk)) => segment_chunk?
                 };
 
-                fanout_and_filter(&mut senders, raw_data);
+                if let SegmentChunk::Head(data) = &segment_chunk {
+                    if !sink_queue.lock().await.is_empty() {
+                        let opt_metadata = extract_metadata(&data);
+
+                        let mut sink_queue = sink_queue.lock().await;
+                        let mut indexed_metadata = indexed_metadata.lock().await;
+
+                        for (key, sink) in sink_queue.drain(..) {
+                            if let Some(metadata) = &opt_metadata {
+                                indexed_metadata.insert(key, metadata.clone());
+                            }
+
+                            let (sender, stream) = mpsc::channel(16);
+                            senders.push(sender);
+
+                            runtime::spawn(drain_stream(stream, sink, opts.player_max_sink_buffer_size));
+                        }
+                    }
+                }
+
+                let raw_segment_data = segment_chunk.into_data();
+
+                fanout_and_filter(&mut senders, raw_segment_data);
 
                 if !senders.is_empty() { last_active = Instant::now(); }
 
-                let timed_out = last_active.elapsed() > inactive_timeout;
-                match timed_out {
-                    true  => future::err(StreamPlayerError::InactiveTooLong),
-                    false => future::ok(())
+                let timed_out = last_active.elapsed() > opts.player_inactive_timeout;
+
+                if timed_out {
+                    break Err(StreamPlayerError::InactiveTooLong)
                 }
             }
-        };
-
-        let video_data_stream = segment_stream(
-            self.client.clone(),
-            playlist_info,
-            self.opts.player_playlist_fetch_interval,
-            self.opts.player_video_chunks_size,
-        );
-
-        video_data_stream
-            .timeout(self.opts.player_fetch_timeout)
-            .for_each(process_segment_chunk)
+        }
     }
 
-    pub fn queue_sink(&self, sink: ResponseSink, meta_key: MetaKey) {
-        self.sink_queue.write().unwrap().push((meta_key, sink))
+    pub async fn queue_sink(&self, sink: ResponseSink, meta_key: MetaKey) {
+        self.sink_queue.lock().await.push((meta_key, sink))
     }
 
-    pub fn get_metadata(&self, meta_key: &MetaKey) -> Option<SegmentMetadata> {
-        self.indexed_metadata.read().unwrap().get(meta_key).cloned()
+    pub async fn get_metadata(&self, meta_key: &MetaKey) -> Option<SegmentMetadata> {
+        self.indexed_metadata.lock().await.get(meta_key).cloned()
     }
 }
 
 fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interval: Duration, video_chunks_size: usize)
-    -> impl Stream<Item = SegmentChunk, Error = StreamPlayerError>
+    -> impl Stream<Item = Result<SegmentChunk, StreamPlayerError>>
 {
-    use crate::twitch::api::playlist;
+    let mut pick_segment = segment_picker();
 
     let origin = playlist_info.url
         .rsplitn(2, '/')
@@ -130,100 +125,81 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
         }
     };
 
-    let fetch_playlist = {
-        let client = client.clone();
-        move |_timer_tick| {
-            playlist(&client, &playlist_info.url)
-                .map_err(StreamPlayerError::FetchPlaylistFail)
-        }
-    };
-
-    let mut segment_to_download = {
-        let mut previous_segment = None;
-
-        move |mut playlist: Playlist| {
-            let next_segment = match previous_segment {
-                // We want to have the least delay possible so if we don't have
-                // a previous segment, we just use the most recent one
-                // (the last one referenced in the playlist)
-                None => playlist.segments.pop(),
-                // If we previously yielded a segment, we want to yield the one
-                // that comes right afterwards. We have to search for it in
-                // the new playlist
-                Some(ref segment) => {
-                    match playlist.segments.iter().position(|s| s == segment) {
-                        // In case we don't find the previous segment in the
-                        // new playlist, we still want to have the least delay
-                        // possible, so we return the most recent segment
-                        None      => playlist.segments.pop(),
-                        // Otherwise return the next logical segment
-                        Some(idx) => playlist.segments.into_iter().nth(idx + 1)
-                    }
-                }
-            };
-            // Update the state for the next iteration before yielding the
-            // segment that we should download next
-            if let Some(ref segment) = next_segment {
-                previous_segment = Some(segment.clone());
+    interval(fetch_interval)
+        .then({
+            let client = client.clone();
+            move |_tick| {
+                api::playlist(&client, &playlist_info.url)
+                    .map_err(StreamPlayerError::FetchPlaylistFail)
             }
-            next_segment
+        })
+        .map_ok(move |playlist| {
+            let segment = match pick_segment(playlist) {
+                None => return stream::empty().left_stream(),
+                Some(segment) => segment,
+            };
+
+            let request = hyper::Request::get(segment_url(&segment.location))
+                .body(hyper::Body::default())
+                .expect("Request building error: Video Segment");
+
+            let mut segment_stream = fetch_streamed(&client, request)
+                .map_err(StreamPlayerError::FetchSegmentFail)
+                .chunk_concat(video_chunks_size);
+
+            async move {
+                let head_segment = segment_stream.next().await
+                    .ok_or(StreamPlayerError::EmptySegment)??;
+
+                let head_chunk = SegmentChunk::Head(head_segment);
+                let tail_chunks = segment_stream.map_ok(SegmentChunk::Tail);
+
+                let wrapped_stream = stream::once(future::ok(head_chunk))
+                    .chain(tail_chunks);
+
+                Ok(wrapped_stream)
+            }
+            .try_flatten_stream()
+            .right_stream()
+        })
+        .try_flatten()
+}
+
+fn segment_picker() -> impl FnMut(Playlist) -> Option<Segment> {
+    let mut previous_segment = None;
+
+    move |mut playlist| {
+        let next_segment = match &previous_segment {
+            // We want to have the least delay possible so if we don't have
+            // a previous segment, we just use the most recent one
+            // (the last one referenced in the playlist)
+            None => playlist.segments.pop(),
+            // If we previously yielded a segment, we want to yield the one
+            // that comes right afterwards. We have to search for it in
+            // the new playlist
+            Some(segment) => {
+                match playlist.segments.iter().position(|s| s == segment) {
+                    // In case we don't find the previous segment in the
+                    // new playlist, we still want to have the least delay
+                    // possible, so we return the most recent segment
+                    None => playlist.segments.pop(),
+                    // Otherwise return the next logical segment
+                    Some(idx) => playlist.segments.into_iter().nth(idx + 1)
+                }
+            }
+        };
+        // Update the state for the next iteration before yielding the
+        // segment that we should download next
+        if let Some(segment) = &next_segment {
+            previous_segment = Some(segment.clone());
         }
-    };
-
-    let dowload_segment = move |segment: Segment| {
-        let request = hyper::Request::get(segment_url(&segment.location))
-            .body(hyper::Body::default())
-            .expect("Request building error: Video Segment");
-
-        let segment_stream = fetch_streamed(&client, request)
-            .map_err(StreamPlayerError::FetchSegmentFail)
-            // -> Buffer incoming data into larger chunks
-            .buffer_concat(video_chunks_size)
-            // Now we need to split the head and the tail of the data to be able
-            // to process the metadata that's in the head
-            // -> convert the stream into a future
-            .into_future()
-            // A stream S = Stream<T, E>                   is converted to a
-            //   future F = Future<(Option<T>, S), (E, S)>
-            // We need to extract the error to get a Future<_, E>
-            // -> map F's error to E, the first element of the tuple (E, S)
-            .map_err(|(error, _tail_stream)| error)
-            // Now we need to reify the head chunk and the tail chunks as
-            // `SegmentChunk`s and concatenate them into a stream
-            // -> map the (Option<T>, S) to a Stream<T, S::E> chained to S
-            .map(|(opt_head, tail_stream)| {
-                let head_chunk = opt_head
-                    .map(SegmentChunk::Head)
-                    .ok_or(StreamPlayerError::EmptySegment);
-
-                let tail_chunks = tail_stream.map(SegmentChunk::Tail);
-
-                stream::once(head_chunk).chain(tail_chunks)
-            })
-            // Flattens our future of stream F<S<...>> to the stream S<...>
-            .flatten_stream();
-
-        Box::new(segment_stream) as BoxStream<_, _>
-    };
-
-    let fetch_latest_segment = move |playlist: Playlist| {
-        segment_to_download(playlist)
-            .map(|segment| dowload_segment(segment))
-            .unwrap_or_else(|| Box::new(stream::empty()))
-    };
-
-    let playlist_stream = Interval::new(Instant::now(), fetch_interval)
-        .map_err(StreamPlayerError::TimerError)
-        .and_then(fetch_playlist);
-
-    playlist_stream
-        .map(fetch_latest_segment)
-        .flatten()
+        next_segment
+    }
 }
 
 // Helper function that pretty much combines a `drain_filter` algorithm
 // with a fan out style data dispatching
-fn fanout_and_filter(senders: &mut Vec<sync::mpsc::Sender<RawVideoData>>, data: RawVideoData) {
+fn fanout_and_filter(senders: &mut Vec<mpsc::Sender<RawVideoData>>, data: RawVideoData) {
     if senders.is_empty() { return }
 
     let mut i = 0;
@@ -240,47 +216,28 @@ fn fanout_and_filter(senders: &mut Vec<sync::mpsc::Sender<RawVideoData>>, data: 
     }
 }
 
-fn drain_stream<S>(video_stream: S, mut sink: PlayerSink, max_buffer_size: usize)
-    -> impl Future<Item = (), Error = ()>
+async fn drain_stream<S>(mut video_stream: S, mut sink: PlayerSink, max_buffer_size: usize)
 where
-    S: Stream<Item = RawVideoData, Error = ()>
+    S: Stream<Item = RawVideoData> + Unpin
 {
-    use std::mem::replace;
+    let mut sink_buffer = Vec::new();
 
-    let mut sink_buffer = RawVideoData::new();
+    while let Some(data) = video_stream.next().await {
+        let data_out = if sink_buffer.is_empty() {
+            data
+        } else {
+            sink_buffer.extend_from_slice(&data);
+            std::mem::take(&mut sink_buffer)
+        };
 
-    let data_to_send = |data: RawVideoData, backlog: &mut RawVideoData| {
-        match backlog.is_empty() {
-            true => data,
-            false => {
-                backlog.extend_from_slice(&data);
-                replace(backlog, RawVideoData::new())
-            }
+        if let Err(data_back) = sink.try_send_data(data_out.into()) {
+            sink_buffer.extend_from_slice(&data_back)
         }
-    };
 
-    let send_or_buffer = move |data: RawVideoData| {
         if sink_buffer.len() > max_buffer_size {
-            return Err(())
+            return // TODO: Bubbling up/logging some error could be useful
         }
-
-        match sink.poll_ready() {
-            Ok(Async::Ready(_)) => {
-                let data_out = data_to_send(data, &mut sink_buffer);
-                sink.send_data(Chunk::from(data_out))
-                    .map_err(|_chunk| {
-                        eprintln!("Send data failed after successful polling");
-                    })
-            },
-            Ok(Async::NotReady) => {
-                sink_buffer.extend_from_slice(&data);
-                Ok(())
-            },
-            Err(_) => Err(())
-        }
-    };
-
-    video_stream.for_each(send_or_buffer)
+    }
 }
 
 enum SegmentChunk {
@@ -288,7 +245,16 @@ enum SegmentChunk {
     Tail(RawVideoData),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl SegmentChunk {
+    fn into_data(self) -> RawVideoData {
+        match self {
+            SegmentChunk::Head(data) => data,
+            SegmentChunk::Tail(data) => data,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SegmentMetadata {
     broadc_s: u32,
     cmd: String,
@@ -304,7 +270,7 @@ const MPEG_TS_SECTION_LENGTH: usize = 188;
 const FIRST_PES_METADATA_OFFSET: usize = MPEG_TS_SECTION_LENGTH * 3;
 const SECOND_PES_METADATA_OFFSET: usize = FIRST_PES_METADATA_OFFSET + MPEG_TS_SECTION_LENGTH;
 
-fn extract_metadata(data: &RawVideoData) -> Option<SegmentMetadata> {
+fn extract_metadata(data: &[u8]) -> Option<SegmentMetadata> {
     let first_pes_slice = &data[FIRST_PES_METADATA_OFFSET..SECOND_PES_METADATA_OFFSET];
 
     let json_start_offset = first_pes_slice.iter()
@@ -344,7 +310,6 @@ fn extract_metadata(data: &RawVideoData) -> Option<SegmentMetadata> {
 
 #[derive(Debug)]
 pub enum StreamPlayerError {
-    TimerError(tokio::timer::Error),
     FetchPlaylistFail(ApiError),
     FetchSegmentFail(HttpError),
     InactiveTooLong,
@@ -352,24 +317,10 @@ pub enum StreamPlayerError {
     EmptySegment
 }
 
-impl From<TimeoutError> for StreamPlayerError {
-    fn from(err: TimeoutError) -> Self {
-        use self::TimeoutError::*;
-        use self::StreamPlayerError::*;
-
-        match err {
-            Timer(timer_error) => TimerError(timer_error),
-            TimedOut           => TooLongToFetch
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-
     fn extract_metadata_test(data: &[u8]) {
-        use super::{extract_metadata, RawVideoData};
-        assert!(extract_metadata(&RawVideoData::from(data)).is_some());
+        assert!(super::extract_metadata(data).is_some());
     }
 
     #[test]

@@ -357,6 +357,44 @@ mod tests {
     use super::Input;
     use nom::IResult;
 
+    macro_rules! m3u8_file_path {
+        ($name:ident) => { concat!("../../test_samples/m3u8/", stringify!($name), ".m3u8") }
+    }
+
+    macro_rules! parse_test {
+        ($name:ident, $parser:expr) => {
+            #[test]
+            fn $name() {
+                parse_test($parser, include_bytes!(m3u8_file_path!($name)))
+            }
+        }
+    }
+
+    macro_rules! playlist_tests {
+        ($($name:ident),* $(,)?) => { $(parse_test!{$name, super::playlist_parser})* }
+    }
+
+    macro_rules! index_tests {
+        ($($name:ident),* $(,)?) => { $(parse_test!{$name, super::stream_index_parser})* }
+    }
+
+    playlist_tests! {
+        simple_playlist,
+        playlist_with_prefetch_segments,
+        playlist_with_program_date_time,
+        playlist_with_map,
+        playlist_with_stitched_ads,
+        faulty_playlist_22_may_2019,
+        faulty_playlist_01_august_2019,
+        faulty_playlist_11_october_2019,
+    }
+
+    index_tests! {
+        simple_index,
+        index_with_restricted_playlist,
+        index_without_program_id,
+    }
+
     fn parse_test<T>(parser: fn(Input) -> IResult<Input, T>, data: &[u8]) {
         let parsed_sucessfully = match parser(Input(data)) {
             Ok((remaining, _)) if remaining.is_empty() => true,
@@ -364,93 +402,5 @@ mod tests {
         };
 
         assert!(parsed_sucessfully);
-    }
-
-    #[test]
-    fn parse_simple_playlist() {
-        parse_test(
-            super::playlist_parser,
-            include_bytes!("../../test_samples/m3u8/simple_playlist.m3u8")
-        );
-    }
-
-    #[test]
-    fn parse_playlist_with_prefetch_segments() {
-        parse_test(
-            super::playlist_parser,
-            include_bytes!("../../test_samples/m3u8/playlist_with_prefetch_segments.m3u8")
-        );
-    }
-
-    #[test]
-    fn parse_playlist_with_program_date_time() {
-        parse_test(
-            super::playlist_parser,
-            include_bytes!("../../test_samples/m3u8/playlist_with_program_date_time.m3u8")
-        );
-    }
-
-    #[test]
-    fn parse_playlist_with_map() {
-        parse_test(
-            super::playlist_parser,
-            include_bytes!("../../test_samples/m3u8/playlist_with_map.m3u8")
-        );
-    }
-
-    #[test]
-    fn parse_playlist_with_stiched_ads() {
-        parse_test(
-            super::playlist_parser,
-            include_bytes!("../../test_samples/m3u8/playlist_with_stitched_ads.m3u8")
-        );
-    }
-
-    #[test]
-    fn parse_simple_index() {
-        parse_test(
-            super::stream_index_parser,
-            include_bytes!("../../test_samples/m3u8/simple_index.m3u8")
-        );
-    }
-
-    #[test]
-    fn parse_index_with_restricted_playlist() {
-        parse_test(
-            super::stream_index_parser,
-            include_bytes!("../../test_samples/m3u8/index_with_restricted_playlist.m3u8")
-        );
-    }
-
-    #[test]
-    fn parse_index_without_program_id() {
-        parse_test(
-            super::stream_index_parser,
-            include_bytes!("../../test_samples/m3u8/index_without_program_id.m3u8")
-        );
-    }
-
-    #[test]
-    fn parse_faulty_playlist_22_may_2019() {
-        parse_test(
-            super::playlist_parser,
-            include_bytes!("../../test_samples/m3u8/faulty_playlist_22_may_2019.m3u8")
-        );
-    }
-
-    #[test]
-    fn parse_faulty_playlist_01_august_2019() {
-        parse_test(
-            super::playlist_parser,
-            include_bytes!("../../test_samples/m3u8/faulty_playlist_01_august_2019.m3u8")
-        );
-    }
-
-    #[test]
-    fn parse_faulty_playlist_11_october_2019() {
-        parse_test(
-            super::playlist_parser,
-            include_bytes!("../../test_samples/m3u8/faulty_playlist_11_october_2019.m3u8")
-        );
     }
 }

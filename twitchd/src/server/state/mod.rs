@@ -2,12 +2,11 @@ pub mod index_cache;
 pub mod player_pool;
 pub mod stream_player;
 
-use crate::prelude::futures::*;
 use crate::options::Options;
 
-use std::sync::Mutex;
+use futures::lock::Mutex;
 
-type ShutdownSignal = sync::oneshot::Sender<()>;
+type ShutdownSignal = futures::channel::oneshot::Sender<()>;
 
 pub struct State {
     pub index_cache: index_cache::IndexCache,

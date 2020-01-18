@@ -1,68 +1,111 @@
-use crate::prelude::http::{HttpsClient, http_client};
-use crate::prelude::futures::*;
-use crate::prelude::runtime;
-use crate::options::Options;
-use crate::twitch::types::{PlaylistInfo, Stream};
-use super::stream_player::{StreamPlayer, PlayerSink, MetaKey, SegmentMetadata};
+use super::stream_player::{MetaKey, PlayerSink, SegmentMetadata, StreamPlayer};
+use crate::{
+    options::Options,
+    prelude::{
+        http::{http_client, HttpsClient},
+        runtime,
+    },
+    twitch::types::{PlaylistInfo, Stream},
+};
 
-use std::sync::{Arc, RwLock};
-use std::collections::HashMap;
+use std::{
+    collections::{hash_map::Entry as HashMapEntry, HashMap},
+    sync::Arc,
+};
+
+use futures::{lock::Mutex, prelude::*};
 
 pub struct PlayerPool {
     opts: Options,
     client: HttpsClient,
-    players: Arc<RwLock<HashMap<Stream, StreamPlayer>>>,
+    players: Arc<Mutex<HashMap<Stream, StreamPlayer>>>,
 }
 
 impl PlayerPool {
     pub fn new(opts: Options) -> Self {
         Self {
-            opts: opts,
-            client: http_client().expect("Failed to initialize HTTP client"),
+            opts,
+            client: http_client(),
             players: Default::default(),
         }
     }
 
-    pub fn is_playing(&self, stream: &Stream) -> bool {
-        self.players.read().unwrap().contains_key(stream)
+    pub fn entry(&self, stream: Stream) -> Entry<'_> {
+        Entry { stream, pool: self }
     }
 
-    pub fn add_sink(&self, stream: &Stream, sink: PlayerSink, opt_meta_key: Option<MetaKey>) {
-        if let Some(player) = self.players.read().unwrap().get(stream) {
-            player.queue_sink(sink, opt_meta_key.unwrap_or_default());
+    pub async fn get_metadata(
+        &self,
+        stream: &Stream,
+        meta_key: &MetaKey,
+    ) -> Option<SegmentMetadata> {
+        self.players
+            .lock()
+            .await
+            .get(stream)?
+            .get_metadata(meta_key)
+            .await
+    }
+}
+
+pub struct Entry<'pool> {
+    stream: Stream,
+    pool: &'pool PlayerPool,
+}
+
+impl<'pool> Entry<'pool> {
+    pub fn or_try_insert_with<F, Fut, E>(self, default: F) -> FilledEntry<'pool, F>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<PlaylistInfo, E>>,
+    {
+        FilledEntry {
+            entry: self,
+            default,
         }
     }
+}
 
-    pub fn get_metadata(&self, stream: &Stream, meta_key: &MetaKey) -> Option<SegmentMetadata> {
-        self.players.read().unwrap().get(stream)
-            .and_then(|player| player.get_metadata(meta_key))
-    }
+pub struct FilledEntry<'pool, F> {
+    entry: Entry<'pool>,
+    default: F,
+}
 
-    pub fn add_player(&self, stream: Stream, playlist: PlaylistInfo, sink: PlayerSink, opt_meta_key: Option<MetaKey>) {
-        let remove_player = {
-            let stream = stream.clone();
-            let players = Arc::clone(&self.players);
-            move |result| {
-                println!("{:?}", result);
-                players.write().unwrap().remove(&stream);
-                Ok(())
+impl<F, Fut, E> FilledEntry<'_, F>
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = Result<PlaylistInfo, E>>,
+{
+    pub async fn play(self, sink: PlayerSink, meta_key: MetaKey) -> Result<(), E> {
+        let Self {
+            entry: Entry { stream, pool },
+            default,
+        } = self;
+
+        let mut guard = pool.players.lock().await;
+
+        let player = match guard.entry(stream.clone()) {
+            HashMapEntry::Occupied(entry) => entry.into_mut(),
+            HashMapEntry::Vacant(entry) => {
+                let playlist = default().await?;
+                let player = StreamPlayer::new(pool.opts.clone(), pool.client.clone());
+
+                let play_playlist = player.play(playlist);
+
+                runtime::spawn({
+                    let players = pool.players.clone();
+                    async move {
+                        let _ = play_playlist.await;
+                        players.lock().await.remove(&stream)
+                    }
+                });
+
+                entry.insert(player)
             }
         };
 
-        let new_player = {
-            let client = self.client.clone();
-            move || {
-                let player = StreamPlayer::new(self.opts.clone(), client);
-                let future = player.play(playlist)
-                    .then(remove_player);
-                runtime::spawn(future);
-                player
-            }
-        };
+        player.queue_sink(sink, meta_key).await;
 
-        self.players.write().unwrap()
-            .entry(stream)
-            .or_insert_with(new_player)
-            .queue_sink(sink, opt_meta_key.unwrap_or_default());
+        Ok(())
     }
 }

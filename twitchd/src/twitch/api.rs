@@ -1,15 +1,16 @@
+use super::types::{AccessToken, Playlist, StreamIndex};
 use crate::prelude::http::*;
-use crate::prelude::futures::*;
-
-use super::types::{AccessToken, StreamIndex, Playlist};
 
 use url::form_urlencoded;
 
-type ParseResult<T> = Result<T, ApiError>;
+type ApiResult<T> = Result<T, ApiError>;
 
-pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str, oauth: Option<&str>)
-    -> impl Future<Item = AccessToken, Error = ApiError>
-{
+pub fn access_token(
+    client: &HttpsClient,
+    channel: &str,
+    client_id: &str,
+    oauth: Option<&str>,
+) -> impl Future<Output = ApiResult<AccessToken>> {
     let request = hyper::Request::get(access_token_url(channel, oauth))
         .header("Client-ID", client_id)
         .body(hyper::Body::default())
@@ -18,9 +19,11 @@ pub fn access_token(client: &HttpsClient, channel: &str, client_id: &str, oauth:
     api_call(client, request, parse_token)
 }
 
-pub fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
-    -> impl Future<Item = StreamIndex, Error = ApiError>
-{
+pub fn stream_index(
+    client: &HttpsClient,
+    channel: &str,
+    token: &AccessToken,
+) -> impl Future<Output = ApiResult<StreamIndex>> {
     let request = hyper::Request::get(stream_index_url(channel, token))
         .body(hyper::Body::default())
         .expect("Request Building error: Stream Index");
@@ -28,9 +31,9 @@ pub fn stream_index(client: &HttpsClient, channel: &str, token: &AccessToken)
     api_call(client, request, parse_index)
 }
 
-pub fn playlist(client: &HttpsClient, url: &str)
-    -> impl Future<Item = Playlist, Error = ApiError>
-{
+use futures::prelude::*;
+
+pub fn playlist(client: &HttpsClient, url: &str) -> impl Future<Output = ApiResult<Playlist>> {
     let request = hyper::Request::get(url)
         .body(hyper::Body::default())
         .expect("Request Building error: Playlist");
@@ -38,14 +41,17 @@ pub fn playlist(client: &HttpsClient, url: &str)
     api_call(client, request, parse_playlist)
 }
 
-fn api_call<F, T>(client: &HttpsClient, request: Request, parse: F)
-    -> impl Future<Item = T, Error = ApiError>
+fn api_call<F, T>(
+    client: &HttpsClient,
+    request: Request,
+    parse: F,
+) -> impl Future<Output = ApiResult<T>>
 where
-    F: FnOnce(hyper::Chunk) -> ParseResult<T>
+    F: FnOnce(&[u8]) -> ApiResult<T>,
 {
     fetch(client, request)
         .map_err(ApiError::HttpError)
-        .and_then(parse)
+        .map(|d| parse(&d?))
 }
 
 fn access_token_url(channel: &str, oauth: Option<&str>) -> String {
@@ -73,19 +79,19 @@ fn access_token_url(channel: &str, oauth: Option<&str>) -> String {
 
 fn stream_index_url(channel: &str, token: &AccessToken) -> String {
     let query_string = form_urlencoded::Serializer::new(String::new())
-        .append_pair("token",                      &token.token)
-        .append_pair("sig",                        &token.signature)
-        .append_pair("allow_source",               "true")
-        .append_pair("fast_bread",                 "true")
-        .append_pair("baking_bread",               "true")
-        .append_pair("baking_brownies",            "true")
-        .append_pair("baking_brownies_timeout",    "1050")
+        .append_pair("token", &token.token)
+        .append_pair("sig", &token.signature)
+        .append_pair("allow_source", "true")
+        .append_pair("fast_bread", "true")
+        .append_pair("baking_bread", "true")
+        .append_pair("baking_brownies", "true")
+        .append_pair("baking_brownies_timeout", "1050")
         .append_pair("playlist_include_framerate", "true")
         // .append_pair("reassignments_supported",    "true")
-        .append_pair("cdm",                        "wv")
-        .append_pair("player_backend",             "mediaplayer")
-        .append_pair("rtqos",                      "control")
-        .append_pair("preferred_codecs",           "avc1")
+        .append_pair("cdm", "wv")
+        .append_pair("player_backend", "mediaplayer")
+        .append_pair("rtqos", "control")
+        .append_pair("preferred_codecs", "avc1")
         // TODO: figure out that parameter's meaning
         // .append_pair("p",                          "7036871")
         .finish();
@@ -97,38 +103,36 @@ fn stream_index_url(channel: &str, token: &AccessToken) -> String {
     )
 }
 
-fn parse_token(chunk: hyper::Chunk) -> ParseResult<AccessToken> {
+fn parse_token(data: &[u8]) -> ApiResult<AccessToken> {
     use serde_json::from_slice as json_decode;
 
-    json_decode(&chunk)
-        .map_err(|error| ApiError::FormatError(error.to_string()))
+    json_decode(data).map_err(|error| ApiError::FormatError(error.to_string()))
 }
 
+fn parse_index(data: &[u8]) -> ApiResult<StreamIndex> {
+    use super::m3u8::{parse_stream_index, ParseError};
 
-fn parse_index(chunk: hyper::Chunk) -> ParseResult<StreamIndex> {
-    use super::m3u8::{ParseError, parse_stream_index};
-
-    parse_stream_index(&chunk)
-        .map_err(|ParseError(error)| ApiError::FormatError(error))
+    parse_stream_index(data).map_err(|ParseError(error)| ApiError::FormatError(error))
 }
 
-fn parse_playlist(chunk: hyper::Chunk) -> ParseResult<Playlist> {
-    use super::m3u8::{ParseError, parse_playlist};
+fn parse_playlist(data: &[u8]) -> ApiResult<Playlist> {
+    use super::m3u8::{parse_playlist, ParseError};
 
-    parse_playlist(&chunk)
-        .map_err(|ParseError(error)| ApiError::FormatError(error))
+    parse_playlist(data).map_err(|ParseError(error)| ApiError::FormatError(error))
 }
 
 #[derive(Debug)]
 pub enum ApiError {
     HttpError(HttpError),
-    FormatError(String)
+    FormatError(String),
 }
 
 use std::{error, fmt};
 
 impl error::Error for ApiError {
-    fn description(&self) -> &str { "Api Error" }
+    fn description(&self) -> &str {
+        "Api Error"
+    }
 }
 
 impl fmt::Display for ApiError {
