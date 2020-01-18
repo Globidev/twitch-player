@@ -26,18 +26,21 @@ pub fn parse_query_params(query: &str) -> QueryParams {
         .collect()
 }
 
-pub async fn fetch(
+pub fn fetch(
     client: &HttpsClient,
     request: Request,
-) -> Result<Vec<u8>, HttpError> {
+) -> impl Future<Output = Result<Vec<u8>, HttpError>> {
     let mut chunks = fetch_streamed(client, request);
-    let mut concat = Vec::new();
 
-    while let Some(chunk) = chunks.next().await {
-        concat.extend(chunk?);
+    async move {
+        let mut concat = Vec::new();
+
+        while let Some(chunk) = chunks.next().await {
+            concat.extend(chunk?);
+        }
+
+        Ok(concat)
     }
-
-    Ok(concat)
 }
 
 pub fn fetch_streamed(
@@ -47,7 +50,13 @@ pub fn fetch_streamed(
     client
         .request(request)
         .map_err(HttpError::NetworkError)
-        .and_then(|resp| future::ready(stream_response(resp)))
+        .map(|response_result| {
+            let response = response_result?;
+            match response.status() {
+                hyper::StatusCode::OK => Ok(response.into_body().map_err(HttpError::NetworkError2)),
+                status => Err(HttpError::BadStatus(status)),
+            }
+        })
         .try_flatten_stream()
 }
 
@@ -58,20 +67,10 @@ pub fn streaming_response() -> (ResponseSink, Response) {
     (sink, response)
 }
 
-fn stream_response(
-    response: Response,
-) -> Result<impl Stream<Item = Result<Bytes, HttpError>> + Unpin, HttpError> {
-    match response.status() {
-        hyper::StatusCode::OK => {
-            Ok(response.into_body().map_err(HttpError::NetworkError))
-        }
-        status => Err(HttpError::BadStatus(status)),
-    }
-}
-
 #[derive(Debug)]
 pub enum HttpError {
     NetworkError(hyper::Error),
+    NetworkError2(hyper::Error),
     BadStatus(hyper::StatusCode),
 }
 
