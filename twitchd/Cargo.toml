@@ -24,6 +24,8 @@ structopt = "0.2"
 
 thiserror = "1.0"
 
+pin-project = "0.4"
+
 [profile.release]
 lto = true
 panic = "abort"

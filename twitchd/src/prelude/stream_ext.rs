@@ -1,165 +1,129 @@
-use super::futures::*;
+use futures::prelude::*;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use pin_project::pin_project;
 
-use std::time::{Duration, Instant};
-
-use tokio::timer;
-use bytes::Bytes;
-
-pub trait StreamExtTimeout {
-    fn timeout(self, duration: Duration) -> TimeoutStream<Self>
+pub trait StreamExtChunkConcat {
+    fn chunk_concat<R>(self, chunk_len: usize) -> ChunkConcat<Self, R>
     where
-        Self: Stream + Sized
-    {
-        TimeoutStream::new(self, duration)
-    }
+        Self: Sized;
 }
 
-impl<S: Stream> StreamExtTimeout for S { }
-
-pub trait StreamExtBufferConcat {
-    fn buffer_concat(self, buf_size: usize) -> BufferConcat<Self>
-        where
-            Self: Stream + Sized,
-            Self::Item: AsRef<[u8]>
-    {
-        BufferConcat::new(self, buf_size)
-    }
-}
-
-impl<S> StreamExtBufferConcat for S
-where
-    S: Stream,
-    S::Item: AsRef<[u8]>
-{ }
-
-pub struct TimeoutStream<S> {
-    stream: S,
-    duration: Duration,
-    delay_timer: timer::Delay,
-}
-
-pub struct BufferConcat<S>
-where
-    S: Stream,
-    S::Item: AsRef<[u8]>,
-{
-    stream: S,
-    buf_size: usize,
-    buffered: Bytes,
-    err: Option<S::Error>,
-}
-
-impl<S: Stream> TimeoutStream<S> {
-    fn new(stream: S, duration: Duration) -> Self {
-        let delay_timer = timer::Delay::new(Instant::now() + duration);
-
-        Self { stream, duration, delay_timer }
-    }
-}
-
-impl<S> BufferConcat<S>
-where
-    S: Stream,
-    S::Item: AsRef<[u8]>,
-{
-    fn new(stream: S, buf_size: usize) -> BufferConcat<S> {
-        let buffered = Bytes::with_capacity(buf_size);
-        let err = None;
-
-        Self { stream, buf_size, buffered, err }
-    }
-
-    fn take_buffer(&mut self) -> Bytes {
-        use std::mem;
-        mem::replace(&mut self.buffered, Bytes::with_capacity(self.buf_size))
-    }
-}
-
-impl<S> Stream for TimeoutStream<S>
-where
-    S: Stream,
-    S::Error: From<TimeoutError>,
-{
-    type Item = S::Item;
-    type Error = S::Error;
-
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        match self.stream.poll() {
-            // If an error occured with the stream, we error with it
-            err @ Err(_) => err,
-            // If an item is ready, reset the timeout before returning the item
-            item @ Ok(Async::Ready(_)) => {
-                self.delay_timer.reset(Instant::now() + self.duration);
-                item
-            }
-            // If the stream is not ready, proceed to polling the timer
-            Ok(Async::NotReady) => match self.delay_timer.poll() {
-                // If the timer errored, return its error
-                Err(timer_error) => Err(TimeoutError::Timer(timer_error).into()),
-                // If the timer did not timeout yet then the stream is not ready
-                Ok(Async::NotReady) => Ok(Async::NotReady),
-                // If the timer timedout, return a timeout error
-                Ok(Async::Ready(_)) => Err(TimeoutError::TimedOut.into())
-            }
+impl<S: Stream> StreamExtChunkConcat for S {
+    fn chunk_concat<R>(self, chunk_len: usize) -> ChunkConcat<Self, R> {
+        ChunkConcat {
+            stream: self.fuse(),
+            chunk_len,
+            buffer: Vec::with_capacity(chunk_len),
         }
     }
 }
 
-impl<S> Stream for BufferConcat<S>
-where
-    S: Stream,
-    S::Item: AsRef<[u8]>,
-{
-    type Item = bytes::Bytes;
-    type Error = S::Error;
+#[pin_project]
+pub struct ChunkConcat<S, R> {
+    #[pin] stream: stream::Fuse<S>,
+    chunk_len: usize,
+    buffer: Vec<R>,
+}
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        // Abort right away if we encountered an error during the last poll
-        if let Some(err) = self.err.take() {
-            return Err(err)
+impl<S, T, R, E> Stream for ChunkConcat<S, R>
+where
+    S: Stream<Item = Result<T, E>>,
+    T: AsRef<[R]>,
+    R: Clone
+{
+    type Item = Result<Vec<R>, E>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        match self.as_mut().project() {
+            this => if this.buffer.len() >= *this.chunk_len {
+                let rest = this.buffer.split_off(*this.chunk_len);
+                return Poll::Ready(Some(Ok(std::mem::replace(this.buffer, rest))))
+            }
         }
-        // Here we are gonna poll the inner stream in a loop because we might
-        // be able to buffer multiple consecutive ready items
+
         loop {
-            match self.stream.poll() {
-                // If the inner stream is not ready then we wait
-                Ok(Async::NotReady) => return Ok(Async::NotReady),
-                // In case the inner stream errored
-                Err(error) => return match self.buffered.is_empty() {
-                    // If the buffer is empty we can abort with the error right
-                    // away
-                    true  => Err(error),
-                    // If we still have buffered items, we first need to yield
-                    // them back before erroring at the next call to poll
-                    false => {
-                        self.err = Some(error);
-                        Ok(Async::Ready(Some(self.take_buffer())))
+            let this = self.as_mut().project();
+
+            match this.stream.poll_next(cx) {
+                Poll::Pending => return Poll::Pending,
+                Poll::Ready(None) => break,
+                Poll::Ready(Some(Err(e))) => return Poll::Ready(Some(Err(e))),
+                Poll::Ready(Some(Ok(data))) => {
+                    let bytes = data.as_ref();
+                    if this.buffer.len() + bytes.len() > *this.chunk_len {
+                        let max_amount = *this.chunk_len - this.buffer.len();
+                        let (left, right) = bytes.split_at(max_amount);
+                        this.buffer.extend_from_slice(left);
+                        let mut next_buffer = Vec::with_capacity(*this.chunk_len);
+                        next_buffer.extend_from_slice(right);
+                        return Poll::Ready(Some(Ok(std::mem::replace(this.buffer, next_buffer))))
+                    } else {
+                        this.buffer.extend_from_slice(bytes)
                     }
                 },
-                // If the inner stream has some item ready, we can buffer it and
-                // maybe yield the buffer back if we reached the capacity
-                Ok(Async::Ready(Some(data))) => {
-                    self.buffered.extend_from_slice(data.as_ref());
-
-                    if self.buffered.len() >= self.buf_size {
-                        return Ok(Async::Ready(Some(self.take_buffer())))
-                    }
-                }
-                // In case the stream ended
-                Ok(Async::Ready(None)) => return match self.buffered.is_empty() {
-                    // If the buffer is empty, we can end right away
-                    true  => Ok(Async::Ready(None)),
-                    // Otherwise we need to yield our buffer before ending at
-                    // the next call to poll
-                    false => Ok(Async::Ready(Some(self.take_buffer())))
-                }
             }
         }
 
+        let this = self.as_mut().project();
+
+        if this.buffer.is_empty() {
+            Poll::Ready(None)
+        } else {
+            Poll::Ready(Some(Ok(std::mem::take(this.buffer))))
+        }
     }
 }
 
-pub enum TimeoutError {
-    TimedOut,
-    Timer(timer::Error),
+#[cfg(test)]
+mod tests {
+    async fn chunk_concat_ok<T, A>(it: impl IntoIterator<Item = A>, chunk_len: usize) -> Vec<Vec<T>>
+    where
+        A: AsRef<[T]>,
+        T: Clone,
+    {
+        use super::StreamExtChunkConcat;
+        use std::convert::Infallible;
+        use futures::prelude::*;
+
+        stream::iter(it).map(Ok::<_, Infallible>)
+            .chunk_concat(chunk_len)
+            .try_collect()
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn test_chunk_concat() {
+        assert_eq!(
+            chunk_concat_ok(vec!["Hello", "", ", ", "World!"], 4).await,
+            vec![b"Hell".to_vec(), b"o, W".to_vec(), b"orld".to_vec(), b"!".to_vec()]
+        );
+
+        assert_eq!(
+            chunk_concat_ok(vec![[1,2,3], [4,5,6], [7,8,9]], 5).await,
+            vec![vec![1,2,3,4,5], vec![6,7,8,9]]
+        );
+
+        assert_eq!(
+            chunk_concat_ok(vec![[1,2,3], [4,5,6], [7,8,9]], 10).await,
+            vec![vec![1,2,3,4,5,6,7,8,9]]
+        );
+
+        assert_eq!(
+            chunk_concat_ok(vec![[1,2,3], [4,5,6], [7,8,9]], 2).await,
+            vec![vec![1,2], vec![3,4], vec![5,6], vec![7,8], vec![9]]
+        );
+
+        assert_eq!(
+            chunk_concat_ok(vec![[1,2,3,4,5,6]], 2).await,
+            vec![vec![1,2], vec![3,4], vec![5,6]]
+        );
+
+        assert_eq!(
+            chunk_concat_ok(vec![[1,2,3,4,5,6]], 10).await,
+            vec![vec![1,2,3,4,5,6]]
+        );
+    }
 }
+
