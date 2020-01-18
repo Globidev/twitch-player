@@ -1,6 +1,4 @@
-use super::stream_player::{
-    MetaKey, PlayerSink, SegmentMetadata, StreamPlayer,
-};
+use super::stream_player::{MetaKey, PlayerSink, SegmentMetadata, StreamPlayer};
 use crate::{
     options::Options,
     prelude::{
@@ -46,6 +44,7 @@ impl PlayerPool {
             .await
             .get(stream)?
             .get_metadata(meta_key)
+            .await
     }
 }
 
@@ -55,10 +54,7 @@ pub struct Entry<'pool> {
 }
 
 impl<'pool> Entry<'pool> {
-    pub fn or_try_insert_with<F, Fut, E>(
-        self,
-        default: F,
-    ) -> FilledEntry<'pool, F>
+    pub fn or_try_insert_with<F, Fut, E>(self, default: F) -> FilledEntry<'pool, F>
     where
         F: FnOnce() -> Fut,
         Fut: Future<Output = Result<PlaylistInfo, E>>,
@@ -80,11 +76,7 @@ where
     F: FnOnce() -> Fut,
     Fut: Future<Output = Result<PlaylistInfo, E>>,
 {
-    pub async fn play(
-        self,
-        sink: PlayerSink,
-        meta_key: MetaKey,
-    ) -> Result<(), E> {
+    pub async fn play(self, sink: PlayerSink, meta_key: MetaKey) -> Result<(), E> {
         let Self {
             entry: Entry { stream, pool },
             default,
@@ -95,9 +87,8 @@ where
         let player = match guard.entry(stream.clone()) {
             HashMapEntry::Occupied(entry) => entry.into_mut(),
             HashMapEntry::Vacant(entry) => {
-                let playlist = (default)().await?;
-                let player =
-                    StreamPlayer::new(pool.opts.clone(), pool.client.clone());
+                let playlist = default().await?;
+                let player = StreamPlayer::new(pool.opts.clone(), pool.client.clone());
 
                 let play_playlist = player.play(playlist);
 
@@ -113,7 +104,7 @@ where
             }
         };
 
-        player.queue_sink(sink, meta_key);
+        player.queue_sink(sink, meta_key).await;
 
         Ok(())
     }
