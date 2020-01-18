@@ -1,5 +1,5 @@
 use crate::prelude::http::*;
-use crate::twitch::types::{Quality, Stream};
+use crate::twitch::types::Quality;
 use crate::twitch::utils::find_playlist;
 
 use super::state::{State, index_cache::IndexError};
