@@ -11,7 +11,6 @@ use std::sync::Arc;
 use std::convert::Infallible;
 
 use hyper::service::{make_service_fn, service_fn};
-use thiserror::Error;
 
 use futures::{prelude::*, channel::oneshot};
 
@@ -62,7 +61,7 @@ fn infallible<T>(x: T) -> Result<T, Infallible> {
     Ok(x)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 enum ServerError {
     #[error("Lost shutdown capability somewhow")]
     ShutdownCanceled(oneshot::Canceled),

@@ -49,11 +49,10 @@ pub fn fetch_streamed(
 ) -> impl Stream<Item = Result<Bytes, HttpError>> + Unpin {
     client
         .request(request)
-        .map_err(HttpError::NetworkError)
         .map(|response_result| {
             let response = response_result?;
             match response.status() {
-                hyper::StatusCode::OK => Ok(response.into_body().map_err(HttpError::NetworkError2)),
+                hyper::StatusCode::OK => Ok(response.into_body().err_into()),
                 status => Err(HttpError::BadStatus(status)),
             }
         })
@@ -67,23 +66,10 @@ pub fn streaming_response() -> (ResponseSink, Response) {
     (sink, response)
 }
 
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum HttpError {
-    NetworkError(hyper::Error),
-    NetworkError2(hyper::Error),
+    #[error("Network error: {0}")]
+    NetworkError(#[from] hyper::Error),
+    #[error("Unexpected HTTP status: {0}")]
     BadStatus(hyper::StatusCode),
-}
-
-use std::{error, fmt};
-
-impl error::Error for HttpError {
-    fn description(&self) -> &str {
-        "Http Error"
-    }
-}
-
-impl fmt::Display for HttpError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
 }

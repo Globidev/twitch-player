@@ -119,15 +119,14 @@ impl ApiParams {
     }
 }
 
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
 enum ApiError {
+    #[error("Not found")]
     NotFound,
-    Index(IndexError),
+    #[error("Index error: {0}")]
+    Index(#[from] IndexError),
+    #[error("Bad request: {0}")]
     BadRequest(String),
-}
-
-impl From<IndexError> for ApiError {
-    fn from(err: IndexError) -> Self { Self::Index(err) }
 }
 
 trait IntoResponse {

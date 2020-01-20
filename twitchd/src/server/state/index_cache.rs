@@ -98,20 +98,21 @@ impl IndexCache {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum IndexError {
+    #[error("Not found")]
     NotFound,
+    #[error("Unexpected: {0}")]
     Unexpected(String)
 }
 
 impl From<ApiError> for IndexError {
     fn from(error: ApiError) -> Self {
-        use self::ApiError::*;
-        use self::HttpError::BadStatus;
+        use HttpError::BadStatus;
         use hyper::StatusCode;
 
         match error {
-            HttpError(BadStatus(StatusCode::NOT_FOUND)) => IndexError::NotFound,
+            ApiError::HttpError(BadStatus(StatusCode::NOT_FOUND)) => IndexError::NotFound,
             _ => IndexError::Unexpected(error.to_string())
         }
     }
