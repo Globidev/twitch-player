@@ -39,7 +39,7 @@ impl TwitchdApi<'_> {
         result.into_response()
     }
 
-    async fn get_stream_index(&self, params: ApiParams) -> ApiResponse {
+    async fn get_stream_index(&self, params: ApiParams<'_>) -> ApiResponse {
         let channel = params.get("channel")?;
         let oauth = params.get_opt("oauth");
 
@@ -48,7 +48,7 @@ impl TwitchdApi<'_> {
         Ok(json_response(index))
     }
 
-    async fn get_video_stream(&self, params: ApiParams) -> ApiResponse {
+    async fn get_video_stream(&self, params: ApiParams<'_>) -> ApiResponse {
         let channel = params.get("channel")?;
 
         let quality = params.get_opt("quality")
@@ -74,7 +74,7 @@ impl TwitchdApi<'_> {
         Ok(response)
     }
 
-    async fn get_metadata(&self, params: ApiParams) -> ApiResponse {
+    async fn get_metadata(&self, params: ApiParams<'_>) -> ApiResponse {
         let channel = params.get("channel")?;
         let key = params.get("key")?;
 
@@ -106,16 +106,16 @@ impl TwitchdApi<'_> {
     }
 }
 
-struct ApiParams(QueryParams);
+struct ApiParams<'a>(QueryParams<'a>);
 
-impl ApiParams {
+impl ApiParams<'_> {
     fn get(&self, key: &str) -> Result<&str, ApiError> {
         self.get_opt(key)
             .ok_or_else(|| ApiError::BadRequest(format!("Missing {}", key)))
     }
 
     fn get_opt(&self, key: &str) -> Option<&str> {
-        self.0.get(key).map(String::as_str)
+        self.0.get(key).map(|cow_param| cow_param.as_ref())
     }
 }
 

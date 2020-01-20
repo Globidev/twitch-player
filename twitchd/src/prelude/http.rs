@@ -1,6 +1,6 @@
 use futures::prelude::*;
 
-use std::collections::HashMap;
+use std::{borrow::Cow, collections::HashMap};
 
 pub use http::{header, method::Method};
 use hyper::{body::Bytes, client::HttpConnector};
@@ -9,7 +9,7 @@ use hyper_tls::HttpsConnector;
 pub type Request = hyper::Request<hyper::Body>;
 pub type Response = hyper::Response<hyper::Body>;
 pub type HttpsClient = hyper::Client<HttpsConnector<HttpConnector>>;
-pub type QueryParams = HashMap<String, String>;
+pub type QueryParams<'a> = HashMap<Cow<'a, str>, Cow<'a, str>>;
 pub type ResponseSink = hyper::body::Sender;
 
 pub fn http_client() -> HttpsClient {
@@ -18,11 +18,10 @@ pub fn http_client() -> HttpsClient {
     hyper::Client::builder().build(connector)
 }
 
-pub fn parse_query_params(query: &str) -> QueryParams {
+pub fn parse_query_params(query: &str) -> QueryParams<'_> {
     use url::form_urlencoded::parse as parse_query;
 
     parse_query(query.as_bytes())
-        .map(|(k, v)| (String::from(k), String::from(v)))
         .collect()
 }
 
