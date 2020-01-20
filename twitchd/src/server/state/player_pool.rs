@@ -1,11 +1,14 @@
-use super::stream_player::{MetaKey, PlayerSink, SegmentMetadata, StreamPlayer};
+use super::stream_player::{MetaKey, PlayerSink, StreamPlayer};
 use crate::{
     options::Options,
     prelude::{
         http::{http_client, HttpsClient},
         runtime,
     },
-    twitch::types::{PlaylistInfo, Stream},
+    twitch::{
+        mpeg_ts::SegmentMetadata,
+        types::{PlaylistInfo, Stream},
+    },
 };
 
 use std::{
