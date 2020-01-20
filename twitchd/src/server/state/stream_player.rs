@@ -119,9 +119,10 @@ fn segment_stream(client: HttpsClient, playlist_info: PlaylistInfo, fetch_interv
         .expect("Malformed playlist info URL");
 
     let segment_url = move |segment_location: &str| {
-        match segment_location.starts_with("http://") {
-            true  => String::from(segment_location),
-            false => format!("{}/{}", origin, segment_location)
+        if segment_location.starts_with("http://") {
+            String::from(segment_location)
+        } else {
+            format!("{}/{}", origin, segment_location)
         }
     };
 

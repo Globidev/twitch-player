@@ -1,4 +1,4 @@
-use futures::prelude::*;
+use futures::{prelude::*, ready};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use pin_project::pin_project;
@@ -45,11 +45,10 @@ where
         loop {
             let this = self.as_mut().project();
 
-            match this.stream.poll_next(cx) {
-                Poll::Pending => return Poll::Pending,
-                Poll::Ready(None) => break,
-                Poll::Ready(Some(Err(e))) => return Poll::Ready(Some(Err(e))),
-                Poll::Ready(Some(Ok(data))) => {
+            match ready!(this.stream.poll_next(cx)) {
+                None => break,
+                Some(Err(e)) => return Poll::Ready(Some(Err(e))),
+                Some(Ok(data)) => {
                     let bytes = data.as_ref();
                     if this.buffer.len() + bytes.len() > *this.chunk_len {
                         let max_amount = *this.chunk_len - this.buffer.len();
