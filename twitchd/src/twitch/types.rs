@@ -1,4 +1,5 @@
 use std::net::IpAddr;
+use std::borrow::Cow;
 
 use serde::{Serialize, Deserialize};
 
@@ -91,8 +92,24 @@ pub struct Playlist {
     pub segments: Vec<Segment>,
 }
 
-pub type Channel = String;
-pub type Stream = (Channel, Quality);
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Channel(String);
+
+impl Channel {
+    pub fn new<'a>(raw_channel: impl Into<Cow<'a, str>>) -> Self {
+        Self(raw_channel.into().as_ref().to_lowercase())
+    }
+
+    pub fn name(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Stream {
+    pub channel: Channel,
+    pub quality: Quality,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Quality {

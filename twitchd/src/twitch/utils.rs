@@ -30,7 +30,7 @@ fn find_playlist_approx(mut index: StreamIndex, quality: &ApproxQuality)
     let as_slice = index.playlist_infos.as_mut_slice();
     as_slice.sort_by_key(|info| info.stream_info.bandwidth);
 
-    let playlist_ref = match *quality {
+    let playlist_ref = match quality {
         ApproxQuality::Best => as_slice.last(),
         ApproxQuality::Worst => as_slice.first(),
     };

@@ -1,5 +1,5 @@
 use crate::prelude::http::*;
-use crate::twitch::types::Quality;
+use crate::twitch::types::{Quality, Stream, Channel};
 use crate::twitch::utils::find_playlist;
 
 use super::state::{State, index_cache::IndexError};
@@ -15,7 +15,7 @@ impl TwitchdApi<'_> {
         TwitchdApi { state }
     }
 
-    pub async fn call(&self, req: Request) -> Response {
+    pub async fn handle(&self, req: Request) -> Response {
         let params = {
             let query_params = req.uri().query()
                 .map(parse_query_params)
@@ -40,33 +40,27 @@ impl TwitchdApi<'_> {
     }
 
     async fn get_stream_index(&self, params: ApiParams<'_>) -> ApiResponse {
-        let channel = params.get("channel")?;
+        let channel = params.get_channel()?;
         let oauth = params.get_opt("oauth");
 
-        let index = self.state.index_cache.get(channel, oauth).await?;
+        let index = self.state.index_cache.get(&channel, oauth).await?;
 
         Ok(json_response(index))
     }
 
     async fn get_video_stream(&self, params: ApiParams<'_>) -> ApiResponse {
-        let channel = params.get("channel")?;
-
-        let quality = params.get_opt("quality")
-            .map(Quality::from)
-            .unwrap_or_default();
+        let stream = params.get_stream()?;
 
         let meta_key = params.get_opt("meta_key")
             .map_or_else(Default::default, ToOwned::to_owned);
 
-        let stream = (channel.to_string(), quality.clone());
-
         let (sink, response) = streaming_response();
 
-        self.state.player_pool.entry(stream)
+        self.state.player_pool.entry(stream.clone())
             .or_try_insert_with(|| async {
                 let oauth = params.get_opt("oauth");
-                let index = self.state.index_cache.get(channel, oauth).await?;
-                find_playlist(index, &quality).ok_or(ApiError::NotFound)
+                let index = self.state.index_cache.get(&stream.channel, oauth).await?;
+                find_playlist(index, &stream.quality).ok_or(ApiError::NotFound)
             })
             .play(sink, meta_key)
             .await?;
@@ -75,14 +69,8 @@ impl TwitchdApi<'_> {
     }
 
     async fn get_metadata(&self, params: ApiParams<'_>) -> ApiResponse {
-        let channel = params.get("channel")?;
+        let stream = params.get_stream()?;
         let key = params.get("key")?;
-
-        let quality = params.get("quality")
-            .map(Quality::from)
-            .unwrap_or_default();
-
-        let stream = (channel.to_string(), quality);
 
         let metadata = self.state.player_pool.get_metadata(&stream, &key.to_owned())
             .await
@@ -116,6 +104,17 @@ impl ApiParams<'_> {
 
     fn get_opt(&self, key: &str) -> Option<&str> {
         self.0.get(key).map(|cow_param| cow_param.as_ref())
+    }
+
+    fn get_stream(&self) -> Result<Stream, ApiError> {
+        let channel = self.get_channel()?;
+        let quality = self.get_opt("quality").map(Quality::from).unwrap_or_default();
+
+        Ok(Stream { channel, quality })
+    }
+
+    fn get_channel(&self) -> Result<Channel, ApiError> {
+        Ok(Channel::new(self.get("channel")?))
     }
 }
 
@@ -171,7 +170,7 @@ fn json_response(value: impl serde::Serialize) -> Response {
 
     let reply_with_data = |data: Vec<u8>| {
         hyper::Response::builder()
-            .header(header::CONTENT_LENGTH, data.len().to_string().as_str())
+            .header(header::CONTENT_LENGTH, data.len())
             .header(header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
             .body(data.into())
             .expect("Response building error: Json Data")

@@ -2,7 +2,7 @@ use crate::prelude::http::*;
 use crate::prelude::runtime;
 use crate::options::Options;
 use crate::twitch::api::{ApiError, access_token, stream_index};
-use crate::twitch::types::StreamIndex;
+use crate::twitch::types::{StreamIndex, Channel};
 
 use std::sync::Arc;
 use futures::lock::Mutex;
@@ -11,7 +11,6 @@ use std::collections::HashMap;
 
 use tokio::time::delay_for;
 
-type Channel = String;
 type FutureStreamIndex = future::BoxFuture<'static, Arc<Result<StreamIndex, IndexError>>>;
 type ChannelIndexes = HashMap<Channel, future::Shared<FutureStreamIndex>>;
 
@@ -30,19 +29,16 @@ impl IndexCache {
         }
     }
 
-    pub async fn get(&self, channel: &str, oauth: Option<impl AsRef<str>>)
+    pub async fn get(&self, channel: &Channel, oauth: Option<impl AsRef<str>>)
         -> Result<StreamIndex, IndexError>
     {
-        let channel_lc = channel.to_lowercase();
-
-        let opt_index = self.cache.lock().await.get(&channel_lc)
-            .cloned();
+        let opt_index = self.cache.lock().await.get(&channel).cloned();
 
         match opt_index {
             Some(shared_index) => (*shared_index.await).clone(),
             None => {
                 let shared_index = self.create_new_shared_index(
-                    &channel_lc,
+                    channel.clone(),
                     oauth.as_ref().map(AsRef::as_ref)
                 );
 
@@ -51,10 +47,9 @@ impl IndexCache {
         }
     }
 
-    async fn create_new_shared_index(&self, channel: &str, oauth: Option<&str>)
+    async fn create_new_shared_index(&self, channel: Channel, oauth: Option<&str>)
         -> Result<StreamIndex, IndexError>
     {
-        let channel = channel.to_string();
         let client = self.client.clone();
         let client_id = self.opts.client_id.to_string();
         let oauth = oauth.map(String::from);
@@ -62,9 +57,9 @@ impl IndexCache {
         let future_index = {
             let channel = channel.clone();
             async move {
-                let token = access_token(&client, &channel, &client_id, oauth.as_deref()).await?;
+                let token = access_token(&client, channel.name(), &client_id, oauth.as_deref()).await?;
 
-                stream_index(&client, &channel, &token).err_into().await
+                stream_index(&client, channel.name(), &token).err_into().await
             }
         };
 

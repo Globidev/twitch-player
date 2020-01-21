@@ -30,7 +30,7 @@ pub fn run(opts: Options) {
                 let shared_state = shared_state.clone();
                 async move {
                     let api = TwitchdApi::new(&shared_state);
-                    let response = api.call(req).await;
+                    let response = api.handle(req).await;
                     infallible(response)
                 }
             });
