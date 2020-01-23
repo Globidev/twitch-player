@@ -1,13 +1,12 @@
-use std::net::IpAddr;
-use std::borrow::Cow;
+use std::{borrow::Cow, net::IpAddr};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 pub struct AccessToken {
     pub token: String,
     #[serde(rename = "sig")]
-    pub signature: String
+    pub signature: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -114,11 +113,11 @@ pub struct Stream {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Quality {
     Exact(String),
-    Approx(ApproxQuality)
+    Approx(ApproxQuality),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ApproxQuality {
     Best,
-    Worst
+    Worst,
 }

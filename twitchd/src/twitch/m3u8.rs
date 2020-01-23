@@ -9,26 +9,21 @@ use nom::*;
 
 type RawInfoMap = HashMap<String, String>;
 
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
+#[error("Parse error: {0}")]
 pub struct ParseError(pub String);
 
 pub fn parse_playlist(data: &[u8]) -> Result<Playlist, ParseError> {
     match playlist_parser(Input(data)) {
         Ok((_, result)) => Ok(result),
-        Err(e) => {
-            let detail = format!("Error: {}", e);
-            Err(ParseError(detail))
-        }
+        Err(e) => Err(ParseError(e.to_string()))
     }
 }
 
 pub fn parse_stream_index(data: &[u8]) -> Result<StreamIndex, ParseError> {
     match stream_index_parser(Input(data)) {
         Ok((_, result)) => Ok(result),
-        Err(e) => {
-            let detail = format!("Error: {}", e);
-            Err(ParseError(detail))
-        }
+        Err(e) => Err(ParseError(e.to_string()))
     }
 }
 

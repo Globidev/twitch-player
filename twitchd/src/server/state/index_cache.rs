@@ -107,7 +107,7 @@ impl From<ApiError> for IndexError {
         use hyper::StatusCode;
 
         match error {
-            ApiError::HttpError(BadStatus(StatusCode::NOT_FOUND)) => IndexError::NotFound,
+            ApiError::Http(BadStatus(StatusCode::NOT_FOUND)) => IndexError::NotFound,
             _ => IndexError::Unexpected(error.to_string())
         }
     }
