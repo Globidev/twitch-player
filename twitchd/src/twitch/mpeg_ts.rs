@@ -1,12 +1,15 @@
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SegmentMetadata {
+    broadc_r: Option<u32>,
     broadc_s: u32,
     cmd: String,
-    ingest_r: u32,
-    ingest_s: u32,
+    ingest_r: Option<u64>,
+    ingest_s: u64,
     stream_offset: f64,
     transc_r: u64,
     transc_s: u64,
+    segment_loudness: Option<f32>,
+    stream_loudness: Option<f32>,
 }
 
 const MPEG_TS_SECTION_LENGTH: usize = 188;
@@ -47,6 +50,7 @@ pub fn extract_metadata(data: &[u8]) -> Option<SegmentMetadata> {
             json_continuity_end_offset
         ];
 
+
         let json_slice = [json_initial_slice, json_continuity_slice].concat();
         serde_json::from_slice(&json_slice).ok()
     }
@@ -78,5 +82,6 @@ mod tests {
         encoded_480p,
         encoded_160p,
         source_faulty_22_may_2019,
+        source_faulty_21_feb_2020,
     }
 }
