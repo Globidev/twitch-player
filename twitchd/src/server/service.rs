@@ -4,7 +4,7 @@ use crate::twitch::utils::find_playlist;
 
 use super::state::{State, index_cache::IndexError};
 
-const DAEMON_VERSION: &str = "1.4.8";
+const DAEMON_VERSION: &str = "1.5.0";
 
 pub struct TwitchdApi<'st> {
     state: &'st State
