@@ -48,12 +48,14 @@ impl StreamPlayer {
             let mut last_active = Instant::now();
             let mut senders = Vec::new();
 
-            let mut video_data_stream = segment_stream(
+            let video_data_stream = segment_stream(
                 client,
                 playlist_info,
                 opts.player_playlist_fetch_interval,
                 opts.player_video_chunks_size,
-            ).boxed();
+            );
+
+            futures::pin_mut!(video_data_stream);
 
             loop {
                 let timed_fetch_segment = timeout(opts.player_fetch_timeout, video_data_stream.next());
@@ -84,14 +86,13 @@ impl StreamPlayer {
                     }
                 }
 
-                let raw_segment_data = segment_chunk.into_data();
+                fanout_and_filter(&mut senders, segment_chunk.into_data());
 
-                fanout_and_filter(&mut senders, raw_segment_data);
-
-                if !senders.is_empty() { last_active = Instant::now(); }
+                if !senders.is_empty() {
+                    last_active = Instant::now();
+                }
 
                 let timed_out = last_active.elapsed() > opts.player_inactive_timeout;
-
                 if timed_out {
                     break Err(StreamPlayerError::InactiveTooLong)
                 }
