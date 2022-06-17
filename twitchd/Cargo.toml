@@ -9,7 +9,7 @@ futures = "0.3"
 
 http = "0.2"
 mime = "0.3"
-hyper = { version = "0.13", features = ["stream"] }
+hyper = { version = "0.14", features = ["stream"] }
 hyper-tls = "0.4"
 url = "2.1"
 
